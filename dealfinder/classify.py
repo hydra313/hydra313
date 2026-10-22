@@ -49,7 +49,10 @@ def classify(listing: Listing, catalog: Catalog, cfg: Config) -> Classified | No
 
     if names_platform and has_games and has_hardware and (
             quantity != 1 or _has_game_count(title_norm, mask_patterns)):
-        return None  # console + games bundle: neither lot type
+        # Console + games bundle: neither lot type. A lone known product ("Halo 3
+        # Special Edition Console Bundle with 5 games") is still valued as that
+        # product; ignoring the games only understates it.
+        return _classify_single(listing, catalog) if quantity == 1 else None
 
     if quantity is None or quantity >= 2:
         lot = match_hardware_lot(title_norm, catalog.bulk, quantity, cfg.min_hardware_lot,
@@ -60,6 +63,10 @@ def classify(listing: Listing, catalog: Catalog, cfg: Config) -> Classified | No
         return Classified(kind="hardware_lot" if qty is not None else "scan_only",
                           key=bulk.id, condition=None, quantity=qty, category=bulk.category)
 
+    return _classify_single(listing, catalog)
+
+
+def _classify_single(listing: Listing, catalog: Catalog) -> Classified | None:
     single = match_single(listing.title, catalog.enabled_products(), listing.condition_id)
     if single is None:
         return None

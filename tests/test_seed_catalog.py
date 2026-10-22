@@ -293,6 +293,9 @@ def test_every_pattern_matches_its_own_name():
     ("Nintendo DS Lite Pikachu Edition with Pokemon Diamond Game", "ds-lite-pikachu"),
     ("Nintendo 64 Pikachu Edition Console with Hey You Pikachu game", "n64-pikachu"),
     ("Nintendo 64 Pikachu Edition Blue Yellow", "n64-pikachu"),
+    # a known single product with a counted set of games is valued as that product
+    ("Xbox 360 Halo 3 Special Edition Console Bundle with 5 games",
+     "xbox-360-halo-3-special-edition"),
 ])
 def test_collectible_console(catalog, title, key):
     result = match_single(title, SEED.products)
@@ -379,10 +382,7 @@ def test_collectible_console_no_match(catalog, title):
     assert _classify(title, catalog) is None
 
 
-def test_collectible_console_with_game_count(catalog):
-    # The title is the edition, but a console listed with a game count is a
-    # console + games bundle, which classify rejects as neither lot type (6.3).
-    title = "Xbox 360 Halo 3 Special Edition Console Bundle with 5 games"
-    result = match_single(title, SEED.products)
-    assert result is not None and result[0].id == "xbox-360-halo-3-special-edition"
-    assert _classify(title, catalog) is None
+def test_collectible_console_lot_with_games_is_not_one_console(catalog):
+    # A counted lot of edition consoles with games is still skipped, not valued as one.
+    assert _classify("Lot of 3 Xbox 360 Halo 3 Special Edition consoles with 10 games",
+                     catalog) is None

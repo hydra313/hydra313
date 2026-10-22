@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from dealfinder.catalog import Catalog
 from dealfinder.classify import classify
 from dealfinder.config import Config
@@ -115,10 +117,15 @@ def test_ps2_game_lot_not_a_console():
 
 
 def test_console_with_games_skipped():
-    assert _c("PS2 console with 10 games") is None
-    assert _c("PS2 Slim console + 12 games") is None
-    assert _c("PS2 1 console 12 games") is None
-    assert _c("Lot of 2 PS2 consoles and games") is None
+    # Skipped as a console + games bundle when no single product matches the title.
+    no_ps2_single = replace(
+        CATALOG, products=[p for p in CATALOG.products if p.id != "ps2-slim"])
+    for title in ("PS2 console with 10 games", "PS2 Slim console + 12 games",
+                  "PS2 1 console 12 games", "Lot of 2 PS2 consoles and games"):
+        assert classify(_listing(title), no_ps2_single, CFG) is None, title
+    # A known single product sold with games is valued as that product.
+    r = _c("PS2 console with 10 games")
+    assert (r.kind, r.key, r.quantity) == ("single", "ps2-slim", 1)
 
 
 def test_console_bundle_with_game_is_single():
