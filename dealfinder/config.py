@@ -76,7 +76,7 @@ class Config:
     vision_model: str = "claude-opus-5-5"
     vision_prices: dict[str, tuple[float, float]] = field(
         default_factory=lambda: {"claude-opus-5-5": (4.00, 20.00)})
-    scan_cost_ceiling: float = 0.25
+    scan_cost_ceiling: float = 0.40
     initial_daily_cap: float = 5.0
     initial_monthly_cap: float = 50.0
     initial_max_scan_price: float = 300.0

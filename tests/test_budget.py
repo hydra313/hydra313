@@ -68,7 +68,7 @@ def test_price_filter(conn):
 
 
 def test_daily_cap_with_ceiling(conn):
-    b = make_budget(conn)
+    b = make_budget(conn, cfg=Config(scan_cost_ceiling=0.25))
     b.set_scan_enabled(True)
     spend(conn, 4.80, NOW)
     assert b.can_auto_scan(10) == GateDecision(False, "daily cap reached")

@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -542,3 +543,144 @@ def test_scan_candidates(conn, cfg):
     db.dismiss_listing(conn, ids["dear"]["id"])
     order = [r["source_id"] for r in db.scan_candidates(conn, T0)]
     assert order == ["cheap", "mid", "only"]
+
+
+# --- fix round 1 -------------------------------------------------------------
+
+
+class BoomMarket(FakeMarket):
+    def item_price(self, platform, title, completeness):
+        raise RuntimeError("pricing exploded")
+
+
+CHRONO = ScanItem(kind="game", platform="SNES", title="Chrono Trigger", edition=None,
+                  completeness="loose", quantity=1, confidence="high", photo_index=0)
+
+
+def test_paid_scan_with_failing_post_processing_is_saved_once(conn, cfg):
+    scanner = FakeScanner(scan_result([CHRONO], cost=0.20))
+    ebay = FakeSource("ebay", [listing("g", "Lot of 6 SNES games", price=100, shipping=10)])
+    p = make_pipeline(conn, cfg, {"ebay": ebay}, scanner=scanner, market=BoomMarket())
+    p.budget.set_scan_enabled(True)
+    reports = [p.refresh() for _ in range(3)]
+
+    assert len(scanner.calls) == 1
+    assert [r.scanned for r in reports] == [1, 0, 0]
+    assert p.budget.spent_today() == pytest.approx(0.20)
+    (scan,) = conn.execute("SELECT * FROM scans").fetchall()
+    assert scan["status"] == "failed"
+    assert "RuntimeError: pricing exploded" in scan["error"]
+    assert scan["cost_usd"] == pytest.approx(0.20)
+    assert scan["is_rare_find"] == 0
+    assert db.scan_candidates(conn, T0) == []
+
+
+def test_failed_scan_save_falls_back_to_minimal_row(conn, cfg, monkeypatch):
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay", _three_game_lots())},
+                      scanner=FakeScanner(scan_result([CHRONO], cost=0.20)))
+    p.refresh()
+    lid = rows(conn)["cheap"]["id"]
+    real_save = db.save_scan
+    calls = []
+
+    def flaky_save(*args, **kwargs):
+        calls.append(args[2].items)
+        if len(calls) <= 2:
+            raise sqlite3.OperationalError("disk I/O error")
+        return real_save(*args, **kwargs)
+
+    monkeypatch.setattr(db, "save_scan", flaky_save)
+    result = p.scan_listing(lid, manual=True)
+    assert len(calls) == 3
+    assert result.status == "failed" and result.items == []
+    scan = db.get_scan(conn, lid)
+    assert scan["status"] == "failed" and json.loads(scan["items"]) == []
+    assert scan["cost_usd"] == pytest.approx(0.20)
+
+
+def test_scan_listing_rejects_non_lot_kinds(conn, cfg):
+    scanner = FakeScanner()
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay", [
+        listing("single", "RTX 4090 Founders Edition 24GB", price=600)])}, scanner=scanner)
+    p.refresh()
+    assert p.scan_listing(rows(conn)["single"]["id"], manual=True) is None
+    assert scanner.calls == []
+
+
+def test_text_deals_notified_before_scans(conn, cfg, http, webhook):
+    seen_at_scan = []
+
+    class OrderScanner(FakeScanner):
+        def scan(self, image_urls, title):
+            seen_at_scan.append(webhook.call_count)
+            return super().scan(image_urls, title)
+
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay", [
+        listing("games", "Lot of 20 SNES games", price=50, shipping=10)])},
+        scanner=OrderScanner(), http=http)
+    p.budget.set_scan_enabled(True)
+    report = p.refresh()
+    assert seen_at_scan == [1]  # game_lot_deal was already sent when the scan ran
+    assert (report.scanned, report.notified) == (1, 1)
+
+
+def test_concurrent_manual_and_auto_scan(conn, cfg, tmp_path):
+    cfg.scan_cost_ceiling = 0.25
+    scanner = FakeScanner(scan_result(cost=0.20), delay=0.05)
+    ebay = FakeSource("ebay", _three_game_lots())
+    refresher = make_pipeline(conn, cfg, {"ebay": ebay}, scanner=scanner)
+    refresher.refresh()  # scanning is off: stores rows only
+    refresher.budget.set_scan_enabled(True)
+    refresher.budget.set_caps(daily=0.30)  # room for one scan
+    web_conn = db.connect(tmp_path / "p.db")  # a web request has its own connection
+    try:
+        web = make_pipeline(web_conn, cfg, {"ebay": ebay}, scanner=scanner)
+        manual_id = rows(conn)["dear"]["id"]  # ranked last, so auto starts elsewhere
+        threads = [threading.Thread(target=refresher.refresh),
+                   threading.Thread(target=web.scan_listing, args=(manual_id, True))]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+    finally:
+        web_conn.close()
+    assert len(scanner.calls) == 1
+    assert conn.execute("SELECT COUNT(*) FROM scans").fetchone()[0] == 1
+    assert refresher.budget.spent_today() == pytest.approx(0.20)
+
+
+def _deal_and_find_listings(price=50):
+    return [listing("games", "Lot of 20 SNES games", price=price, shipping=10),
+            listing("single", "RTX 4090 Founders Edition 24GB", price=600)]
+
+
+def test_restart_does_not_realert(conn, cfg, http, webhook, tmp_path):
+    market = FakeMarket(item_values={"Chrono Trigger": 180.0})
+    ebay = FakeSource("ebay", _deal_and_find_listings())
+    p = make_pipeline(conn, cfg, {"ebay": ebay}, scanner=FakeScanner(scan_result([CHRONO])),
+                      market=market, http=http)
+    p.budget.set_scan_enabled(True)
+    assert p.refresh().notified == 3  # target_hit, game_lot_deal, photo_find
+    assert webhook.call_count == 3
+
+    restarted = db.connect(tmp_path / "p.db")
+    try:
+        with httpx.Client() as http2:
+            scanner = FakeScanner(scan_result([CHRONO]))
+            p2 = make_pipeline(restarted, cfg, {"ebay": ebay}, scanner=scanner, market=market,
+                               http=http2)
+            assert p2.refresh().notified == 0
+    finally:
+        restarted.close()
+    assert scanner.calls == []
+    assert webhook.call_count == 3
+
+
+def test_price_change_does_not_realert(conn, cfg, http, webhook):
+    ebay = FakeSource("ebay", _deal_and_find_listings(price=50))
+    p = make_pipeline(conn, cfg, {"ebay": ebay}, http=http)
+    assert p.refresh().notified == 2
+    ebay.listings = _deal_and_find_listings(price=30)
+    assert p.refresh().notified == 0
+    assert rows(conn)["games"]["total_cost"] == pytest.approx(40)
+    assert webhook.call_count == 2

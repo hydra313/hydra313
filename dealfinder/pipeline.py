@@ -6,7 +6,7 @@ import logging
 import math
 import sqlite3
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 from dealfinder import db
@@ -25,6 +25,7 @@ from dealfinder.vision import ScanDeferred, VisionScanner
 log = logging.getLogger(__name__)
 
 ROTATION_SETTING = "ebay_rotation_index"
+SCAN_KINDS = ("hardware_lot", "game_lot", "scan_only")
 _GATE_STOPS = ("scanning is off", "daily cap reached", "monthly cap reached")
 
 
@@ -113,9 +114,7 @@ class Pipeline:
         for name, source in self.sources.items():
             report.per_source[name] = self._run_source(name, source, catalog, pending)
 
-        if self.scanner is not None:
-            report.scanned, report.notified = self._auto_scan()
-
+        # Text deals are time-sensitive: alert before the (slow) photo scans.
         now = self.clock()
         for listing_id, reasons in pending.items():
             row = db.get_listing(self.conn, listing_id)
@@ -124,6 +123,10 @@ class Pipeline:
             for reason, details in reasons.items():
                 if self._notify(listing_id, reason, details):
                     report.notified += 1
+
+        if self.scanner is not None:
+            report.scanned, photo_finds = self._auto_scan(catalog)
+            report.notified += photo_finds
         return report
 
     def _queries(self, name: str, catalog: Catalog) -> list[str]:
@@ -204,7 +207,7 @@ class Pipeline:
         """The lot kind a scan_only listing becomes once photos give it a count."""
         if estimate is None:
             return None
-        if any(p.id == c.key for p in catalog.platforms):
+        if c.category is None:  # platform key: a game lot
             if estimate >= self.cfg.min_game_lot:
                 return Classified(kind="game_lot", key=c.key, condition=None,
                                   quantity=estimate, category=None)
@@ -256,7 +259,7 @@ class Pipeline:
                else self.cfg.lot_ship_base)
         return total_cost(_row_listing(row), self.cfg, est)[0]
 
-    def _auto_scan(self) -> tuple[int, int]:
+    def _auto_scan(self, catalog: Catalog) -> tuple[int, int]:
         scanned = notified = 0
         for row in db.scan_candidates(self.conn, self.clock()):
             decision = self.budget.can_auto_scan(self._gate_cost(row))
@@ -265,7 +268,7 @@ class Pipeline:
                     break
                 continue  # over max scan price: a cheaper candidate may still pass
             try:
-                outcome = self._scan(row["id"], manual=False)
+                outcome = self._scan(row["id"], manual=False, catalog=catalog)
             except ScanDeferred as e:
                 log.info("photo scans deferred: %s", e)
                 break
@@ -278,22 +281,28 @@ class Pipeline:
         return scanned, notified
 
     def scan_listing(self, listing_id: int, manual: bool) -> ScanResult | None:
+        if self.scanner is None:
+            return None
+        catalog = self.catalog_loader()  # loaded before taking the scan lock
         try:
-            outcome = self._scan(listing_id, manual)
+            outcome = self._scan(listing_id, manual, catalog)
         except ScanDeferred as e:
             log.info("photo scan of listing %s deferred: %s", listing_id, e)
             return None
         return outcome[0] if outcome is not None else None
 
-    def _scan(self, listing_id: int, manual: bool) -> tuple[ScanResult, bool] | None:
-        """Scan one listing; returns the result and whether a photo_find was sent,
-        or None when the scan did not run."""
+    def _scan(
+        self, listing_id: int, manual: bool, catalog: Catalog
+    ) -> tuple[ScanResult, bool] | None:
+        """Scan one listing; returns the result as saved and whether a photo_find was
+        sent, or None when the scan did not run."""
         if self.scanner is None:
             return None
         with self.budget.lock:
             now = self.clock()
             row = db.get_listing(self.conn, listing_id)
-            if row is None or _ended(row, now) or db.get_scan(self.conn, listing_id) is not None:
+            if (row is None or row["kind"] not in SCAN_KINDS or _ended(row, now)
+                    or db.get_scan(self.conn, listing_id) is not None):
                 return None
             cost = self._gate_cost(row)
             decision = (self.budget.can_manual_scan() if manual
@@ -302,19 +311,27 @@ class Pipeline:
                 return None
             photos = self._photos(row)
             result = self.scanner.scan(photos, row["title"])  # ScanDeferred propagates
-            if result.cost_usd > 0:
-                self.budget.record(listing_id, result.input_tokens, result.output_tokens,
-                                   result.cost_usd)
+            # The scan is paid for: from here on a scans row must be written, whatever
+            # fails, or the listing would stay a candidate and be billed again.
             find_eval = None
-            if result.status == "ok":
-                if row["kind"] == "scan_only":
-                    cost = self._rescore(row, result.unit_count_estimate, now) or cost
-                find_eval = evaluate_finds(
-                    result,
-                    lambda item: self.market.item_price(item.platform, item.title,
-                                                        item.completeness),
-                    cost, self.cfg)
-            db.save_scan(self.conn, listing_id, result, find_eval, now, photo_urls=photos)
+            try:
+                if result.cost_usd > 0:
+                    self.budget.record(listing_id, result.input_tokens, result.output_tokens,
+                                       result.cost_usd)
+                if result.status == "ok":
+                    if row["kind"] == "scan_only":
+                        cost = self._rescore(row, result.unit_count_estimate, catalog,
+                                             now) or cost
+                    find_eval = evaluate_finds(
+                        result,
+                        lambda item: self.market.item_price(item.platform, item.title,
+                                                            item.completeness),
+                        cost, self.cfg)
+                db.save_scan(self.conn, listing_id, result, find_eval, now, photo_urls=photos)
+            except Exception as e:  # noqa: BLE001 - record the paid scan as failed instead
+                log.exception("processing the scan of listing %s failed", listing_id)
+                find_eval = None
+                result = self._save_failed_scan(listing_id, result, e, now, photos)
         sent = False
         if find_eval is not None and (find_eval.is_rare_find or find_eval.is_lot_find):
             sent = self._notify(listing_id, "photo_find", self._find_details(find_eval, cost))
@@ -331,9 +348,33 @@ class Pipeline:
             log.warning("photos for listing %s failed: %s", row["id"], e)
             return stored
 
-    def _rescore(self, row: sqlite3.Row, estimate: int | None, now: datetime) -> float | None:
+    def _save_failed_scan(
+        self, listing_id: int, result: ScanResult, error: Exception, now: datetime,
+        photos: list[str],
+    ) -> ScanResult:
+        """Store a scan whose post-processing failed; a second failure retries once
+        with a minimal row, and a third raises."""
+        self.conn.rollback()
+        message = f"processing the scan failed: {type(error).__name__}: {error}"
+        failed = result if result.status != "ok" else replace(
+            result, status="failed", error=message)
+        try:
+            db.save_scan(self.conn, listing_id, failed, None, now, photo_urls=photos)
+            return failed
+        except Exception:  # noqa: BLE001 - fall back to a row with nothing to serialize
+            log.exception("saving the failed scan of listing %s failed", listing_id)
+            self.conn.rollback()
+        minimal = ScanResult(
+            status="failed", items=[], unit_count_estimate=None, notes="",
+            model=result.model, input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens, cost_usd=result.cost_usd, error=message)
+        db.save_scan(self.conn, listing_id, minimal, None, now, photo_urls=[])
+        return minimal
+
+    def _rescore(
+        self, row: sqlite3.Row, estimate: int | None, catalog: Catalog, now: datetime
+    ) -> float | None:
         """Re-score a scan_only row as a lot from the scan's unit count; its total cost."""
-        catalog = self.catalog_loader()
         c = self._lot_from_estimate(_row_classified(row), estimate, catalog)
         if c is None:
             return None
