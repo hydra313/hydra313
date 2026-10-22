@@ -578,3 +578,42 @@ def list_custom(conn: sqlite3.Connection, kind: Literal["product", "bulk"]) -> l
             d["exclude"] = json.loads(d["exclude"])
         out.append(d)
     return out
+
+
+# --- notifications -----------------------------------------------------------
+
+
+def claim_notification(
+    conn: sqlite3.Connection, listing_id: int, reason: str, now: datetime
+) -> bool:
+    """Reserve the (listing, reason) notification; True only for the first caller.
+
+    The row starts as 'pending' and stays claimed whatever happens next, so a
+    failed send is never retried automatically.
+    """
+    cur = conn.execute(
+        "INSERT OR IGNORE INTO notifications (listing_id, reason, sent_at, status)"
+        " VALUES (?, ?, ?, 'pending')",
+        (listing_id, reason, _iso(now)),
+    )
+    conn.commit()
+    return cur.rowcount == 1
+
+
+def mark_notification(
+    conn: sqlite3.Connection, listing_id: int, reason: str, status: str
+) -> None:
+    conn.execute(
+        "UPDATE notifications SET status = ? WHERE listing_id = ? AND reason = ?",
+        (status, listing_id, reason),
+    )
+    conn.commit()
+
+
+def notification_failures_since(conn: sqlite3.Connection, since: datetime) -> int:
+    row = conn.execute(
+        "SELECT COUNT(*) AS n FROM notifications"
+        " WHERE status = 'failed' AND julianday(sent_at) >= julianday(?)",
+        (_iso(since),),
+    ).fetchone()
+    return int(row["n"])
