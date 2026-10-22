@@ -175,11 +175,54 @@ def test_add_custom_validates(catalog_dir, conn):
     assert len(db.list_custom(conn, "product")) == 1
 
 
-def test_custom_id_clashing_with_seed_rejected_on_load(catalog_dir, conn):
+def test_custom_id_clashing_with_seed_is_skipped_on_load(catalog_dir, conn, caplog):
     db.add_custom(conn, "product", {
-        "id": "rx-7900-xtx", "category": "gpu", "name": "X", "ebay_query": "x", "match": "x"})
-    with pytest.raises(ValueError, match="rx-7900-xtx"):
-        load_catalog(catalog_dir, conn, Config())
+        "id": "rx-7900-xtx", "category": "gpu", "name": "Custom", "ebay_query": "x", "match": "x"})
+    db.add_custom(conn, "bulk", {
+        "id": "ps2-console", "category": "console", "name": "Custom", "ebay_query": "x",
+        "match": "x", "repair_cost": 1.0, "success_rate": 0.1})
+    with caplog.at_level("WARNING", logger="dealfinder.catalog"):
+        cat = load_catalog(catalog_dir, conn, Config())
+    assert cat.product("rx-7900-xtx").name == "Radeon RX 7900 XTX"
+    assert cat.bulk_product("ps2-console").name == "PlayStation 2 console"
+    assert [p.id for p in cat.products].count("rx-7900-xtx") == 1
+    assert [b.id for b in cat.bulk].count("ps2-console") == 1
+    assert "rx-7900-xtx" in caplog.text and "ps2-console" in caplog.text
+
+
+def test_custom_bulk_id_clashing_with_auto_id_is_skipped(catalog_dir, conn, caplog):
+    db.add_custom(conn, "bulk", {
+        "id": "bulk-rx-7900-xtx", "category": "gpu", "name": "Custom", "ebay_query": "x",
+        "match": "x", "repair_cost": 1.0, "success_rate": 0.1})
+    with caplog.at_level("WARNING", logger="dealfinder.catalog"):
+        cat = load_catalog(catalog_dir, conn, Config())
+    b = cat.bulk_product("bulk-rx-7900-xtx")
+    assert b.source_product_id == "rx-7900-xtx" and b.repair_cost == 40
+    assert [x.id for x in cat.bulk].count("bulk-rx-7900-xtx") == 1
+    assert "bulk-rx-7900-xtx" in caplog.text
+
+
+def test_auto_bulk_follows_effective_product_enabled(catalog_dir, conn):
+    db.set_override(conn, "product_overrides", "rx-7900-xtx", enabled=False)
+    cat = load_catalog(catalog_dir, conn, Config())
+    assert cat.bulk_product("bulk-rx-7900-xtx").enabled is False
+    assert cat.bulk_product("bulk-rtx-4070-ti-super").enabled is True
+    assert "bulk-rx-7900-xtx" not in [b.id for b in cat.enabled_bulk()]
+
+
+def test_bulk_override_beats_product_enabled_for_auto_bulk(catalog_dir, conn):
+    db.set_override(conn, "product_overrides", "rx-7900-xtx", enabled=False)
+    db.set_override(conn, "bulk_overrides", "bulk-rx-7900-xtx", enabled=True)
+    cat = load_catalog(catalog_dir, conn, Config())
+    assert cat.product("rx-7900-xtx").enabled is False
+    assert cat.bulk_product("bulk-rx-7900-xtx").enabled is True
+
+
+def test_seed_read_as_utf8(catalog_dir, conn):
+    (catalog_dir / "controllers.yaml").write_bytes(
+        "- id: c1\n  category: controller\n  name: Ragnar\u00f6k pad\n  ebay_query: x\n"
+        "  match: 'x'\n".encode("utf-8"))
+    assert load_seed(catalog_dir).product("c1").name == "Ragnar\u00f6k pad"
 
 
 def test_mask_patterns_contains_platforms(catalog_dir, conn):

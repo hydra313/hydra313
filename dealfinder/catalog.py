@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import sqlite3
 from dataclasses import dataclass, replace
@@ -11,6 +12,8 @@ import yaml
 from dealfinder import db
 from dealfinder.config import Config
 from dealfinder.models import BulkProduct, Category, Platform, Product
+
+log = logging.getLogger(__name__)
 
 _PRODUCT_FILES = ("gpus.yaml", "cpus.yaml", "consoles.yaml", "controllers.yaml")
 _BULK_FILE = "bulk.yaml"
@@ -56,7 +59,7 @@ def _find(items: list, item_id: str, what: str):
 def _read(path: Path) -> list[dict]:
     if not path.exists():
         return []
-    data = yaml.safe_load(path.read_text()) or []
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or []
     if not isinstance(data, list):
         raise ValueError(f"{path.name}: top level must be a list")
     return data
@@ -156,28 +159,13 @@ def load_catalog(catalog_dir: Path, conn: sqlite3.Connection, cfg: Config) -> Ca
     product_ids = {p.id for p in products}
     for d in db.list_custom(conn, "product"):
         if d["id"] in product_ids:
-            raise ValueError(f"custom product {d['id']!r}: id already exists in the catalog")
+            log.warning("skipping custom product %r: id already used by a catalog entry", d["id"])
+            continue
         product_ids.add(d["id"])
         products.append(Product(
             id=d["id"], category=d["category"], name=d["name"], ebay_query=d["ebay_query"],
             match=d["match"], exclude=tuple(d["exclude"]), max_price=d["max_price"],
             enabled=d["enabled"]))
-    bulk_ids = {b.id for b in bulk}
-    for d in db.list_custom(conn, "bulk"):
-        if d["id"] in bulk_ids:
-            raise ValueError(f"custom bulk product {d['id']!r}: id already exists in the catalog")
-        bulk_ids.add(d["id"])
-        bulk.append(BulkProduct(**d))
-
-    for p in list(products):
-        if p.category in ("gpu", "cpu"):
-            bulk_id = f"bulk-{p.id}"
-            if bulk_id in bulk_ids:
-                raise ValueError(f"bulk product {bulk_id!r}: id already exists in the catalog")
-            bulk_ids.add(bulk_id)
-            bulk.append(BulkProduct(
-                id=bulk_id, category=p.category, name=p.name, ebay_query=p.ebay_query,
-                match=p.match, repair_cost=None, success_rate=None, source_product_id=p.id))
 
     po = db.get_overrides(conn, "product_overrides")
     bo = db.get_overrides(conn, "bulk_overrides")
@@ -214,8 +202,32 @@ def load_catalog(catalog_dir: Path, conn: sqlite3.Connection, cfg: Config) -> Ca
             return p
         return replace(p, enabled=bool(o["enabled"]))
 
+    products = [apply_product(p) for p in products]
+
+    seed_bulk_ids = {b.id for b in bulk}
+    auto_ids = {f"bulk-{p.id}" for p in products if p.category in ("gpu", "cpu")}
+    bulk_ids = set(seed_bulk_ids)
+    for d in db.list_custom(conn, "bulk"):
+        if d["id"] in bulk_ids or d["id"] in auto_ids:
+            log.warning("skipping custom bulk product %r: id already used by a catalog entry",
+                        d["id"])
+            continue
+        bulk_ids.add(d["id"])
+        bulk.append(BulkProduct(**d))
+    for p in products:
+        if p.category in ("gpu", "cpu"):
+            bulk_id = f"bulk-{p.id}"
+            if bulk_id in seed_bulk_ids:
+                log.warning("skipping generated bulk product %r: id already used by a seed entry",
+                            bulk_id)
+                continue
+            bulk.append(BulkProduct(
+                id=bulk_id, category=p.category, name=p.name, ebay_query=p.ebay_query,
+                match=p.match, repair_cost=None, success_rate=None, enabled=p.enabled,
+                source_product_id=p.id))
+
     return Catalog(
-        products=[apply_product(p) for p in products],
+        products=products,
         bulk=[apply_bulk(b) for b in bulk],
         platforms=[apply_platform(p) for p in seed.platforms],
     )
