@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import sqlite3
 import time
 from collections.abc import Callable
@@ -18,6 +19,7 @@ log = logging.getLogger(__name__)
 Reason = Literal["photo_find", "target_hit", "hardware_lot_deal", "game_lot_deal", "resale_deal"]
 
 MIN_SPACING_S = 1.0
+MAX_RETRY_AFTER_S = 30.0  # a longer Discord wait is not worth stalling a refresh for
 _TITLE_MAX = 256
 _DESCRIPTION_MAX = 4000  # Discord allows 4096
 _SITE_NAMES = {"ebay": "eBay", "shopgoodwill": "ShopGoodwill", "hibid": "HiBid"}
@@ -96,11 +98,14 @@ def build_payload(row: sqlite3.Row, reason: Reason, details: list[str], now: dat
     return {"embeds": [embed]}
 
 
-def _retry_after(resp: httpx.Response) -> float:
+def _retry_after(resp: httpx.Response) -> float | None:
+    """Seconds to wait before the retry; None when the wait is too long or not a number."""
     try:
         value = float(resp.json()["retry_after"])
     except (ValueError, KeyError, TypeError):
         return MIN_SPACING_S
+    if not math.isfinite(value) or value > MAX_RETRY_AFTER_S:
+        return None
     return value if value > 0 else MIN_SPACING_S
 
 
@@ -136,7 +141,11 @@ class Notifier:
             return False
         if not db.claim_notification(self.conn, listing_id, reason, now):
             return False
-        ok = self._deliver(build_payload(row, reason, details, now))
+        try:
+            ok = self._deliver(build_payload(row, reason, details, now))
+        except Exception as e:  # noqa: BLE001 - once claimed, nothing may stop a refresh
+            log.warning("discord notification error: %s", type(e).__name__)
+            ok = False
         db.mark_notification(self.conn, listing_id, reason, "sent" if ok else "failed")
         if not ok:
             log.warning("discord notification for listing %s (%s) failed", listing_id, reason)
@@ -151,7 +160,11 @@ class Notifier:
                 self.sleep(wait)
         resp = self._post(payload)
         if resp is not None and resp.status_code == 429:
-            self.sleep(_retry_after(resp))
+            wait = _retry_after(resp)
+            if wait is None:
+                log.warning("discord rate limit wait too long; giving up")
+                return False
+            self.sleep(wait)
             resp = self._post(payload)
         return resp is not None and resp.is_success
 

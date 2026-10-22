@@ -229,3 +229,97 @@ def test_claim_and_mark_notification(conn):
     assert status_of(conn, lid, "target_hit") == "pending"
     db.mark_notification(conn, lid, "target_hit", "sent")
     assert status_of(conn, lid, "target_hit") == "sent"
+
+
+@respx.mock
+@pytest.mark.parametrize("body", ['{"retry_after": 1e9}', '{"retry_after": Infinity}',
+                                  '{"retry_after": NaN}', '{"retry_after": 30.5}'])
+def test_429_unusable_retry_after_fails_without_sleeping(conn, cfg, http, ft, body):
+    route = respx.post(WEBHOOK).respond(
+        429, content=body, headers={"content-type": "application/json"})
+    lid = add(conn, make_listing())
+    assert make_notifier(conn, cfg, http, ft).notify(lid, "target_hit", ["a"]) is False
+    assert route.call_count == 1
+    assert ft.sleeps == []
+    assert status_of(conn, lid, "target_hit") == "failed"
+
+
+@respx.mock
+def test_429_retry_after_at_cap_is_honored(conn, cfg, http, ft):
+    respx.post(WEBHOOK).mock(side_effect=[
+        httpx.Response(429, json={"retry_after": 30}), httpx.Response(204)])
+    lid = add(conn, make_listing())
+    assert make_notifier(conn, cfg, http, ft).notify(lid, "target_hit", ["a"]) is True
+    assert ft.sleeps == [30.0]
+
+
+@respx.mock
+@pytest.mark.parametrize("resp_429", [
+    httpx.Response(429, content=b"<html>slow down</html>"),
+    httpx.Response(429, json={"retry_after": 0}),
+    httpx.Response(429, json={"retry_after": -3}),
+    httpx.Response(429, json={"message": "no retry_after"}),
+])
+def test_429_fallback_wait(conn, cfg, http, ft, resp_429):
+    route = respx.post(WEBHOOK).mock(side_effect=[resp_429, httpx.Response(204)])
+    lid = add(conn, make_listing())
+    assert make_notifier(conn, cfg, http, ft).notify(lid, "target_hit", ["a"]) is True
+    assert route.call_count == 2
+    assert ft.sleeps == [1.0]
+
+
+@respx.mock
+def test_unexpected_error_after_claim_marks_failed(conn, cfg, http, ft, monkeypatch):
+    route = respx.post(WEBHOOK).respond(204)
+    lid = add(conn, make_listing())
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("dealfinder.notify.build_payload", boom)
+    assert make_notifier(conn, cfg, http, ft).notify(lid, "target_hit", ["a"]) is False
+    assert status_of(conn, lid, "target_hit") == "failed"
+    assert route.call_count == 0
+
+
+@respx.mock
+def test_bad_listing_data_marks_failed(conn, cfg, http, ft):
+    route = respx.post(WEBHOOK).respond(204)
+    lid = add(conn, make_listing())
+    conn.execute("UPDATE listings SET image_urls = '[]', total_cost = 'abc' WHERE id = ?", (lid,))
+    # sqlite stores the text as-is; formatting it as a number must not escape notify()
+    assert make_notifier(conn, cfg, http, ft).notify(lid, "target_hit", ["a"]) is False
+    assert status_of(conn, lid, "target_hit") == "failed"
+    assert route.call_count == 0
+
+
+@respx.mock
+def test_sleep_failure_marks_failed(conn, cfg, http, ft):
+    respx.post(WEBHOOK).respond(204)
+    lid = add(conn, make_listing())
+
+    def bad_sleep(seconds):
+        raise OSError("interrupted")
+
+    n = Notifier(conn, cfg, http, sleep=bad_sleep, clock=ft.clock)
+    assert n.notify(lid, "target_hit", ["a"]) is True
+    assert n.notify(lid, "photo_find", ["a"]) is False  # spacing sleep raises
+    assert status_of(conn, lid, "photo_find") == "failed"
+
+
+@respx.mock
+def test_ended_buy_it_now_listing_not_sent(conn, cfg, http, ft):
+    route = respx.post(WEBHOOK).respond(204)
+    lid = add(conn, make_listing(is_auction=False, end_time=T0 - timedelta(days=1)))
+    assert make_notifier(conn, cfg, http, ft).notify(lid, "target_hit", ["a"]) is False
+    assert route.call_count == 0
+    assert status_of(conn, lid, "target_hit") is None
+
+
+@respx.mock
+def test_empty_details_still_sends(conn, cfg, http, ft):
+    route = respx.post(WEBHOOK).respond(204)
+    lid = add(conn, make_listing())
+    assert make_notifier(conn, cfg, http, ft).notify(lid, "target_hit", []) is True
+    assert route.call_count == 1
+    assert status_of(conn, lid, "target_hit") == "sent"
