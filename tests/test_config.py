@@ -1,3 +1,5 @@
+import pytest
+
 from dealfinder.config import load_config
 
 
@@ -8,6 +10,20 @@ def test_defaults_without_file():
     assert cfg.repair_defaults["console"] == (25, 0.60)
     assert cfg.notify_reasons["resale_deal"] is False
     assert cfg.anthropic_api_key is None
+
+
+def test_cache_ttl_and_min_comp_defaults():
+    cfg = load_config(None, env={})
+    assert cfg.market_ttl_hours == 24
+    assert cfg.item_price_ttl_days == 30
+    assert cfg.min_comps == 5
+    assert cfg.min_item_comps == 3
+
+
+def test_unknown_yaml_key_raises(tmp_path):
+    p = tmp_path / "c.yaml"; p.write_text("min_proft: 40\n")
+    with pytest.raises(ValueError, match="min_proft"):
+        load_config(p, env={})
 
 
 def test_yaml_overrides_merge_one_level(tmp_path):

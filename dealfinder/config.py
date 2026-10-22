@@ -46,6 +46,10 @@ class Config:
     min_game_lot: int = 5
     rare_item_threshold: float = 50
     tax_rate: float = 0
+    market_ttl_hours: int = 24
+    item_price_ttl_days: int = 30
+    min_comps: int = 5
+    min_item_comps: int = 3
     repair_defaults: dict[Category, tuple[float, float]] = field(
         default_factory=lambda: {
             "console": (25, 0.60),
