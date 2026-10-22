@@ -113,7 +113,7 @@ class ScanItem:
     completeness: Completeness
     quantity: int
     confidence: Confidence
-    photo_index: int
+    photo_index: int  # position in the listing's image_urls; -1 = unknown photo
 
 
 @dataclass

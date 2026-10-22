@@ -136,16 +136,20 @@ def compute_cost(
     return total_in, total_out, cost
 
 
-def _item(raw: dict) -> ScanItem:
+def _item(raw: dict, sent: list[int]) -> ScanItem:
+    """`sent` holds the image_urls positions of the photos actually sent, so the
+    model's index into the sent photos maps back to the listing's photo; an
+    out-of-range index becomes -1 (unknown photo)."""
+    raw_index = int(raw["photo_index"])
     return ScanItem(
         kind=raw["kind"],
         platform=raw["platform"],
         title=raw["title"],
         edition=raw["edition"],
         completeness=raw["completeness"],
-        quantity=int(raw["quantity"]),
+        quantity=max(1, int(raw["quantity"])),
         confidence=raw["confidence"],
-        photo_index=int(raw["photo_index"]),
+        photo_index=sent[raw_index] if 0 <= raw_index < len(sent) else -1,
     )
 
 
@@ -163,9 +167,11 @@ class VisionScanner:
             output_tokens=output_tokens, cost_usd=cost, error=error,
         )
 
-    def _photo_blocks(self, image_urls: list[str]) -> list[dict]:
-        blocks = []
-        for url in image_urls[:MAX_PHOTOS]:
+    def _photo_blocks(self, image_urls: list[str]) -> tuple[list[dict], list[int]]:
+        """Image blocks plus the image_urls positions of the photos they hold."""
+        blocks: list[dict] = []
+        sent: list[int] = []
+        for index, url in enumerate(image_urls[:MAX_PHOTOS]):
             try:
                 data = resize_jpeg(self._http.request("GET", url).content)
             except (SourceError, OSError, ValueError, Image.DecompressionBombError) as e:
@@ -179,10 +185,11 @@ class VisionScanner:
                     "data": base64.b64encode(data).decode("ascii"),
                 },
             })
-        return blocks
+            sent.append(index)
+        return blocks, sent
 
     def scan(self, image_urls: list[str], title: str) -> ScanResult:
-        images = self._photo_blocks(image_urls)
+        images, sent = self._photo_blocks(image_urls)
         if not images:
             return self._failed("no usable photos")
         model = self._cfg.vision_model
@@ -205,6 +212,8 @@ class VisionScanner:
             raise ScanDeferred(str(e)) from e
         except (anthropic.APIStatusError, anthropic.APIConnectionError) as e:
             return self._failed(str(e))
+        except anthropic.APIError as e:
+            return self._failed(str(e))
 
         input_tokens, output_tokens, cost = compute_cost(
             response, model, self._cfg.vision_prices)
@@ -224,7 +233,7 @@ class VisionScanner:
             if text is None:
                 raise ValueError("no text block in the response")
             data = json.loads(text)
-            items = [_item(raw) for raw in data["items"]]
+            items = [_item(raw, sent) for raw in data["items"]]
             unit_count = data["unit_count_estimate"]
             result = ScanResult(
                 status="ok", items=items,

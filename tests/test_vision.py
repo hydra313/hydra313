@@ -1,11 +1,11 @@
 import base64
 import io
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import anthropic
 import httpx
-import httpx2  # the anthropic SDK's own HTTP library; its errors carry httpx2 objects
 import pytest
 from PIL import Image
 
@@ -25,7 +25,7 @@ FIXTURES = Path(__file__).parent / "fixtures" / "vision"
 OK_JSON = (FIXTURES / "ok.json").read_text()
 PHOTO = (FIXTURES / "photo.jpg").read_bytes()
 URLS = ["https://img.example.com/1.jpg", "https://img.example.com/2.jpg"]
-API_REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+API_REQUEST = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
 
 
 class FakeMessages:
@@ -81,7 +81,7 @@ def jpeg(width, height, mode="RGB"):
 
 
 def api_status_error(cls, status):
-    return cls(f"HTTP {status}", response=httpx2.Response(status, request=API_REQUEST), body=None)
+    return cls(f"HTTP {status}", response=httpx.Response(status, request=API_REQUEST), body=None)
 
 
 def test_request_arguments():
@@ -192,6 +192,49 @@ def test_connection_error_failed_zero_cost():
     assert result.status == "failed"
     assert result.cost_usd == 0
     assert result.error == "Connection error."
+
+
+def test_unknown_api_error_failed_zero_cost():
+    error = anthropic.APIResponseValidationError(
+        response=httpx.Response(200, request=API_REQUEST), body=None)
+    scanner, _ = make_scanner(error=error)
+    result = scanner.scan(URLS, "lot")
+    assert result.status == "failed"
+    assert result.cost_usd == 0
+    assert result.error == "Data returned by API invalid for expected schema."
+
+
+def one_item_json(photo_index=0, quantity=1):
+    return json.dumps({
+        "items": [{
+            "kind": "game", "platform": "SNES", "title": "Chrono Trigger", "edition": None,
+            "completeness": "loose", "quantity": quantity, "confidence": "high",
+            "photo_index": photo_index,
+        }],
+        "unit_count_estimate": None,
+        "notes": "",
+    })
+
+
+def test_photo_index_maps_back_to_original_url_position():
+    # first URL 404s, so the only photo sent is image_urls[1]
+    scanner, _ = make_scanner(make_response(text=one_item_json(photo_index=0)),
+                              photos={URLS[1]: PHOTO})
+    result = scanner.scan(URLS, "lot")
+    assert result.items[0].photo_index == 1
+
+
+def test_photo_index_out_of_range_is_unknown():
+    scanner, _ = make_scanner(make_response(text=one_item_json(photo_index=5)))
+    result = scanner.scan(URLS, "lot")
+    assert result.items[0].photo_index == -1
+    scanner, _ = make_scanner(make_response(text=one_item_json(photo_index=-2)))
+    assert scanner.scan(URLS, "lot").items[0].photo_index == -1
+
+
+def test_quantity_clamped_to_at_least_one():
+    scanner, _ = make_scanner(make_response(text=one_item_json(quantity=0)))
+    assert scanner.scan(URLS, "lot").items[0].quantity == 1
 
 
 def test_no_photos_failed_without_request():
