@@ -146,6 +146,16 @@ Starter coverage:
   Halo Infinite edition, Switch OLED Zelda: Tears of the Kingdom and Pokémon
   Scarlet & Violet editions, God of War Ragnarök and Spider-Man 2 DualSense
   editions). Every entry is verified to be a real release when written.
+- **Collectible limited-edition consoles, any generation** (added by the user
+  on 2026-10-22): any limited or special-edition console run with strong
+  resale value, starting with the Xbox 360 Halo 3 Special Edition. Examples
+  to evaluate include Xbox 360 Halo Reach / Halo 4 / Star Wars / Gears of War 3
+  editions, original Xbox Halo Special Edition, PS4 20th Anniversary Edition,
+  N64 Pikachu Edition, and Pokémon / Zelda handheld editions. An entry is added
+  only when it is confirmed real and recent eBay sold prices show strong
+  resale (well above a standard console of the same model). Patterns must
+  never match game-only listings that share the name (e.g. "Halo 3" the game,
+  "Halo 3 Legendary Edition" the game collector's box).
 
 ### 5.2 Bulk-lot products (`bulk.yaml`)
 
@@ -352,6 +362,7 @@ controller 10; `lot_ship_base` 8, `lot_ship_per_game` 0.40; `min_profit` 30;
 - **ShopGoodwill and HiBid:** a fixed set of broad queries defined in config
   (e.g. "rtx", "geforce", "ryzen", "intel core", "ps5",
   "xbox series", "switch oled", "dualsense", "limited edition controller",
+  "limited edition console", "special edition console",
   "console lot", "controller lot", "video game lot", "games lot"). Every
   returned listing is classified locally.
 - Listings are upserted by `(source, source_id)`. `first_seen` drives "new
