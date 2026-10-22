@@ -1,0 +1,42 @@
+{
+  "searchResults": {
+    "items": [
+      {
+        "itemId": 240000001,
+        "title": "NVIDIA GeForce RTX 3070 8GB Graphics Card Tested",
+        "currentPrice": 187.5,
+        "numBids": 9,
+        "endTime": "2026-10-25T19:30:00",
+        "imageURL": "https://images.shopgoodwill.com/240000001/thumb.jpg",
+        "pickupOnly": false
+      },
+      {
+        "itemId": 240000002,
+        "title": "Lot of 12 Nintendo Switch Games",
+        "currentPrice": 64.0,
+        "numBids": 0,
+        "endTime": "2026-10-26T08:15:30",
+        "imageURL": "https://images.shopgoodwill.com/240000002/thumb.jpg",
+        "pickupOnly": true
+      },
+      {
+        "itemId": 240000003,
+        "title": "Sony PlayStation 5 Console Disc Edition PICKUP ONLY",
+        "currentPrice": 210.0,
+        "numBids": 4,
+        "endTime": "2026-11-02T10:00:00",
+        "imageURL": "https://images.shopgoodwill.com/240000003/thumb.jpg",
+        "pickupOnly": false
+      },
+      {
+        "itemId": 240000004,
+        "title": "Xbox Series X Controller",
+        "currentPrice": 22.0,
+        "numBids": 2,
+        "endTime": "2026-10-24T01:05:00",
+        "imageURL": "",
+        "pickupOnly": false
+      }
+    ]
+  }
+}
