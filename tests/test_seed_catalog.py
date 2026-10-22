@@ -272,6 +272,27 @@ def test_every_pattern_matches_its_own_name():
     ("Nintendo Wii U Wind Waker Limited Edition Deluxe Set", "wii-u-zelda-wind-waker"),
     ("Sega Dreamcast Hello Kitty Edition Console", "dreamcast-hello-kitty"),
     ("Hello Kitty Dreamcast System Pink", "dreamcast-hello-kitty"),
+    # fix round 1: a bundled game, charger or controller after with / and / +
+    ("Xbox 360 Halo 3 Special Edition Console with Halo 3 game, controller and cables",
+     "xbox-360-halo-3-special-edition"),
+    ("Xbox 360 Halo 3 Special Edition Console w/ Halo 3 game & controller",
+     "xbox-360-halo-3-special-edition"),
+    ("Microsoft Xbox 360 Halo 3 Special Edition 20GB Console + Halo 3 Game",
+     "xbox-360-halo-3-special-edition"),
+    ("Xbox 360 Halo 3 Special Edition Console & Halo 3 Game, Matching Controller",
+     "xbox-360-halo-3-special-edition"),
+    ("Xbox 360 Halo 3 Special Edition Console W/ Halo 3 Game", "xbox-360-halo-3-special-edition"),
+    ("Xbox 360 Halo 3 Special Edition Console with charger", "xbox-360-halo-3-special-edition"),
+    ("Xbox 360 S Halo Reach Limited Edition Console 250GB with Halo Reach Game",
+     "xbox-360-halo-reach-limited-edition"),
+    ("Original Xbox Halo Special Edition Green Console with Halo game",
+     "xbox-halo-special-edition"),
+    ("Original Xbox Halo Special Edition Console + Halo Combat Evolved game",
+     "xbox-halo-special-edition"),
+    ("Game Boy Advance SP Pikachu with Pokemon Ruby game", "gba-sp-pikachu"),
+    ("Nintendo DS Lite Pikachu Edition with Pokemon Diamond Game", "ds-lite-pikachu"),
+    ("Nintendo 64 Pikachu Edition Console with Hey You Pikachu game", "n64-pikachu"),
+    ("Nintendo 64 Pikachu Edition Blue Yellow", "n64-pikachu"),
 ])
 def test_collectible_console(catalog, title, key):
     result = match_single(title, SEED.products)
@@ -320,7 +341,48 @@ def test_collectible_console(catalog, title, key):
     # plain consoles are not limited editions
     "Xbox 360 console",
     "Xbox 360 Slim 250GB console",
+    # fix round 1: an edition named after with / and / + is an extra
+    "Xbox 360 Elite console with controller, Halo 3 Limited Edition game",
+    "Xbox 360 S 250GB console Halo Reach Edition",
+    "Hey You Pikachu Nintendo 64",
+    # fix round 1: parts and accessories named after an edition
+    "Halo 3 Special Edition Xbox 360 Hard Drive 20GB",
+    "Halo 3 Spartan Edition Xbox 360 Hard Drive Green",
+    "Xbox 360 Halo 3 Special Edition 20GB HDD",
+    "Xbox 360 Halo 3 Special Edition Power Supply",
+    "Halo 3 Special Edition Xbox 360 Manual",
+    "Halo 3 Special Edition Xbox 360 Console Manual and Inserts",
+    "Xbox 360 Halo 3 Special Edition Gold Wireless Controller Charger",
+    "Xbox 360 Halo 3 Special Edition Console Parts Motherboard",
+    "Halo Reach Limited Edition Xbox 360 250GB Hard Drive",
+    "Xbox 360 Star Wars R2-D2 Limited Edition 320GB Hard Drive",
+    "Xbox 360 Star Wars R2-D2 Limited Edition Power Supply",
+    "Xbox 360 Star Wars R2D2 Kinect Sensor Limited Edition",
+    "Xbox One X Cyberpunk 2077 Limited Edition 1TB Hard Drive",
+    "PS4 20th Anniversary Edition 500GB Hard Drive",
+    "Game Boy Advance SP Pikachu AC Adapter",
+    "Nintendo DS Lite Pikachu Battery",
+    "DS Lite Dialga Palkia Replacement Hinge",
+    "Nintendo DS Lite Dialga Palkia Manual and Inserts",
+    "Pokemon Groudon GBA SP Box and Manual",
+    "New 3DS XL Majora's Mask Edition Replacement Top Shell",
+    "New 3DS XL Pikachu Edition Battery Cover",
+    "GBA SP Kyogre Edition Battery Cover",
+    "New Nintendo 3DS XL Majora's Mask faceplates",
+    "New 3DS XL Majora's Mask Edition Charger",
+    "3DS Zelda 25th Anniversary Edition AR Cards",
+    "Zelda 25th Anniversary 3DS Bundle Box Insert",
+    "Zelda 25th Anniversary Symphony CD 3DS",
 ])
 def test_collectible_console_no_match(catalog, title):
     assert match_single(title, SEED.products) is None
+    assert _classify(title, catalog) is None
+
+
+def test_collectible_console_with_game_count(catalog):
+    # The title is the edition, but a console listed with a game count is a
+    # console + games bundle, which classify rejects as neither lot type (6.3).
+    title = "Xbox 360 Halo 3 Special Edition Console Bundle with 5 games"
+    result = match_single(title, SEED.products)
+    assert result is not None and result[0].id == "xbox-360-halo-3-special-edition"
     assert _classify(title, catalog) is None
