@@ -189,3 +189,30 @@ def test_latest_runs_one_per_source(tmp_path):
     assert rows["ebay"]["id"] == r2 and rows["ebay"]["status"] == "ok"
     assert rows["ebay"]["listings_seen"] == 12 and rows["ebay"]["error"] is None
     assert rows["hibid"]["status"] == "site_change" and rows["hibid"]["error"] == "no items"
+
+
+def test_market_value_and_comps_round_trip(tmp_path):
+    from datetime import date
+
+    from dealfinder.models import Comp, MarketValue
+
+    conn = db.connect(tmp_path / "d.sqlite")
+    mv = MarketValue(key="rtx-4070", condition="used", value=450.0, comp_count=2,
+                     method="active_bin", low_confidence=True, computed_at=T0)
+    comps = [Comp("RTX 4070 A", 440.0, date(2026, 10, 1), "https://e/1", "Pre-Owned"),
+             Comp("RTX 4070 B", 460.0, None, "https://e/2", None)]
+    db.save_market_value(conn, mv, comps)
+    db.save_market_value(conn, MarketValue(**{**mv.__dict__, "condition": "new"}), comps[:1])
+    assert db.get_market_value(conn, "rtx-4070", "used") == mv
+    assert db.get_comps(conn, "rtx-4070", "used") == comps
+    # a re-save replaces the comps for that key and condition only
+    db.save_market_value(conn, mv, comps[1:])
+    assert db.get_comps(conn, "rtx-4070", "used") == comps[1:]
+    assert db.get_comps(conn, "rtx-4070", "new") == comps[:1]
+
+    item = MarketValue(key="snes|chrono trigger", condition="cib", value=600.0, comp_count=3,
+                       method="sold", low_confidence=False, computed_at=T0)
+    db.save_market_value(conn, item, [], table="item_prices")
+    row = conn.execute("SELECT platform, title, completeness FROM item_prices").fetchone()
+    assert tuple(row) == ("snes", "chrono trigger", "cib")
+    assert db.get_market_value(conn, "snes|chrono trigger", "cib", table="item_prices") == item

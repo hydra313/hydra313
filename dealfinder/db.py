@@ -4,11 +4,11 @@ import json
 import re
 import sqlite3
 from collections.abc import Sequence
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Collection, Literal, get_args
 
-from dealfinder.models import Category, Classified, Listing, Scored
+from dealfinder.models import Category, Classified, Comp, Listing, MarketValue, Scored
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS listings (
@@ -56,18 +56,21 @@ CREATE TABLE IF NOT EXISTS market_values (
 CREATE TABLE IF NOT EXISTS comps (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL,
+    condition TEXT NOT NULL,
     title TEXT NOT NULL,
     price REAL NOT NULL,
     sold_date TEXT,
-    url TEXT NOT NULL
+    url TEXT NOT NULL,
+    condition_label TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_comps_key ON comps (key);
+CREATE INDEX IF NOT EXISTS idx_comps_key ON comps (key, condition);
 CREATE TABLE IF NOT EXISTS item_prices (
     platform TEXT NOT NULL,
     title TEXT NOT NULL,
     completeness TEXT NOT NULL,
     value REAL NOT NULL,
     comp_count INTEGER NOT NULL,
+    method TEXT NOT NULL DEFAULT 'sold',
     low_confidence INTEGER NOT NULL DEFAULT 0,
     computed_at TEXT NOT NULL,
     PRIMARY KEY (platform, title, completeness)
@@ -333,6 +336,108 @@ def latest_runs(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         "SELECT * FROM runs WHERE id IN (SELECT MAX(id) FROM runs GROUP BY source)"
         " ORDER BY source"
     ).fetchall()
+
+
+# --- market values and comps -------------------------------------------------
+
+ValueTable = Literal["market_values", "item_prices"]
+
+
+def _check_value_table(table: str) -> None:
+    if table not in ("market_values", "item_prices"):
+        raise ValueError(f"unknown market value table {table!r}")
+
+
+def save_market_value(
+    conn: sqlite3.Connection,
+    mv: MarketValue,
+    comps: list[Comp],
+    table: ValueTable = "market_values",
+) -> None:
+    """Upsert a value and replace the comps stored for its (key, condition).
+
+    item_prices rows split the key "platform|title" into their own columns.
+    """
+    _check_value_table(table)
+    common = {
+        "value": mv.value,
+        "comp_count": mv.comp_count,
+        "method": mv.method,
+        "low_confidence": int(mv.low_confidence),
+        "computed_at": _iso(mv.computed_at),
+    }
+    if table == "market_values":
+        row = {"key": mv.key, "condition": mv.condition, **common}
+        conflict = "key, condition"
+    else:
+        platform, _, title = mv.key.partition("|")
+        row = {"platform": platform, "title": title, "completeness": mv.condition, **common}
+        conflict = "platform, title, completeness"
+    cols = ", ".join(row)
+    marks = ", ".join(f":{k}" for k in row)
+    updates = ", ".join(f"{k} = excluded.{k}" for k in common)
+    conn.execute(
+        f"INSERT INTO {table} ({cols}) VALUES ({marks})"
+        f" ON CONFLICT ({conflict}) DO UPDATE SET {updates}",
+        row,
+    )
+    conn.execute("DELETE FROM comps WHERE key = ? AND condition = ?", (mv.key, mv.condition))
+    conn.executemany(
+        "INSERT INTO comps (key, condition, title, price, sold_date, url, condition_label)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            (mv.key, mv.condition, c.title, c.price,
+             c.sold_date.isoformat() if c.sold_date else None, c.url, c.condition_label)
+            for c in comps
+        ],
+    )
+    conn.commit()
+
+
+def get_market_value(
+    conn: sqlite3.Connection,
+    key: str,
+    condition: str,
+    table: ValueTable = "market_values",
+) -> MarketValue | None:
+    _check_value_table(table)
+    if table == "market_values":
+        row = conn.execute(
+            "SELECT * FROM market_values WHERE key = ? AND condition = ?", (key, condition)
+        ).fetchone()
+    else:
+        platform, _, title = key.partition("|")
+        row = conn.execute(
+            "SELECT * FROM item_prices WHERE platform = ? AND title = ? AND completeness = ?",
+            (platform, title, condition),
+        ).fetchone()
+    if row is None:
+        return None
+    return MarketValue(
+        key=key,
+        condition=condition,
+        value=row["value"],
+        comp_count=row["comp_count"],
+        method=row["method"],
+        low_confidence=bool(row["low_confidence"]),
+        computed_at=datetime.fromisoformat(row["computed_at"]),
+    )
+
+
+def get_comps(conn: sqlite3.Connection, key: str, condition: str) -> list[Comp]:
+    rows = conn.execute(
+        "SELECT * FROM comps WHERE key = ? AND condition = ? ORDER BY id", (key, condition)
+    ).fetchall()
+    return [
+        Comp(
+            title=r["title"],
+            price=r["price"],
+            sold_date=date.fromisoformat(r["sold_date"]) if r["sold_date"] else None,
+            url=r["url"],
+            condition_label=r["condition_label"],
+        )
+        for r in rows
+    ]
 
 
 # --- catalog overrides and custom entries -----------------------------------
