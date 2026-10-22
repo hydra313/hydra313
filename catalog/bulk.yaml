@@ -1,0 +1,315 @@
+# Bulk-lot products (spec 5.2). GPU and CPU bulk products are generated from the
+# single-item catalog. Console and controller patterns need a hardware word, except
+# handhelds, whose device name alone is enough (game lots route first on game words).
+
+- id: ps1-console
+  category: console
+  name: PlayStation 1 console
+  ebay_query: "ps1 console"
+  match: '\b(ps1|psx|psone|ps one|playstation( 1| one)?)\b(?! ?([2-5]|vita|portable|portal|classic|vr|move|plus|network)\b).*\b(consoles?|systems?|scph)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: ps2-console
+  category: console
+  name: PlayStation 2 console
+  ebay_query: "ps2 console"
+  match: '\b(ps2|playstation ?2)\b.*\b(consoles?|systems?|slim|fat|scph)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: ps3-console
+  category: console
+  name: PlayStation 3 console
+  ebay_query: "ps3 console"
+  match: '\b(ps3|playstation ?3)\b.*\b(consoles?|systems?|slim|fat|cech)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: ps4-console
+  category: console
+  name: PlayStation 4 console
+  ebay_query: "ps4 console"
+  match: '\b(ps4|playstation ?4)\b.*\b(consoles?|systems?|slim|cuh)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: ps5-console
+  category: console
+  name: PlayStation 5 console
+  ebay_query: "ps5 console"
+  match: '\b(ps5|playstation ?5)\b.*\b(consoles?|systems?|slim|cfi)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: psp-console
+  category: console
+  name: PSP handheld
+  ebay_query: "psp console"
+  match: '\b(psp|playstation portable)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: ps-vita-console
+  category: console
+  name: PS Vita handheld
+  ebay_query: "ps vita console"
+  match: '\b(ps|playstation) ?vita\b'
+  repair_cost: null
+  success_rate: null
+
+- id: xbox-console
+  category: console
+  name: Original Xbox console
+  ebay_query: "original xbox console"
+  match: '\bxbox\b(?! ?(360|one|series)\b).*\b(consoles?|systems?)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: xbox-360-console
+  category: console
+  name: Xbox 360 console
+  ebay_query: "xbox 360 console"
+  match: '\bxbox ?360\b.*\b(consoles?|systems?|slim|fat)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: xbox-one-console
+  category: console
+  name: Xbox One console
+  ebay_query: "xbox one console"
+  match: '\bxbox ?one\b.*\b(consoles?|systems?)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: xbox-series-x-console
+  category: console
+  name: Xbox Series X console
+  ebay_query: "xbox series x console"
+  match: '\bxbox series x\b(?! s\b).*\b(consoles?|systems?)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: xbox-series-s-console
+  category: console
+  name: Xbox Series S console
+  ebay_query: "xbox series s console"
+  match: '\bxbox series s\b.*\b(consoles?|systems?)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: gamecube-console
+  category: console
+  name: Nintendo GameCube console
+  ebay_query: "gamecube console"
+  match: '\bgame ?cube\b.*\b(consoles?|systems?|dol)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: wii-console
+  category: console
+  name: Nintendo Wii console
+  ebay_query: "wii console"
+  match: '\bwii\b(?! ?u\b).*\b(consoles?|systems?|rvl)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: wii-u-console
+  category: console
+  name: Nintendo Wii U console
+  ebay_query: "wii u console"
+  match: '\bwii ?u\b.*\b(consoles?|systems?|wup)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: switch-console
+  category: console
+  name: Nintendo Switch console
+  ebay_query: "nintendo switch console"
+  match: '\b(nintendo )?switch\b(?! (lite|oled|2)\b).*\b(consoles?|systems?|hac)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: switch-lite-console
+  category: console
+  name: Nintendo Switch Lite handheld
+  ebay_query: "nintendo switch lite"
+  match: '\b(nintendo )?switch lite\b'
+  repair_cost: null
+  success_rate: null
+
+- id: switch-oled-console
+  category: console
+  name: Nintendo Switch OLED console
+  ebay_query: "nintendo switch oled console"
+  match: '\b(nintendo )?switch oled\b.*\b(consoles?|systems?|models?|handhelds?)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: switch-2-console
+  category: console
+  name: Nintendo Switch 2 console
+  ebay_query: "nintendo switch 2 console"
+  match: '\b(nintendo )?switch 2\b.*\b(consoles?|systems?)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: ds-console
+  category: console
+  name: Nintendo DS handheld
+  ebay_query: "nintendo ds console"
+  match: '\b(nintendo )?ds\b'
+  repair_cost: null
+  success_rate: null
+
+- id: ds-lite-console
+  category: console
+  name: Nintendo DS Lite handheld
+  ebay_query: "nintendo ds lite"
+  match: '\b(nintendo )?ds lite\b'
+  repair_cost: null
+  success_rate: null
+
+- id: dsi-console
+  category: console
+  name: Nintendo DSi handheld
+  ebay_query: "nintendo dsi"
+  match: '\b(nintendo )?dsi( xl| ll)?\b'
+  repair_cost: null
+  success_rate: null
+
+- id: 3ds-console
+  category: console
+  name: Nintendo 3DS handheld
+  ebay_query: "nintendo 3ds console"
+  match: '\b(nintendo )?3ds( xl| ll)?\b'
+  repair_cost: null
+  success_rate: null
+
+- id: new-3ds-console
+  category: console
+  name: New Nintendo 3DS handheld
+  ebay_query: "new nintendo 3ds"
+  match: '\b(nintendo )?new (nintendo )?3ds( xl| ll)?\b'
+  repair_cost: null
+  success_rate: null
+
+- id: 2ds-console
+  category: console
+  name: Nintendo 2DS handheld
+  ebay_query: "nintendo 2ds"
+  match: '\b(nintendo )?(new )?(nintendo )?2ds( xl| ll)?\b'
+  repair_cost: null
+  success_rate: null
+
+- id: gameboy-console
+  category: console
+  name: Nintendo Game Boy handheld
+  ebay_query: "nintendo game boy console"
+  match: '\b(nintendo )?game ?boy( pocket| light)?\b'
+  repair_cost: null
+  success_rate: null
+
+- id: gameboy-color-console
+  category: console
+  name: Nintendo Game Boy Color handheld
+  ebay_query: "game boy color console"
+  match: '\b(nintendo )?game ?boy colou?r\b|\bgbc\b'
+  repair_cost: null
+  success_rate: null
+
+- id: gba-console
+  category: console
+  name: Nintendo Game Boy Advance handheld
+  ebay_query: "game boy advance console"
+  match: '\b(nintendo )?game ?boy (advance( sp)?|micro)\b|\bgba( sp)?\b'
+  repair_cost: null
+  success_rate: null
+
+- id: dualshock-2
+  category: controller
+  name: DualShock 2 controller
+  ebay_query: "ps2 dualshock 2 controller"
+  match: '\b(ps2|playstation ?2)\b.*\b(controllers?|gamepads?)\b|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?2\b'
+  repair_cost: null
+  success_rate: null
+
+- id: dualshock-3
+  category: controller
+  name: DualShock 3 controller
+  ebay_query: "ps3 dualshock 3 controller"
+  match: '\b(ps3|playstation ?3)\b.*\b(controllers?|gamepads?)\b|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(dualshock ?3|sixaxis)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: dualshock-4
+  category: controller
+  name: DualShock 4 controller
+  ebay_query: "ps4 dualshock 4 controller"
+  match: '\b(ps4|playstation ?4)\b.*\b(controllers?|gamepads?)\b|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?4\b'
+  repair_cost: null
+  success_rate: null
+
+- id: dualsense
+  category: controller
+  name: DualSense controller
+  ebay_query: "ps5 dualsense controller"
+  match: '\b(ps5|playstation ?5)\b.*\b(controllers?|gamepads?)\b|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualsense\b'
+  repair_cost: null
+  success_rate: null
+
+- id: xbox-controller
+  category: controller
+  name: Original Xbox controller
+  ebay_query: "original xbox controller"
+  match: '\boriginal xbox\b.*\b(controllers?|gamepads?)\b|\bxbox\b(?! ?(360|one|series)\b).*\b(duke|controller s)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: xbox-360-controller
+  category: controller
+  name: Xbox 360 controller
+  ebay_query: "xbox 360 controller"
+  match: '\bxbox ?360\b.*\b(controllers?|gamepads?)\b'
+  repair_cost: null
+  success_rate: null
+
+- id: xbox-wireless-controller
+  category: controller
+  name: Xbox Wireless Controller (One / Series)
+  ebay_query: "xbox wireless controller"
+  match: '\bxbox ?(one|series)\b.*\b(controllers?|gamepads?)\b|\bxbox wireless controllers?\b'
+  repair_cost: null
+  success_rate: null
+
+- id: joy-con
+  category: controller
+  name: Nintendo Switch Joy-Con
+  ebay_query: "joy-con"
+  match: '(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bjoy ?cons?\b'
+  repair_cost: null
+  success_rate: null
+
+- id: switch-pro-controller
+  category: controller
+  name: Nintendo Switch Pro Controller
+  ebay_query: "switch pro controller"
+  match: '\bswitch\b.*\bpro controllers?\b'
+  repair_cost: null
+  success_rate: null
+
+- id: gamecube-controller
+  category: controller
+  name: Nintendo GameCube controller
+  ebay_query: "gamecube controller"
+  match: '\bgame ?cube\b.*\b(controllers?|gamepads?)\b|\bwavebird\b'
+  repair_cost: null
+  success_rate: null
+
+- id: wii-remote
+  category: controller
+  name: Nintendo Wii Remote
+  ebay_query: "wii remote"
+  match: '(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(wii ?(remotes?|motes?)|wiimotes?)\b'
+  repair_cost: null
+  success_rate: null

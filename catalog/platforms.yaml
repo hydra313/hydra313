@@ -1,0 +1,147 @@
+# Game platforms (spec 5.3). Look-alikes nest by match span ("xbox" inside
+# "xbox 360"), so the most specific platform wins.
+
+- id: nes
+  name: Nintendo Entertainment System
+  match: '\b(nes|nintendo entertainment system|famicom)\b'
+  ebay_lot_query: "nes game lot"
+
+- id: snes
+  name: Super Nintendo
+  match: '\b(snes|super nintendo( entertainment system)?|super famicom)\b'
+  ebay_lot_query: "snes game lot"
+
+- id: n64
+  name: Nintendo 64
+  match: '\b(n64|nintendo 64)\b'
+  ebay_lot_query: "n64 game lot"
+
+- id: gamecube
+  name: Nintendo GameCube
+  match: '\b(nintendo )?game ?cube\b|\bngc\b'
+  ebay_lot_query: "gamecube game lot"
+
+- id: wii
+  name: Nintendo Wii
+  match: '\b(nintendo )?wii\b'
+  ebay_lot_query: "wii game lot"
+
+- id: wii-u
+  name: Nintendo Wii U
+  match: '\b(nintendo )?wii ?u\b'
+  ebay_lot_query: "wii u game lot"
+
+- id: switch
+  name: Nintendo Switch
+  match: '\b(nintendo )?switch( lite| oled( model)?)?\b'
+  ebay_lot_query: "nintendo switch game lot"
+
+- id: switch-2
+  name: Nintendo Switch 2
+  match: '\b(nintendo )?switch 2\b'
+  ebay_lot_query: "nintendo switch 2 game lot"
+
+- id: gameboy
+  name: Game Boy
+  match: '\b(nintendo )?game ?boy\b'
+  ebay_lot_query: "game boy game lot"
+
+- id: gameboy-color
+  name: Game Boy Color
+  match: '\b(nintendo )?game ?boy colou?r\b|\bgbc\b'
+  ebay_lot_query: "game boy color game lot"
+
+- id: gameboy-advance
+  name: Game Boy Advance
+  match: '\b(nintendo )?game ?boy advance( sp)?\b|\bgba( sp)?\b'
+  ebay_lot_query: "game boy advance game lot"
+
+- id: ds
+  name: Nintendo DS
+  match: '\b(nintendo )?(ds|dsi)( lite| xl| ll)?\b'
+  ebay_lot_query: "nintendo ds game lot"
+
+- id: 3ds
+  name: Nintendo 3DS
+  match: '\b(nintendo )?(new )?(nintendo )?[23]ds( xl| ll)?\b'
+  ebay_lot_query: "3ds game lot"
+
+- id: genesis
+  name: Sega Genesis
+  match: '\b(sega )?(genesis|mega drive)\b'
+  ebay_lot_query: "sega genesis game lot"
+
+- id: saturn
+  name: Sega Saturn
+  match: '\b(sega )?saturn\b'
+  ebay_lot_query: "sega saturn game lot"
+
+- id: dreamcast
+  name: Sega Dreamcast
+  match: '\b(sega )?dreamcast\b'
+  ebay_lot_query: "dreamcast game lot"
+
+- id: game-gear
+  name: Sega Game Gear
+  match: '\b(sega )?game ?gear\b'
+  ebay_lot_query: "game gear game lot"
+
+- id: ps1
+  name: PlayStation
+  match: '\b(ps1|psx|psone|ps one|playstation( 1| one)?)\b(?! ?([2-5]|vita|portable|portal|classic|vr|move|plus|network)\b)'
+  ebay_lot_query: "ps1 game lot"
+
+- id: ps2
+  name: PlayStation 2
+  match: '\b(ps2|playstation ?2)\b'
+  ebay_lot_query: "ps2 game lot"
+
+- id: ps3
+  name: PlayStation 3
+  match: '\b(ps3|playstation ?3)\b'
+  ebay_lot_query: "ps3 game lot"
+
+- id: ps4
+  name: PlayStation 4
+  match: '\b(ps4|playstation ?4)\b'
+  ebay_lot_query: "ps4 game lot"
+
+- id: ps5
+  name: PlayStation 5
+  match: '\b(ps5|playstation ?5)\b'
+  ebay_lot_query: "ps5 game lot"
+
+- id: psp
+  name: PSP
+  match: '\b(psp|playstation portable)\b'
+  ebay_lot_query: "psp game lot"
+
+- id: ps-vita
+  name: PS Vita
+  match: '\b(ps|playstation) ?vita\b'
+  ebay_lot_query: "ps vita game lot"
+
+- id: xbox
+  name: Xbox
+  match: '\b(original )?xbox\b'
+  ebay_lot_query: "original xbox game lot"
+
+- id: xbox-360
+  name: Xbox 360
+  match: '\bxbox ?360\b'
+  ebay_lot_query: "xbox 360 game lot"
+
+- id: xbox-one
+  name: Xbox One
+  match: '\bxbox ?one\b'
+  ebay_lot_query: "xbox one game lot"
+
+- id: xbox-series
+  name: Xbox Series X|S
+  match: '\bxbox series( x)?( s)?\b'
+  ebay_lot_query: "xbox series x game lot"
+
+- id: atari-2600
+  name: Atari 2600
+  match: '\batari ?2600\b'
+  ebay_lot_query: "atari 2600 game lot"
