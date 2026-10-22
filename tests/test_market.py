@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
@@ -169,6 +170,7 @@ def test_cache_expired_refetches(conn):
     svc.product_value(PRODUCTS[0], "used")
     sold.comps = [comp("RTX 4070 Ti", 700, "Used")]
     clock.now = T0 + timedelta(hours=25)
+    svc.begin_run()
     mv = svc.product_value(PRODUCTS[0], "used")
     assert len(sold.queries) == 2
     assert mv.value == 700 and mv.computed_at == clock.now
@@ -289,6 +291,7 @@ def test_item_price_title_filter_and_30_day_ttl(conn):
     assert len(sold.queries) == 1
 
     clock.now = T0 + timedelta(days=31)
+    svc.begin_run()
     svc.item_price("SNES", "Chrono Trigger", "loose")
     assert len(sold.queries) == 2
 
@@ -307,3 +310,153 @@ def test_item_price_ignores_short_and_stop_words(conn):
     mv = make_service(conn, sold).item_price("SNES", "The Legend of Zelda: A Link to the Past",
                                              "loose")
     assert mv.value == 40
+
+
+# --- review fixes ----------------------------------------------------------------
+
+def test_value_count_and_comps_agree_after_trimming(conn):
+    raw = [76, 92, 100, 100, 107, 109, 138, 162, 199]
+    sold = FakeSold([comp(f"RTX 4070 Ti unit {i}", v, "Used") for i, v in enumerate(raw)])
+    mv = make_service(conn, sold).product_value(PRODUCTS[0], "used")
+    assert iqr_median(raw) == (103.5, 8)
+    assert mv.value == iqr_median(raw)[0]
+    assert mv.comp_count == len(db.get_comps(conn, "rtx-4070-ti", "used")) == 8
+
+
+class FailingEbay:
+    def __init__(self):
+        self.calls = 0
+
+    def search(self, query, fixed_price_only=False):
+        self.calls += 1
+        raise SourceError("browse down")
+
+
+def test_stale_product_value_returned_when_sold_blocked(conn):
+    sold = FakeSold([comp("RTX 4070 Ti", 600, "Used")])
+    clock = Clock()
+    svc = make_service(conn, sold, None, clock)
+    first = svc.product_value(PRODUCTS[0], "used")
+    svc.begin_run()
+    sold.error = SourceBlocked("blocked")
+    clock.now = T0 + timedelta(hours=25)
+    assert svc.product_value(PRODUCTS[0], "used") == first
+    stored = db.get_market_value(conn, "rtx-4070-ti", "used")
+    assert stored.computed_at == T0  # not re-saved, so the next run retries
+    svc.begin_run()
+    sold.error = None
+    sold.comps = [comp("RTX 4070 Ti", 700, "Used")]
+    assert svc.product_value(PRODUCTS[0], "used").value == 700
+
+
+def test_stale_product_value_returned_when_browse_fallback_fails(conn):
+    ebay = FailingEbay()
+    sold = FakeSold([comp("RTX 4070 Ti", 600, "Used")])
+    clock = Clock()
+    svc = make_service(conn, sold, ebay, clock)
+    first = svc.product_value(PRODUCTS[0], "used")
+    svc.begin_run()
+    sold.comps = []  # no sold comps, so the Browse fallback runs and fails
+    clock.now = T0 + timedelta(hours=25)
+    assert svc.product_value(PRODUCTS[0], "used") == first
+    assert ebay.calls == 1
+    assert db.get_market_value(conn, "rtx-4070-ti", "used").computed_at == T0
+
+
+def test_stale_per_game_value_returned_when_fetch_fails(conn):
+    sold = FakeSold([comp("Lot of 10 PS2 games", 50)])
+    clock = Clock()
+    svc = make_service(conn, sold, clock=clock)
+    first = svc.per_game_value(PLATFORMS[0])
+    svc.begin_run()
+    sold.error = SourceError("down")
+    clock.now = T0 + timedelta(hours=25)
+    assert svc.per_game_value(PLATFORMS[0]) == first
+    assert len(sold.queries) == 2
+
+
+def test_active_bin_value_expires_after_two_hours(conn):
+    ebay = FakeEbay([_listing("MSI RTX 4070 Ti", 640, 0.0, "3000")])
+    sold = FakeSold(error=SourceError("down"))
+    clock = Clock()
+    svc = make_service(conn, sold, ebay, clock)
+    assert svc.product_value(PRODUCTS[0], "used").method == "active_bin"
+    svc.begin_run()
+    clock.now = T0 + timedelta(hours=1, minutes=59)
+    svc.product_value(PRODUCTS[0], "used")
+    assert len(sold.queries) == 1  # still fresh
+    clock.now = T0 + timedelta(hours=2)
+    sold.error = None
+    sold.comps = [comp("RTX 4070 Ti", 600, "Used")]
+    mv = svc.product_value(PRODUCTS[0], "used")
+    assert len(sold.queries) == 2
+    assert (mv.method, mv.value) == ("sold", 600)
+
+
+def test_bulk_value_when_source_product_disabled(conn):
+    disabled = replace(PRODUCTS[0], enabled=False)
+    catalog = Catalog(products=[disabled, PRODUCTS[1]], bulk=BULK, platforms=PLATFORMS)
+    sold = FakeSold([comp("RTX 4070 Ti", 600, "Used"), comp("RTX 4070 Ti Super", 800, "Used")])
+    svc = MarketService(conn, Config(), sold, None, catalog, Clock())
+    mv = svc.bulk_value(BULK[0])
+    assert (mv.key, mv.value, mv.comp_count) == ("rtx-4070-ti", 600, 1)
+
+
+def test_sold_fetch_memoized_across_conditions(conn):
+    ebay = FakeEbay([])
+    sold = FakeSold([comp("RTX 4070 Ti", 600, "Used")])
+    svc = make_service(conn, sold, ebay)
+    assert svc.product_value(PRODUCTS[0], "used").value == 600
+    assert svc.product_value(PRODUCTS[0], "new") is None  # no new comps; empty Browse too
+    assert sold.queries == ["rtx 4070 ti"]
+    assert ebay.calls == [("rtx 4070 ti", True)]
+
+
+def test_miss_is_negative_cached_across_runs(conn):
+    sold = FakeSold([])
+    clock = Clock()
+    svc = make_service(conn, sold, clock=clock)
+    assert svc.product_value(PRODUCTS[0], "used") is None
+    assert svc.product_value(PRODUCTS[0], "used") is None
+    assert len(sold.queries) == 1
+    svc.begin_run()
+    clock.now = T0 + timedelta(hours=23)
+    assert svc.product_value(PRODUCTS[0], "used") is None
+    assert len(sold.queries) == 1  # memo cleared, negative cache still applies
+    clock.now = T0 + timedelta(hours=24)
+    sold.comps = [comp("RTX 4070 Ti", 600, "Used")]
+    assert svc.product_value(PRODUCTS[0], "used").value == 600
+    assert len(sold.queries) == 2
+
+
+def test_item_price_negative_cache_uses_item_ttl(conn):
+    sold = FakeSold([])
+    clock = Clock()
+    svc = make_service(conn, sold, clock=clock)
+    assert svc.item_price("SNES", "Chrono Trigger", "loose") is None
+    svc.begin_run()
+    clock.now = T0 + timedelta(days=29)
+    assert svc.item_price("SNES", "Chrono Trigger", "loose") is None
+    assert len(sold.queries) == 1
+    clock.now = T0 + timedelta(days=30)
+    svc.item_price("SNES", "Chrono Trigger", "loose")
+    assert len(sold.queries) == 2
+
+
+def test_failed_fetch_without_cache_is_not_negative_cached(conn):
+    sold = FakeSold(error=SourceError("down"))
+    svc = make_service(conn, sold)
+    assert svc.product_value(PRODUCTS[0], "used") is None
+    svc.begin_run()
+    sold.error = None
+    sold.comps = [comp("RTX 4070 Ti", 600, "Used")]
+    assert svc.product_value(PRODUCTS[0], "used").value == 600
+
+
+def test_item_price_key_normalized(conn):
+    sold = FakeSold([comp("Chrono Trigger SNES cart", 300)])
+    svc = make_service(conn, sold)
+    mv = svc.item_price("SNES", "Chrono Trigger\u00ae", "loose")
+    assert mv.key == "snes|chrono trigger"
+    assert svc.item_price("snes", "Chrono  Trigger", "loose") == mv
+    assert len(sold.queries) == 1

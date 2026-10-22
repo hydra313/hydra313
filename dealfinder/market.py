@@ -5,6 +5,7 @@ import re
 import sqlite3
 import statistics
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import datetime, timedelta
 from typing import Callable
 
@@ -40,6 +41,10 @@ _ITEM_EXCLUDES = [
     r"\breproductions?\b",
     r"\bfor parts\b",
 ]
+
+# Values from current fixed-price listings expire sooner than sold values, so
+# sold comps are retried soon after a block lifts.
+ACTIVE_BIN_TTL = timedelta(hours=2)
 
 # Turns one candidate (comp, eBay condition id for active listings) into the
 # number it contributes to the median, or None to drop it.
@@ -112,11 +117,23 @@ class MarketService:
         self._ebay = ebay
         self._catalog = catalog
         self._clock = clock
+        # Per-run memo of fetch results (or the SourceError raised), cleared by begin_run().
+        self._sold_memo: dict[str, list[Comp] | SourceError] = {}
+        self._bin_memo: dict[str, list[Listing] | SourceError] = {}
+        # (table, key, condition) -> when a successful fetch last yielded no value.
+        self._misses: dict[tuple[str, str, str], datetime] = {}
+
+    def begin_run(self) -> None:
+        """Start a refresh: forget memoized fetches (the negative cache stays)."""
+        self._sold_memo.clear()
+        self._bin_memo.clear()
 
     # --- public values ------------------------------------------------------
 
     def product_value(self, p: Product, condition: Condition) -> MarketValue | None:
         products = self._catalog.enabled_products()
+        if not p.enabled:  # a bulk product can outlive its disabled source product
+            products = [*products, replace(p, enabled=True)]
 
         def value_of(comp: Comp, condition_id: str | None) -> float | None:
             if _is_parts(comp.condition_label):
@@ -198,7 +215,7 @@ class MarketService:
             return comp.price
 
         return self._value(
-            f"{platform}|{title}".lower(), condition, query, value_of, fallback=False,
+            f"{normalize(platform)}|{normalize(title)}", condition, query, value_of, fallback=False,
             table="item_prices",
             ttl=timedelta(days=self._cfg.item_price_ttl_days),
             min_comps=self._cfg.min_item_comps,
@@ -222,40 +239,79 @@ class MarketService:
         min_comps = self._cfg.min_comps if min_comps is None else min_comps
         now = self._clock()
         cached = db.get_market_value(self._conn, key, condition, table=table)
-        if cached is not None and now - cached.computed_at < ttl:
-            return cached
+        if cached is not None:
+            cached_ttl = ACTIVE_BIN_TTL if cached.method == "active_bin" else ttl
+            if now - cached.computed_at < cached_ttl:
+                return cached
+        miss_key = (table, key, condition)
+        missed_at = self._misses.get(miss_key)
+        if missed_at is not None and now - missed_at < ttl:
+            return None
 
+        # A failed fetch returns the cached value, even a stale one, without
+        # re-saving it, so the next run tries again.
+        errored = False
         method = "sold"
         try:
-            kept = self._select([(c, None) for c in self._sold.fetch(query)], value_of)
+            kept = self._select([(c, None) for c in self._fetch_sold(query)], value_of)
         except SourceError as e:
             log.warning("sold comps for %r failed: %s", query, e)
-            kept = []
+            if cached is not None:
+                return cached
+            errored, kept = True, []
         if not kept and fallback and self._ebay is not None:
             method = "active_bin"
             try:
-                listings = self._ebay.search(query, fixed_price_only=True)
+                listings = self._fetch_bin(query)
             except SourceError as e:
                 log.warning("active listings for %r failed: %s", query, e)
-                listings = []
+                if cached is not None:
+                    return cached
+                errored, listings = True, []
             kept = self._select([(_listing_comp(l), l.condition_id) for l in listings], value_of)
         if not kept:
+            if not errored:
+                self._misses[miss_key] = now
             return None
 
         keep = _iqr_keep([v for _, v in kept])
         kept = [pair for pair, k in zip(kept, keep) if k]
-        median, count = iqr_median([v for _, v in kept])
+        values = [v for _, v in kept]
         mv = MarketValue(
             key=key,
             condition=condition,
-            value=round(median, 2),
-            comp_count=count,
+            value=round(statistics.median(values), 2),
+            comp_count=len(kept),
             method=method,
-            low_confidence=method == "active_bin" or count < min_comps,
+            low_confidence=method == "active_bin" or len(kept) < min_comps,
             computed_at=now,
         )
         db.save_market_value(self._conn, mv, [c for c, _ in kept], table=table)
+        self._misses.pop(miss_key, None)
         return mv
+
+    def _fetch_sold(self, query: str) -> list[Comp]:
+        if query not in self._sold_memo:
+            try:
+                self._sold_memo[query] = self._sold.fetch(query)
+            except SourceError as e:
+                self._sold_memo[query] = e
+        result = self._sold_memo[query]
+        if isinstance(result, SourceError):
+            raise result
+        return result
+
+    def _fetch_bin(self, query: str) -> list[Listing]:
+        assert self._ebay is not None
+        if query not in self._bin_memo:
+            try:
+                self._bin_memo[query] = self._ebay.search(query, fixed_price_only=True)
+            except SourceError as e:
+                self._bin_memo[query] = e
+        result = self._bin_memo[query]
+        if isinstance(result, SourceError):
+            raise result
+        return result
 
     @staticmethod
     def _select(
