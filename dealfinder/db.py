@@ -4,11 +4,17 @@ import json
 import re
 import sqlite3
 from collections.abc import Sequence
+from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Collection, Literal, get_args
+from typing import TYPE_CHECKING, Collection, Literal, get_args
 
-from dealfinder.models import Category, Classified, Comp, Listing, MarketValue, Scored
+from dealfinder.models import (
+    Category, Classified, Comp, Listing, MarketValue, ScanResult, Scored,
+)
+
+if TYPE_CHECKING:
+    from dealfinder.finds import FindEval
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS listings (
@@ -88,6 +94,7 @@ CREATE TABLE IF NOT EXISTS scans (
     cost_usd REAL NOT NULL DEFAULT 0,
     scanned_at TEXT NOT NULL,
     error TEXT,
+    photo_urls TEXT NOT NULL DEFAULT '[]',
     UNIQUE (listing_id)
 );
 CREATE TABLE IF NOT EXISTS vision_spend (
@@ -617,3 +624,68 @@ def notification_failures_since(conn: sqlite3.Connection, since: datetime) -> in
         (_iso(since),),
     ).fetchone()
     return int(row["n"])
+
+
+# --- photo scans -------------------------------------------------------------
+
+
+def save_scan(
+    conn: sqlite3.Connection,
+    listing_id: int,
+    result: ScanResult,
+    eval: FindEval | None,
+    now: datetime,
+    *,
+    photo_urls: Sequence[str],
+) -> None:
+    """Store a listing's scan. `photo_urls` is the exact list passed to the scanner,
+    which each item's photo_index points into (-1 = unknown photo). Items carry the
+    price they were valued at, when there is one."""
+    priced = eval.priced if eval is not None else [(item, None) for item in result.items]
+    items = [
+        {**asdict(item),
+         "value": price.value if price is not None else None,
+         "value_low_confidence": price.low_confidence if price is not None else None}
+        for item, price in priced
+    ]
+    conn.execute(
+        "INSERT INTO scans (listing_id, status, model, items, unit_count_estimate,"
+        " identified_value, is_rare_find, is_lot_find, cost_usd, scanned_at, error, photo_urls)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            listing_id, result.status, result.model, json.dumps(items),
+            result.unit_count_estimate,
+            eval.identified_value if eval is not None else None,
+            int(eval.is_rare_find) if eval is not None else 0,
+            int(eval.is_lot_find) if eval is not None else 0,
+            result.cost_usd, _iso(now), result.error, json.dumps(list(photo_urls)),
+        ),
+    )
+    conn.commit()
+
+
+def get_scan(conn: sqlite3.Connection, listing_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM scans WHERE listing_id = ?", (listing_id,)).fetchone()
+
+
+def get_scan_by_source(
+    conn: sqlite3.Connection, source: str, source_id: str
+) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT s.* FROM scans s JOIN listings l ON l.id = s.listing_id"
+        " WHERE l.source = ? AND l.source_id = ?",
+        (source, source_id),
+    ).fetchone()
+
+
+def scan_candidates(conn: sqlite3.Connection, now: datetime) -> list[sqlite3.Row]:
+    """Spec 11.1: live, undismissed lots and unknown-quantity lots never scanned, best first."""
+    return conn.execute(
+        "SELECT l.* FROM listings l"
+        " WHERE l.kind IN ('hardware_lot', 'game_lot', 'scan_only')"
+        " AND l.dismissed = 0"
+        " AND (l.end_time IS NULL OR julianday(l.end_time) >= julianday(?))"
+        " AND NOT EXISTS (SELECT 1 FROM scans s WHERE s.listing_id = l.id)"
+        " ORDER BY l.rank_score DESC, l.id",
+        (_iso(now),),
+    ).fetchall()
