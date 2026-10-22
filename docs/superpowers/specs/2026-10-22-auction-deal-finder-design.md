@@ -391,7 +391,7 @@ all of these hold:
 - `scan_enabled` is on. **It is off by default** and toggled from the
   dashboard header, taking effect immediately.
 - `total_cost <= max_scan_price` (default $300).
-- Spend today + `scan_cost_ceiling` (default $0.25, the most one scan is
+- Spend today + `scan_cost_ceiling` (default $0.40, the most one scan is
   assumed to cost) ≤ `daily_cap` (default $5), and the same for the month
   against `monthly_cap` (default $50).
 
