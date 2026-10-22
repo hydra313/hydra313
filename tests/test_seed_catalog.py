@@ -222,3 +222,105 @@ def test_lot_rejected(catalog, title):
 def test_every_pattern_matches_its_own_name():
     for entry in (*SEED.products, *SEED.bulk, *SEED.platforms):
         assert re.search(entry.match, normalize(entry.name)), entry.id
+
+
+# Collectible limited-edition consoles of any generation (spec 5.1)
+@pytest.mark.parametrize("title, key", [
+    ("Xbox 360 Halo 3 Special Edition Console", "xbox-360-halo-3-special-edition"),
+    ("Halo 3 Limited Edition Xbox 360 Console 20GB", "xbox-360-halo-3-special-edition"),
+    ("Microsoft Xbox 360 Halo 3 Spartan Edition", "xbox-360-halo-3-special-edition"),
+    ("Xbox 360 Halo 3 Special Edition 20GB Green & Gold Console w/ Controller",
+     "xbox-360-halo-3-special-edition"),
+    ("Microsoft Xbox 360 S Halo: Reach Limited Edition 250GB Console",
+     "xbox-360-halo-reach-limited-edition"),
+    ("Halo Reach Limited Edition Xbox 360 Slim Console Bundle",
+     "xbox-360-halo-reach-limited-edition"),
+    ("Xbox 360 Star Wars R2-D2 Limited Edition Console 320GB", "xbox-360-star-wars-r2-d2"),
+    ("Xbox 360 Kinect Star Wars Limited Edition Bundle R2D2", "xbox-360-star-wars-r2-d2"),
+    ("Original Xbox Halo Special Edition Green Console", "xbox-halo-special-edition"),
+    ("Microsoft Xbox Translucent Green Halo Edition Console with Controller",
+     "xbox-halo-special-edition"),
+    ("Xbox One X Cyberpunk 2077 Limited Edition Console Bundle 1TB",
+     "xbox-one-x-cyberpunk-2077"),
+    ("Microsoft Xbox One X 1TB Cyberpunk 2077 Limited Edition Console",
+     "xbox-one-x-cyberpunk-2077"),
+    ("Sony PlayStation 4 20th Anniversary Edition 500GB Console", "ps4-20th-anniversary"),
+    ("20th Anniversary PS4 Console Gray", "ps4-20th-anniversary"),
+    ("PS4 Pro 500 Million Limited Edition 2TB Console", "ps4-pro-500-million"),
+    ("Sony PlayStation 4 Pro 2TB 500 Million Limited Edition", "ps4-pro-500-million"),
+    ("Nintendo 64 Pikachu Edition Console", "n64-pikachu"),
+    ("Pikachu N64 Console Pokemon Edition with Controller", "n64-pikachu"),
+    ("Panasonic Q GameCube Console SL-GC10", "gamecube-panasonic-q"),
+    ("Panasonic Q Nintendo GameCube DVD Player System", "gamecube-panasonic-q"),
+    ("Game Boy Advance SP Groudon Edition", "gba-sp-groudon"),
+    ("Pokemon Center Groudon GBA SP AGS-001", "gba-sp-groudon"),
+    ("Game Boy Advance SP Kyogre Edition", "gba-sp-kyogre"),
+    ("Nintendo GBA SP Kyogre Pokemon Center Limited", "gba-sp-kyogre"),
+    ("Game Boy Advance SP Pikachu Edition", "gba-sp-pikachu"),
+    ("Pokemon Pikachu GBA SP with Charger", "gba-sp-pikachu"),
+    ("Nintendo DS Lite Dialga Palkia Pokemon Center Edition", "ds-lite-dialga-palkia"),
+    ("DS Lite Pokemon Dialga & Palkia Limited Edition", "ds-lite-dialga-palkia"),
+    ("Nintendo DS Lite Pikachu Edition Yellow", "ds-lite-pikachu"),
+    ("Pokemon Center Pikachu DS Lite with Stylus", "ds-lite-pikachu"),
+    ("New Nintendo 3DS XL Majora's Mask Limited Edition", "new-3ds-xl-majoras-mask"),
+    ("Zelda Majoras Mask New 3DS XL Console", "new-3ds-xl-majoras-mask"),
+    ("Nintendo 3DS Zelda 25th Anniversary Edition", "3ds-zelda-25th-anniversary"),
+    ("Legend of Zelda 25th Anniversary 3DS Console Black", "3ds-zelda-25th-anniversary"),
+    ("New Nintendo 3DS XL Pikachu Yellow Edition", "new-3ds-xl-pikachu-yellow"),
+    ("Pikachu New 3DS XL Pokemon Edition", "new-3ds-xl-pikachu-yellow"),
+    ("Wii U Deluxe Zelda Wind Waker HD Edition 32GB Console", "wii-u-zelda-wind-waker"),
+    ("Nintendo Wii U Wind Waker Limited Edition Deluxe Set", "wii-u-zelda-wind-waker"),
+    ("Sega Dreamcast Hello Kitty Edition Console", "dreamcast-hello-kitty"),
+    ("Hello Kitty Dreamcast System Pink", "dreamcast-hello-kitty"),
+])
+def test_collectible_console(catalog, title, key):
+    result = match_single(title, SEED.products)
+    assert result is not None and result[0].id == key
+    classified = _classify(title, catalog)
+    assert classified is not None and (classified.kind, classified.key) == ("single", key)
+
+
+@pytest.mark.parametrize("title", [
+    # games and accessories that share an edition's name
+    "Halo 3 Xbox 360 game",
+    "Halo 3 Legendary Edition",
+    "Halo 3 Legendary Edition Xbox 360",
+    "Halo 3 Limited Edition game",
+    "Halo 3 Limited Edition Xbox 360",
+    "Halo 3 Xbox 360 controller",
+    "Xbox 360 Halo 3 Special Edition Wireless Controller",
+    "Halo 3 faceplate",
+    "Halo 3 ODST Xbox 360 game",
+    "Halo 3: ODST Xbox 360 Limited Edition",
+    "Xbox 360 Elite 120GB Console Halo 3 ODST Limited Edition Bundle",
+    "Xbox 360 Elite 120GB console with Halo 3 Limited Edition",
+    "Halo Reach Limited Edition Xbox 360",
+    "Halo Reach Legendary Edition Xbox 360 Console Bundle",
+    "Xbox 360 Kinect bundle with Kinect Star Wars game",
+    "Xbox 360 Star Wars R2-D2 console skin",
+    "Original Xbox console with Halo Combat Evolved",
+    "Original Xbox Halo 2 Limited Edition",
+    "Xbox One X 1TB console with Cyberpunk 2077",
+    "PS4 Beyond Good and Evil 20th Anniversary Edition",
+    "PS4 Slim 1TB console bundle with Beyond Good and Evil 20th Anniversary Edition",
+    "PS4 Pro 500 Million Limited Edition DualShock 4 controller",
+    "Hey You Pikachu N64 game with VRS",
+    "Nintendo 64 console with Hey You Pikachu",
+    "Pokemon X 3DS game",
+    "Majora's Mask 3D game",
+    "Zelda Majora's Mask 3D Nintendo 3DS XL",
+    "New 3DS XL console with Majora's Mask 3D",
+    "Nintendo 3DS XL Pikachu Yellow Edition",
+    "Game Boy Advance SP Pikachu charger",
+    "Pokemon Ruby Groudon GBA SP cartridge",
+    "GBA SP Groudon custom shell",
+    "Zelda Wind Waker HD Wii U game",
+    "Wii U Deluxe 32GB console with Zelda Wind Waker HD",
+    "Hello Kitty Dreamcast controller",
+    # plain consoles are not limited editions
+    "Xbox 360 console",
+    "Xbox 360 Slim 250GB console",
+])
+def test_collectible_console_no_match(catalog, title):
+    assert match_single(title, SEED.products) is None
+    assert _classify(title, catalog) is None

@@ -12,7 +12,8 @@ from dealfinder.models import Category
 _BROAD_QUERIES = [
     "rtx", "geforce", "ryzen", "intel core", "ps5", "xbox series",
     "switch oled", "dualsense", "limited edition controller", "console lot",
-    "controller lot", "video game lot", "games lot",
+    "controller lot", "video game lot", "games lot", "limited edition console",
+    "special edition console", "halo xbox 360",
 ]
 
 _SECRET_ENV = {

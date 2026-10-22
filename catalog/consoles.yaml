@@ -89,3 +89,181 @@
   match: '\b(playstation )?portal\b.*\b30th anniversary\b'
   exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
+
+# Collectible limited-edition consoles of any generation (spec 5.1, user addition
+# 2026-10-22). Each is a real release whose recent sold prices are well above a
+# standard console of the same model. Lookaheads let either word order match;
+# game-only titles sharing the name are kept out by requiring an edition word
+# and a console / system / storage marker, by not accepting the name right after
+# "with" / "and" / "+", and by the game / accessory excludes.
+
+# Microsoft, Sep 2007 (green and gold, 20GB)
+- id: xbox-360-halo-3-special-edition
+  category: console
+  name: Xbox 360 Halo 3 Special Edition Console
+  ebay_query: "xbox 360 halo 3 special edition console"
+  match: '^(?=.*\bxbox ?360\b)(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bhalo ?3\b(?!\W*odst))(?=.*\b((special|limited|spartan|collector\W?s?) edition|halo ?3 edition|spartan)\b|.*\bgreen\b.*\bgold\b|.*\bgold\b.*\bgreen\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?gb|special edition|spartan edition)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: ['\blegendary\b', '\bodst\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Microsoft, Sep 2010 (Xbox 360 S, silver, 250GB)
+- id: xbox-360-halo-reach-limited-edition
+  category: console
+  name: Xbox 360 S Halo Reach Limited Edition Console 250GB
+  ebay_query: "xbox 360 halo reach limited edition console"
+  match: '^(?=.*\bxbox ?360\b)(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bhalo\W*reach\b)(?=.*\b((special|limited|collector\W?s?) edition|reach edition)\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?gb)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: ['\blegendary\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Microsoft, Apr 2012 (Kinect Star Wars limited edition bundle, R2-D2 console, 320GB)
+- id: xbox-360-star-wars-r2-d2
+  category: console
+  name: Xbox 360 Star Wars R2-D2 Limited Edition Kinect Bundle 320GB
+  ebay_query: "xbox 360 star wars r2-d2 limited edition console"
+  match: '^(?=.*\bxbox ?360\b)(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\b(star wars|r2 ?d2)\b)(?=.*\b(r2 ?d2|(special|limited) edition)\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?gb)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Microsoft, 2003 (original Xbox, translucent green Halo Special Edition)
+- id: xbox-halo-special-edition
+  category: console
+  name: Original Xbox Halo Special Edition Green Console
+  ebay_query: "original xbox halo special edition green console"
+  match: '^(?=.*\bxbox\b(?! ?(360|one|series)\b))(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bhalo\b(?! ?(2|3|4|5|reach|infinite|wars|odst)\b))(?=.*\b((special|limited) edition|green|translucent)\b)(?=.*\b(consoles?|systems?|bundle)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: ['\blegendary\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Microsoft, Jun 2020 (1TB, 45,000 units)
+- id: xbox-one-x-cyberpunk-2077
+  category: console
+  name: Xbox One X Cyberpunk 2077 Limited Edition Console 1TB
+  ebay_query: "xbox one x cyberpunk 2077 limited edition console"
+  match: '^(?=.*\bxbox ?one x\b)(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bcyberpunk\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?tb)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Sony, Dec 2014 (grey, 12,300 numbered units)
+- id: ps4-20th-anniversary
+  category: console
+  name: PlayStation 4 20th Anniversary Edition Console
+  ebay_query: "ps4 20th anniversary edition console"
+  match: '^(?=.*(\b(ps4|playstation ?4)\b(?: \S+){0,3} 20th anniversary\b|\b20th anniversary\b(?: \S+){0,3} (ps4|playstation ?4)\b))(?=.*\b(consoles?|systems?|bundle|\d+ ?gb|cuh ?\d{4}\w?)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|dualshock|gamepads?)\b)).*'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Sony, Aug 2018 (translucent blue, 2TB, 50,000 units)
+- id: ps4-pro-500-million
+  category: console
+  name: PlayStation 4 Pro 500 Million Limited Edition Console 2TB
+  ebay_query: "ps4 pro 500 million limited edition console"
+  match: '^(?=.*\b(ps4|playstation ?4) pro\b)(?=.*\b500 million\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?tb|cuh ?\d{4}\w?)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|dualshock|gamepads?)\b)).*'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Nintendo, Dec 1999 (blue and yellow Pikachu Nintendo 64)
+- id: n64-pikachu
+  category: console
+  name: Nintendo 64 Pikachu Edition Console
+  ebay_query: "nintendo 64 pikachu edition console"
+  match: '^(?=.*\b(n64|nintendo 64)\b)(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )(?<!you )\bpikachu\b)(?=.*\b(consoles?|systems?|bundle|nus ?101)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Panasonic, Dec 2001 (GameCube with DVD player, SL-GC10)
+- id: gamecube-panasonic-q
+  category: console
+  name: Panasonic Q GameCube Console SL-GC10
+  ebay_query: "panasonic q gamecube"
+  match: '^(?=.*\b(panasonic q|sl ?gc ?10)\b)(?=.*\b(game ?cube|consoles?|systems?|sl ?gc ?10)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: ['(?<!with )(?<!and )\b(remotes?|cables?|ac adapters?|power supply)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Pokemon Center, 2003
+- id: gba-sp-groudon
+  category: console
+  name: Game Boy Advance SP Groudon Edition
+  ebay_query: "game boy advance sp groudon"
+  match: '^(?=.*(\b(game ?boy advance|gba) sp\b|\bags ?[01]01\b))(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bgroudon\b).*'
+  exclude: ['(?<!with )(?<!and )(?<!\+ )\b(carts?|cartridges?)\b', '(?<!with )(?<!and )\b(chargers?|stylus(es)?|pouch(es)?|screen protectors?)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Pokemon Center, 2003
+- id: gba-sp-kyogre
+  category: console
+  name: Game Boy Advance SP Kyogre Edition
+  ebay_query: "game boy advance sp kyogre"
+  match: '^(?=.*(\b(game ?boy advance|gba) sp\b|\bags ?[01]01\b))(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bkyogre\b).*'
+  exclude: ['(?<!with )(?<!and )(?<!\+ )\b(carts?|cartridges?)\b', '(?<!with )(?<!and )\b(chargers?|stylus(es)?|pouch(es)?|screen protectors?)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Pokemon Center, 2004
+- id: gba-sp-pikachu
+  category: console
+  name: Game Boy Advance SP Pikachu Edition
+  ebay_query: "game boy advance sp pikachu edition"
+  match: '^(?=.*(\b(game ?boy advance|gba) sp\b|\bags ?[01]01\b))(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bpikachu\b).*'
+  exclude: ['(?<!with )(?<!and )(?<!\+ )\b(carts?|cartridges?)\b', '(?<!with )(?<!and )\b(chargers?|stylus(es)?|pouch(es)?|screen protectors?)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Pokemon Center, 2008 (black, Dialga and Palkia)
+- id: ds-lite-dialga-palkia
+  category: console
+  name: Nintendo DS Lite Dialga Palkia Edition
+  ebay_query: "ds lite dialga palkia edition"
+  match: '^(?=.*(\bds ?lite\b|\busg ?001\b))(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\b(dialga|palkia)\b).*'
+  exclude: ['(?<!with )(?<!and )(?<!\+ )\b(carts?|cartridges?)\b', '(?<!with )(?<!and )\b(chargers?|stylus(es)?|pouch(es)?|screen protectors?)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Pokemon Center, 2006 (yellow Pikachu DS Lite)
+- id: ds-lite-pikachu
+  category: console
+  name: Nintendo DS Lite Pikachu Edition
+  ebay_query: "ds lite pikachu edition"
+  match: '^(?=.*(\bds ?lite\b|\busg ?001\b))(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bpikachu\b).*'
+  exclude: ['(?<!with )(?<!and )(?<!\+ )\b(carts?|cartridges?)\b', '(?<!with )(?<!and )\b(chargers?|stylus(es)?|pouch(es)?|screen protectors?)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Nintendo, Feb 2015 (the game is "Majora's Mask 3D"; the console is not)
+- id: new-3ds-xl-majoras-mask
+  category: console
+  name: New Nintendo 3DS XL Majora's Mask Limited Edition
+  ebay_query: "new 3ds xl majora's mask edition"
+  match: '^(?=.*\b3ds ?(xl|ll)\b)(?=.*\bmajora\W?s mask\b(?! 3d\b)|.*\bmajora\W?s mask 3d (limited |special )?edition\b).*'
+  exclude: ['(?<!with )(?<!and )(?<!\+ )\b(carts?|cartridges?)\b', '(?<!with )(?<!and )\b(chargers?|stylus(es)?|pouch(es)?|screen protectors?)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Nintendo, Dec 2011 (original 3DS, black with Triforce)
+- id: 3ds-zelda-25th-anniversary
+  category: console
+  name: Nintendo 3DS Zelda 25th Anniversary Edition
+  ebay_query: "3ds zelda 25th anniversary edition"
+  match: '^(?=.*\b3ds\b)(?=.*\bzelda\b)(?=.*\b25th anniversary\b).*'
+  exclude: ['(?<!with )(?<!and )(?<!\+ )\b(carts?|cartridges?)\b', '(?<!with )(?<!and )\b(chargers?|stylus(es)?|pouch(es)?|screen protectors?)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Nintendo, Sep 2016 (New 3DS XL; the 2012 PAL 3DS XL Pikachu is a different, cheaper model)
+- id: new-3ds-xl-pikachu-yellow
+  category: console
+  name: New Nintendo 3DS XL Pikachu Yellow Edition
+  ebay_query: "new 3ds xl pikachu yellow edition"
+  match: '^(?=.*\bnew (nintendo )?3ds ?(xl|ll)\b)(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bpikachu\b).*'
+  exclude: ['(?<!with )(?<!and )(?<!\+ )\b(carts?|cartridges?)\b', '(?<!with )(?<!and )\b(chargers?|stylus(es)?|pouch(es)?|screen protectors?)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Nintendo, Sep 2013 (black Deluxe Set, Hyrule crest GamePad)
+- id: wii-u-zelda-wind-waker
+  category: console
+  name: Wii U Deluxe Zelda Wind Waker HD Limited Edition Console
+  ebay_query: "wii u zelda wind waker edition console"
+  match: '^(?=.*\bwii ?u\b)(?=.*\bwind waker\b)(?=.*\b(edition|limited)\b)(?=.*\b(consoles?|systems?|bundle|deluxe|\d+ ?gb)\b)(?=.*\b(consoles?|systems?|bundle|deluxe|\d+ ?gb)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null
+
+# Sega, 1999 (Japan, pink and skeleton Hello Kitty Dreamcast)
+- id: dreamcast-hello-kitty
+  category: console
+  name: Sega Dreamcast Hello Kitty Edition Console
+  ebay_query: "dreamcast hello kitty console"
+  match: '^(?=.*\bdreamcast\b)(?=.*(?<!with )(?<!and )(?<!\+ )(?<!plus )(?<!includes )\bhello kitty\b)(?=.*\b(consoles?|systems?|bundle|hkt ?\d+)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: ['(?<!with )(?<!and )\b(keyboards?|vmus?|visual memory)\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '\bguides?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b(?! ?(boy|cube|gear)\b)', '(?<!with )(?<!and )\bheadsets?\b', '\bcustom\b', '\b(shells?|housings?)\b']
+  max_price: null

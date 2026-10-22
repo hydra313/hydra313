@@ -36,3 +36,10 @@ def test_yaml_overrides_merge_one_level(tmp_path):
 def test_secrets_from_env():
     cfg = load_config(None, env={"DISCORD_WEBHOOK_URL": "https://d/x", "ANTHROPIC_API_KEY": "k"})
     assert cfg.discord_webhook_url == "https://d/x" and cfg.anthropic_api_key == "k"
+
+
+def test_broad_queries_include_collectible_consoles():
+    cfg = load_config(None, env={})
+    for source in ("shopgoodwill", "hibid"):
+        for q in ("limited edition console", "special edition console", "halo xbox 360"):
+            assert q in cfg.broad_queries[source]
