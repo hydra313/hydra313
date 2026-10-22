@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dealfinder"
+version = "0.1.0"
+description = "Finds deals on auction sites"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "jinja2",
+    "python-multipart",
+    "httpx",
+    "selectolax",
+    "pyyaml",
+    "apscheduler>=3,<4",
+    "pillow",
+    "anthropic",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "respx"]
+
+[tool.setuptools.packages.find]
+include = ["dealfinder*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
