@@ -1,0 +1,14 @@
+- id: ps2-console
+  category: console
+  name: PlayStation 2 console
+  ebay_query: "ps2 console"
+  match: '\b(ps2|playstation\s*2)\b.*\b(console|system|slim|fat|scph)\b'
+  repair_cost: null
+  success_rate: null
+- id: xbox-360-controller
+  category: controller
+  name: Xbox 360 controller
+  ebay_query: "xbox 360 controller"
+  match: '\bxbox\s*360\b.*\b(controller|gamepad)\b'
+  repair_cost: 5
+  success_rate: 0.8

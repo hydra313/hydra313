@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Literal
+from typing import Collection, Literal, get_args
 
-from dealfinder.models import Classified, Listing, Scored
+from dealfinder.models import Category, Classified, Listing, Scored
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS listings (
@@ -332,3 +333,117 @@ def latest_runs(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         "SELECT * FROM runs WHERE id IN (SELECT MAX(id) FROM runs GROUP BY source)"
         " ORDER BY source"
     ).fetchall()
+
+
+# --- catalog overrides and custom entries -----------------------------------
+
+_OVERRIDE_TABLES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "product_overrides": ("product_id", ("enabled", "max_price")),
+    "bulk_overrides": ("bulk_id", ("enabled", "repair_cost", "success_rate")),
+    "platform_overrides": ("platform_id", ("enabled",)),
+}
+_CUSTOM_TABLES = {"product": "custom_products", "bulk": "custom_bulk_products"}
+_CUSTOM_COLUMNS: dict[str, tuple[str, ...]] = {
+    "product": ("id", "category", "name", "ebay_query", "match", "exclude", "max_price", "enabled"),
+    "bulk": ("id", "category", "name", "ebay_query", "match", "repair_cost", "success_rate",
+             "enabled", "source_product_id"),
+}
+_CUSTOM_REQUIRED: dict[str, tuple[str, ...]] = {
+    "product": ("id", "category", "name", "ebay_query", "match"),
+    "bulk": ("id", "category", "name", "ebay_query", "match", "repair_cost", "success_rate"),
+}
+
+
+def set_override(
+    conn: sqlite3.Connection,
+    table: Literal["product_overrides", "bulk_overrides", "platform_overrides"],
+    item_id: str,
+    **fields: object,
+) -> None:
+    """Upsert an override row, changing only the given fields. None clears a field."""
+    if table not in _OVERRIDE_TABLES:
+        raise ValueError(f"unknown override table {table!r}")
+    id_col, allowed = _OVERRIDE_TABLES[table]
+    unknown = set(fields) - set(allowed)
+    if unknown:
+        raise ValueError(f"{table} has no field(s) {sorted(unknown)}")
+    values = {k: (int(v) if isinstance(v, bool) else v) for k, v in fields.items()}
+    cols = ", ".join([id_col, *values])
+    marks = ", ".join("?" for _ in range(len(values) + 1))
+    if values:
+        action = "DO UPDATE SET " + ", ".join(f"{k} = excluded.{k}" for k in values)
+    else:
+        action = "DO NOTHING"
+    conn.execute(
+        f"INSERT INTO {table} ({cols}) VALUES ({marks}) ON CONFLICT ({id_col}) {action}",
+        (item_id, *values.values()),
+    )
+    conn.commit()
+
+
+def get_overrides(
+    conn: sqlite3.Connection,
+    table: Literal["product_overrides", "bulk_overrides", "platform_overrides"],
+) -> dict[str, sqlite3.Row]:
+    if table not in _OVERRIDE_TABLES:
+        raise ValueError(f"unknown override table {table!r}")
+    id_col = _OVERRIDE_TABLES[table][0]
+    return {row[id_col]: row for row in conn.execute(f"SELECT * FROM {table}")}
+
+
+def add_custom(
+    conn: sqlite3.Connection,
+    kind: Literal["product", "bulk"],
+    data: dict,
+    reserved_ids: Collection[str] = (),
+) -> None:
+    """Insert a user-defined catalog entry; ValueError if it fails validation.
+
+    `reserved_ids` lets the caller add ids already taken elsewhere (e.g. seed entries).
+    """
+    if kind not in _CUSTOM_TABLES:
+        raise ValueError(f"unknown custom kind {kind!r}")
+    entry_id = data.get("id")
+    label = f"custom {kind} {entry_id!r}"
+    for key in _CUSTOM_REQUIRED[kind]:
+        if data.get(key) is None or data.get(key) == "":
+            raise ValueError(f"{label}: missing {key}")
+    unknown = set(data) - set(_CUSTOM_COLUMNS[kind])
+    if unknown:
+        raise ValueError(f"{label}: unknown field(s) {sorted(unknown)}")
+    if data["category"] not in get_args(Category):
+        raise ValueError(f"{label}: unknown category {data['category']!r}")
+    exclude = list(data.get("exclude") or []) if kind == "product" else []
+    for pattern in [data["match"], *exclude]:
+        try:
+            re.compile(pattern)
+        except re.error as e:
+            raise ValueError(f"{label}: invalid regex {pattern!r}: {e}") from e
+    table = _CUSTOM_TABLES[kind]
+    if entry_id in reserved_ids or conn.execute(
+        f"SELECT 1 FROM {table} WHERE id = ?", (entry_id,)
+    ).fetchone():
+        raise ValueError(f"{label}: id already exists")
+    values = dict(data)
+    if kind == "product":
+        values["exclude"] = json.dumps(exclude)
+    if "enabled" in values:
+        values["enabled"] = int(bool(values["enabled"]))
+    cols = ", ".join(values)
+    marks = ", ".join("?" for _ in values)
+    conn.execute(f"INSERT INTO {table} ({cols}) VALUES ({marks})", list(values.values()))
+    conn.commit()
+
+
+def list_custom(conn: sqlite3.Connection, kind: Literal["product", "bulk"]) -> list[dict]:
+    if kind not in _CUSTOM_TABLES:
+        raise ValueError(f"unknown custom kind {kind!r}")
+    rows = conn.execute(f"SELECT * FROM {_CUSTOM_TABLES[kind]} ORDER BY rowid").fetchall()
+    out = []
+    for row in rows:
+        d = dict(row)
+        d["enabled"] = bool(d["enabled"])
+        if kind == "product":
+            d["exclude"] = json.loads(d["exclude"])
+        out.append(d)
+    return out
