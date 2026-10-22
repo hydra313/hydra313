@@ -46,7 +46,7 @@
   category: console
   name: PSP handheld
   ebay_query: "psp console"
-  match: '\b(psp|playstation portable)\b'
+  match: '\b(psp|playstation portable)\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(psp|playstation portable)\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -54,7 +54,7 @@
   category: console
   name: PS Vita handheld
   ebay_query: "ps vita console"
-  match: '\b(ps|playstation) ?vita\b'
+  match: '\b(ps|playstation) ?vita\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(ps|playstation) ?vita\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -134,7 +134,7 @@
   category: console
   name: Nintendo Switch Lite handheld
   ebay_query: "nintendo switch lite"
-  match: '\b(nintendo )?switch lite\b'
+  match: '\b(nintendo )?switch lite\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(nintendo )?switch lite\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -158,7 +158,7 @@
   category: console
   name: Nintendo DS handheld
   ebay_query: "nintendo ds console"
-  match: '\b(nintendo )?ds\b'
+  match: '\b(nintendo )?ds\b(?! lite\b)(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(nintendo )?ds\b(?! lite\b).*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -166,7 +166,7 @@
   category: console
   name: Nintendo DS Lite handheld
   ebay_query: "nintendo ds lite"
-  match: '\b(nintendo )?ds lite\b'
+  match: '\b(nintendo )?ds lite\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(nintendo )?ds lite\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -174,7 +174,7 @@
   category: console
   name: Nintendo DSi handheld
   ebay_query: "nintendo dsi"
-  match: '\b(nintendo )?dsi( xl| ll)?\b'
+  match: '\b(nintendo )?dsi( xl| ll)?\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(nintendo )?dsi( xl| ll)?\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -182,7 +182,7 @@
   category: console
   name: Nintendo 3DS handheld
   ebay_query: "nintendo 3ds console"
-  match: '\b(nintendo )?3ds( xl| ll)?\b'
+  match: '\b(nintendo )?3ds( xl| ll)?\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(nintendo )?3ds( xl| ll)?\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -190,7 +190,7 @@
   category: console
   name: New Nintendo 3DS handheld
   ebay_query: "new nintendo 3ds"
-  match: '\b(nintendo )?new (nintendo )?3ds( xl| ll)?\b'
+  match: '\b(nintendo )?new (nintendo )?3ds( xl| ll)?\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(nintendo )?new (nintendo )?3ds( xl| ll)?\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -198,7 +198,7 @@
   category: console
   name: Nintendo 2DS handheld
   ebay_query: "nintendo 2ds"
-  match: '\b(nintendo )?(new )?(nintendo )?2ds( xl| ll)?\b'
+  match: '\b(nintendo )?(new )?(nintendo )?2ds( xl| ll)?\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(nintendo )?(new )?(nintendo )?2ds( xl| ll)?\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -206,7 +206,7 @@
   category: console
   name: Nintendo Game Boy handheld
   ebay_query: "nintendo game boy console"
-  match: '\b(nintendo )?game ?boy( pocket| light)?\b'
+  match: '\b(nintendo )?game ?boy( pocket| light)?\b(?! (colou?r|advance|micro)\b)(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b(nintendo )?game ?boy( pocket| light)?\b(?! (colou?r|advance|micro)\b).*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -214,7 +214,7 @@
   category: console
   name: Nintendo Game Boy Color handheld
   ebay_query: "game boy color console"
-  match: '\b(nintendo )?game ?boy colou?r\b|\bgbc\b'
+  match: '\b((nintendo )?game ?boy colou?r|gbc)\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b((nintendo )?game ?boy colou?r|gbc)\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -222,7 +222,7 @@
   category: console
   name: Nintendo Game Boy Advance handheld
   ebay_query: "game boy advance console"
-  match: '\b(nintendo )?game ?boy (advance( sp)?|micro)\b|\bgba( sp)?\b'
+  match: '\b((nintendo )?game ?boy (advance( sp)?|micro)|gba( sp)?)\b(?!.*(?<!with )(?<!and )(?<!with \d )\b(cases?|chargers?|charging|cables?|styl(us|uses|i)|screen protectors?|protectors?|batter(y|ies)|docks?|skins?|bags?|pouch(es)?|grips?|cards?|umd|shells?|housings?|adapters?|straps?)\b)|\b((nintendo )?game ?boy (advance( sp)?|micro)|gba( sp)?)\b.*\b(consoles?|systems?|handhelds?)\b'
   repair_cost: null
   success_rate: null
 
@@ -230,7 +230,7 @@
   category: controller
   name: DualShock 2 controller
   ebay_query: "ps2 dualshock 2 controller"
-  match: '\b(ps2|playstation ?2)\b.*\b(controllers?|gamepads?)\b|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?2\b'
+  match: '\b(ps2|playstation ?2)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?2\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -238,7 +238,7 @@
   category: controller
   name: DualShock 3 controller
   ebay_query: "ps3 dualshock 3 controller"
-  match: '\b(ps3|playstation ?3)\b.*\b(controllers?|gamepads?)\b|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(dualshock ?3|sixaxis)\b'
+  match: '\b(ps3|playstation ?3)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(dualshock ?3|sixaxis)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -246,7 +246,7 @@
   category: controller
   name: DualShock 4 controller
   ebay_query: "ps4 dualshock 4 controller"
-  match: '\b(ps4|playstation ?4)\b.*\b(controllers?|gamepads?)\b|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?4\b'
+  match: '\b(ps4|playstation ?4)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?4\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -254,7 +254,7 @@
   category: controller
   name: DualSense controller
   ebay_query: "ps5 dualsense controller"
-  match: '\b(ps5|playstation ?5)\b.*\b(controllers?|gamepads?)\b|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualsense\b'
+  match: '\b(ps5|playstation ?5)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualsense\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -262,7 +262,7 @@
   category: controller
   name: Original Xbox controller
   ebay_query: "original xbox controller"
-  match: '\boriginal xbox\b.*\b(controllers?|gamepads?)\b|\bxbox\b(?! ?(360|one|series)\b).*\b(duke|controller s)\b'
+  match: '\boriginal xbox\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|\bxbox\b(?! ?(360|one|series)\b).*\b(duke|controller s)\b'
   repair_cost: null
   success_rate: null
 
@@ -270,7 +270,7 @@
   category: controller
   name: Xbox 360 controller
   ebay_query: "xbox 360 controller"
-  match: '\bxbox ?360\b.*\b(controllers?|gamepads?)\b'
+  match: '\bxbox ?360\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -278,7 +278,7 @@
   category: controller
   name: Xbox Wireless Controller (One / Series)
   ebay_query: "xbox wireless controller"
-  match: '\bxbox ?(one|series)\b.*\b(controllers?|gamepads?)\b|\bxbox wireless controllers?\b'
+  match: '\bxbox ?(one|series)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|\bxbox wireless controllers?\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -286,7 +286,7 @@
   category: controller
   name: Nintendo Switch Joy-Con
   ebay_query: "joy-con"
-  match: '(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bjoy ?cons?\b'
+  match: '(?<!switch 2 )(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bjoy ?cons?\b(?! 2\b)(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -294,7 +294,7 @@
   category: controller
   name: Nintendo Switch Pro Controller
   ebay_query: "switch pro controller"
-  match: '\bswitch\b.*\bpro controllers?\b'
+  match: '\bswitch\b(?! 2\b).*\bpro controllers?\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -302,7 +302,7 @@
   category: controller
   name: Nintendo GameCube controller
   ebay_query: "gamecube controller"
-  match: '\bgame ?cube\b.*\b(controllers?|gamepads?)\b|\bwavebird\b'
+  match: '\bgame ?cube\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|\bwavebird\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -310,6 +310,6 @@
   category: controller
   name: Nintendo Wii Remote
   ebay_query: "wii remote"
-  match: '(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(wii ?(remotes?|motes?)|wiimotes?)\b'
+  match: '(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(wii ?(remotes?|motes?)|wiimotes?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null

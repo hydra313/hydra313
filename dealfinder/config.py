@@ -10,7 +10,7 @@ import yaml
 from dealfinder.models import Category
 
 _BROAD_QUERIES = [
-    "rtx", "geforce", "radeon", "ryzen", "intel core", "ps5", "xbox series",
+    "rtx", "geforce", "ryzen", "intel core", "ps5", "xbox series",
     "switch oled", "dualsense", "limited edition controller", "console lot",
     "controller lot", "video game lot", "games lot",
 ]

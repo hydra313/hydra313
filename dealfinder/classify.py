@@ -14,8 +14,10 @@ from dealfinder.text import mask, normalize, parse_quantity, quantity_mask
 # title, so "switch 2 console with game" or "500 gb" never count).
 _GAME_COUNT = re.compile(r"\b(\d+)\b(?=(?: \S+){0,3} games\b)")
 # Masked with the platform names before the game/hardware word checks:
-# "disc edition" is not a game disc, "nintendo entertainment system" not hardware.
-_NOT_WORDS = (r"\bdisc (edition|version|drive)\b", r"\bdigital edition\b")
+# "disc edition" / "slim disc" / "disc console" are not game discs, "nintendo
+# entertainment system" not hardware.
+_NOT_WORDS = (r"\bdisc (edition|version|drive)\b", r"\bdigital edition\b", r"\bslim disc\b",
+              r"\bdisc(?= (consoles?|systems?)\b)")
 
 
 def _has_game_count(title_norm: str, mask_patterns: list[str]) -> bool:

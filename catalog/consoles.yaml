@@ -6,7 +6,7 @@
   name: PlayStation 5 Digital Edition 30th Anniversary Bundle
   ebay_query: "ps5 30th anniversary"
   match: '\b(ps5|playstation ?5)\b(?! pro\b)(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b30th anniversary\b'
-  exclude: []
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
 
 # PlayStation 30th Anniversary Collection, Sony, Nov 2024
@@ -15,7 +15,7 @@
   name: PlayStation 5 Pro 30th Anniversary Bundle
   ebay_query: "ps5 pro 30th anniversary"
   match: '\b(ps5|playstation ?5) pro\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b30th anniversary\b'
-  exclude: []
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
 
 # Sony, Sep 2023 (the later PS5 Slim Spider-Man 2 bundle is a standard bundle)
@@ -23,8 +23,8 @@
   category: console
   name: PS5 Console Marvel's Spider-Man 2 Limited Edition Bundle
   ebay_query: "ps5 spider-man 2 limited edition bundle"
-  match: '\b(ps5|playstation ?5)\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bspider ?man 2\b.*\blimited\b'
-  exclude: ['\bslim\b']
+  match: '\b(ps5|playstation ?5)\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bspider ?man 2\b.*\blimited\b|\bspider ?man 2\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b))(?=.*\blimited\b).*\b(ps5|playstation ?5)\b'
+  exclude: ['\bslim\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
 
 # Microsoft, Nov 2021
@@ -33,7 +33,7 @@
   name: Xbox Series X Halo Infinite Limited Edition
   ebay_query: "xbox series x halo infinite limited edition"
   match: '\bxbox series x\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bhalo infinite\b'
-  exclude: []
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
 
 # Microsoft, Oct 2024
@@ -42,7 +42,7 @@
   name: Xbox Series X 2TB Galaxy Black Special Edition
   ebay_query: "xbox series x galaxy black"
   match: '\bxbox series x\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bgalaxy black\b'
-  exclude: []
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
 
 # Nintendo, Apr 2023
@@ -50,8 +50,8 @@
   category: console
   name: Nintendo Switch OLED Model Zelda Tears of the Kingdom Edition
   ebay_query: "switch oled zelda tears of the kingdom"
-  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(tears of the kingdom|totk)\b'
-  exclude: []
+  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(tears of the kingdom|totk)\b|\b(tears of the kingdom|totk)\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(nintendo )?switch oled\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
 
 # Nintendo, Nov 2022
@@ -59,8 +59,8 @@
   category: console
   name: Nintendo Switch OLED Model Pokémon Scarlet & Violet Edition
   ebay_query: "switch oled pokemon scarlet violet"
-  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(scarlet|violet)\b'
-  exclude: []
+  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(scarlet|violet)\b|\b(scarlet|violet)\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(nintendo )?switch oled\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
 
 # Nintendo, Aug 2022
@@ -68,8 +68,8 @@
   category: console
   name: Nintendo Switch OLED Model Splatoon 3 Edition
   ebay_query: "switch oled splatoon 3"
-  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bsplatoon 3\b'
-  exclude: []
+  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bsplatoon 3\b|\bsplatoon 3\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(nintendo )?switch oled\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
 
 # Nintendo, Oct 2023
@@ -77,8 +77,8 @@
   category: console
   name: Nintendo Switch OLED Model Mario Red Edition
   ebay_query: "switch oled mario red"
-  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bmario red\b'
-  exclude: []
+  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bmario red\b|\bmario red\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(nintendo )?switch oled\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null
 
 # PlayStation 30th Anniversary Collection, Sony, Nov 2024
@@ -87,5 +87,5 @@
   name: PlayStation Portal Remote Player 30th Anniversary
   ebay_query: "playstation portal 30th anniversary"
   match: '\b(playstation )?portal\b.*\b30th anniversary\b'
-  exclude: []
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
   max_price: null

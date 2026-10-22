@@ -62,6 +62,12 @@ PS4 = r"\b(ps4|playstation 4)\b"
         ("Xbox 360 Lot of 4 w/ AC Adapters", [], 4),
         ("Huge lots of PS2 games", [], None),
         ("Lot of 1,200 Pokemon Cards", [], None),
+        ("MSI GeForce RTX 4070 Ventus 3X 12G OC", [], 1),
+        ("Gigabyte RTX 3080 Windforce 3X 10GB", [], 1),
+        ("MSI RTX 3060 Ventus 2X 12G OC", [], 1),
+        ("ASUS TUF Gaming RTX 4070 Ti OC 3x fans", [], 1),
+        ("Lot of 3 MSI RTX 3060 Ventus 2X 12G", [], 3),
+        ("4x MSI RTX 3060 Ventus 2X", [], 4),
     ],
 )
 def test_quantity_raw_titles(raw, extra_masks, expected):

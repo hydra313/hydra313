@@ -45,6 +45,7 @@ GAME_LOT_EXCLUDES: list[str] = [
     r"\bresurface(d)?\b",
     r"\bas is\b",
     r"\bcases? only\b",
+    r"\bgame cases\b",
     r"\bmanuals? only\b",
     r"\binserts? only\b",
     r"\bempty cases?\b",

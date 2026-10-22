@@ -1,18 +1,19 @@
-# Single-item GPUs (spec 5.1). Patterns run on normalize()d titles.
+# Single-item GPUs (spec 5.1): NVIDIA RTX only. Patterns run on normalize()d
+# titles.
 
 - id: rtx-3050
   category: gpu
   name: GeForce RTX 3050
   ebay_query: "rtx 3050"
   match: '\b(rtx )?3050\b(?! (ti|super)\b)'
-  exclude: []
+  exclude: ['\b6 ?gb?\b']
   max_price: null
 
 - id: rtx-3060-8gb
   category: gpu
   name: GeForce RTX 3060 8GB
   ebay_query: "rtx 3060 8gb"
-  match: '\b(rtx )?3060\b(?! (ti|super)\b).*\b8 ?gb\b|\b8 ?gb\b.*\b(rtx )?3060\b(?! (ti|super)\b)'
+  match: '\b(rtx )?3060\b(?! (ti|super)\b).*\b8 ?gb?\b|\b8 ?gb?\b.*\b(rtx )?3060\b(?! (ti|super)\b)'
   exclude: []
   max_price: null
 
@@ -20,7 +21,7 @@
   category: gpu
   name: GeForce RTX 3060 12GB
   ebay_query: "rtx 3060 12gb"
-  match: '\b(rtx )?3060\b(?! (ti|super)\b).*\b12 ?gb\b|\b12 ?gb\b.*\b(rtx )?3060\b(?! (ti|super)\b)'
+  match: '\b(rtx )?3060\b(?! (ti|super)\b).*\b12 ?gb?\b|\b12 ?gb?\b.*\b(rtx )?3060\b(?! (ti|super)\b)'
   exclude: []
   max_price: null
 
@@ -52,7 +53,7 @@
   category: gpu
   name: GeForce RTX 3080 10GB
   ebay_query: "rtx 3080 10gb"
-  match: '\b(rtx )?3080\b(?! (ti|super)\b).*\b10 ?gb\b|\b10 ?gb\b.*\b(rtx )?3080\b(?! (ti|super)\b)'
+  match: '\b(rtx )?3080\b(?! (ti|super)\b)'
   exclude: []
   max_price: null
 
@@ -60,7 +61,7 @@
   category: gpu
   name: GeForce RTX 3080 12GB
   ebay_query: "rtx 3080 12gb"
-  match: '\b(rtx )?3080\b(?! (ti|super)\b).*\b12 ?gb\b|\b12 ?gb\b.*\b(rtx )?3080\b(?! (ti|super)\b)'
+  match: '\b(rtx )?3080\b(?! (ti|super)\b).*\b12 ?gb?\b|\b12 ?gb?\b.*\b(rtx )?3080\b(?! (ti|super)\b)'
   exclude: []
   max_price: null
 
@@ -100,7 +101,7 @@
   category: gpu
   name: GeForce RTX 4060 Ti 8GB
   ebay_query: "rtx 4060 ti 8gb"
-  match: '\b(rtx )?4060 ti\b(?! super\b).*\b8 ?gb\b|\b8 ?gb\b.*\b(rtx )?4060 ti\b(?! super\b)'
+  match: '\b(rtx )?4060 ti\b(?! super\b).*\b8 ?gb?\b|\b8 ?gb?\b.*\b(rtx )?4060 ti\b(?! super\b)'
   exclude: []
   max_price: null
 
@@ -108,7 +109,7 @@
   category: gpu
   name: GeForce RTX 4060 Ti 16GB
   ebay_query: "rtx 4060 ti 16gb"
-  match: '\b(rtx )?4060 ti\b(?! super\b).*\b16 ?gb\b|\b16 ?gb\b.*\b(rtx )?4060 ti\b(?! super\b)'
+  match: '\b(rtx )?4060 ti\b(?! super\b).*\b16 ?gb?\b|\b16 ?gb?\b.*\b(rtx )?4060 ti\b(?! super\b)'
   exclude: []
   max_price: null
 
@@ -188,7 +189,7 @@
   category: gpu
   name: GeForce RTX 5060 Ti 8GB
   ebay_query: "rtx 5060 ti 8gb"
-  match: '\b(rtx )?5060 ti\b(?! super\b).*\b8 ?gb\b|\b8 ?gb\b.*\b(rtx )?5060 ti\b(?! super\b)'
+  match: '\b(rtx )?5060 ti\b(?! super\b).*\b8 ?gb?\b|\b8 ?gb?\b.*\b(rtx )?5060 ti\b(?! super\b)'
   exclude: []
   max_price: null
 
@@ -196,7 +197,7 @@
   category: gpu
   name: GeForce RTX 5060 Ti 16GB
   ebay_query: "rtx 5060 ti 16gb"
-  match: '\b(rtx )?5060 ti\b(?! super\b).*\b16 ?gb\b|\b16 ?gb\b.*\b(rtx )?5060 ti\b(?! super\b)'
+  match: '\b(rtx )?5060 ti\b(?! super\b).*\b16 ?gb?\b|\b16 ?gb?\b.*\b(rtx )?5060 ti\b(?! super\b)'
   exclude: []
   max_price: null
 
@@ -229,205 +230,5 @@
   name: GeForce RTX 5090
   ebay_query: "rtx 5090"
   match: '\b(rtx )?5090\b(?! (ti|super)\b)'
-  exclude: []
-  max_price: null
-
-- id: rx-6400
-  category: gpu
-  name: Radeon RX 6400
-  ebay_query: "rx 6400"
-  match: '\b(rx|radeon( rx)?) 6400\b(?! (xtx?|gre)\b)'
-  exclude: []
-  max_price: null
-
-- id: rx-6500-xt
-  category: gpu
-  name: Radeon RX 6500 XT
-  ebay_query: "rx 6500 xt"
-  match: '\b(rx|radeon( rx)?) 6500 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-6600
-  category: gpu
-  name: Radeon RX 6600
-  ebay_query: "rx 6600"
-  match: '\b(rx|radeon( rx)?) 6600\b(?! (xtx?|gre)\b)'
-  exclude: []
-  max_price: null
-
-- id: rx-6600-xt
-  category: gpu
-  name: Radeon RX 6600 XT
-  ebay_query: "rx 6600 xt"
-  match: '\b(rx|radeon( rx)?) 6600 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-6650-xt
-  category: gpu
-  name: Radeon RX 6650 XT
-  ebay_query: "rx 6650 xt"
-  match: '\b(rx|radeon( rx)?) 6650 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-6700
-  category: gpu
-  name: Radeon RX 6700
-  ebay_query: "rx 6700"
-  match: '\b(rx|radeon( rx)?) 6700\b(?! (xtx?|gre)\b)'
-  exclude: []
-  max_price: null
-
-- id: rx-6700-xt
-  category: gpu
-  name: Radeon RX 6700 XT
-  ebay_query: "rx 6700 xt"
-  match: '\b(rx|radeon( rx)?) 6700 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-6750-xt
-  category: gpu
-  name: Radeon RX 6750 XT
-  ebay_query: "rx 6750 xt"
-  match: '\b(rx|radeon( rx)?) 6750 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-6800
-  category: gpu
-  name: Radeon RX 6800
-  ebay_query: "rx 6800"
-  match: '\b(rx|radeon( rx)?) 6800\b(?! (xtx?|gre)\b)'
-  exclude: []
-  max_price: null
-
-- id: rx-6800-xt
-  category: gpu
-  name: Radeon RX 6800 XT
-  ebay_query: "rx 6800 xt"
-  match: '\b(rx|radeon( rx)?) 6800 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-6900-xt
-  category: gpu
-  name: Radeon RX 6900 XT
-  ebay_query: "rx 6900 xt"
-  match: '\b(rx|radeon( rx)?) 6900 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-6950-xt
-  category: gpu
-  name: Radeon RX 6950 XT
-  ebay_query: "rx 6950 xt"
-  match: '\b(rx|radeon( rx)?) 6950 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-7600
-  category: gpu
-  name: Radeon RX 7600
-  ebay_query: "rx 7600"
-  match: '\b(rx|radeon( rx)?) 7600\b(?! (xtx?|gre)\b)'
-  exclude: []
-  max_price: null
-
-- id: rx-7600-xt
-  category: gpu
-  name: Radeon RX 7600 XT
-  ebay_query: "rx 7600 xt"
-  match: '\b(rx|radeon( rx)?) 7600 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-7700-xt
-  category: gpu
-  name: Radeon RX 7700 XT
-  ebay_query: "rx 7700 xt"
-  match: '\b(rx|radeon( rx)?) 7700 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-7800-xt
-  category: gpu
-  name: Radeon RX 7800 XT
-  ebay_query: "rx 7800 xt"
-  match: '\b(rx|radeon( rx)?) 7800 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-7900-gre
-  category: gpu
-  name: Radeon RX 7900 GRE
-  ebay_query: "rx 7900 gre"
-  match: '\b(rx|radeon( rx)?) 7900 gre\b'
-  exclude: []
-  max_price: null
-
-- id: rx-7900-xt
-  category: gpu
-  name: Radeon RX 7900 XT
-  ebay_query: "rx 7900 xt"
-  match: '\b(rx|radeon( rx)?) 7900 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-7900-xtx
-  category: gpu
-  name: Radeon RX 7900 XTX
-  ebay_query: "rx 7900 xtx"
-  match: '\b(rx|radeon( rx)?) 7900 xtx\b'
-  exclude: []
-  max_price: null
-
-- id: rx-9060-xt-8gb
-  category: gpu
-  name: Radeon RX 9060 XT 8GB
-  ebay_query: "rx 9060 xt 8gb"
-  match: '\b(rx|radeon( rx)?) 9060 xt\b.*\b8 ?gb\b|\b8 ?gb\b.*\b(rx|radeon( rx)?) 9060 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-9060-xt-16gb
-  category: gpu
-  name: Radeon RX 9060 XT 16GB
-  ebay_query: "rx 9060 xt 16gb"
-  match: '\b(rx|radeon( rx)?) 9060 xt\b.*\b16 ?gb\b|\b16 ?gb\b.*\b(rx|radeon( rx)?) 9060 xt\b'
-  exclude: []
-  max_price: null
-
-- id: rx-9070
-  category: gpu
-  name: Radeon RX 9070
-  ebay_query: "rx 9070"
-  match: '\b(rx|radeon( rx)?) 9070\b(?! (xtx?|gre)\b)'
-  exclude: []
-  max_price: null
-
-- id: rx-9070-xt
-  category: gpu
-  name: Radeon RX 9070 XT
-  ebay_query: "rx 9070 xt"
-  match: '\b(rx|radeon( rx)?) 9070 xt\b'
-  exclude: []
-  max_price: null
-
-- id: arc-b570
-  category: gpu
-  name: Intel Arc B570
-  ebay_query: "arc b570"
-  match: '\b(arc )?b570\b'
-  exclude: []
-  max_price: null
-
-- id: arc-b580
-  category: gpu
-  name: Intel Arc B580
-  ebay_query: "arc b580"
-  match: '\b(arc )?b580\b'
   exclude: []
   max_price: null

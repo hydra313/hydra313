@@ -23,7 +23,7 @@
   category: controller
   name: DualSense God of War Ragnarök
   ebay_query: "dualsense god of war ragnarok"
-  match: '\bdualsense\b.*\b(god of war|ragnar[oö]k)\b'
+  match: '\bdualsense\b.*\b(god of war|ragnar[oö]k)\b|^(?!.*\b(consoles?|bundle|systems?|digital edition)\b).*\b(god of war|ragnar[oö]k)\b.*\bdualsense\b'
   exclude: []
   max_price: null
 
@@ -32,7 +32,7 @@
   category: controller
   name: DualSense Marvel's Spider-Man 2
   ebay_query: "dualsense spider-man 2"
-  match: '\bdualsense\b.*\bspider ?man 2\b'
+  match: '\bdualsense\b.*\bspider ?man 2\b|^(?!.*\b(consoles?|bundle|systems?|digital edition)\b).*\bspider ?man 2\b.*\bdualsense\b'
   exclude: []
   max_price: null
 
@@ -41,7 +41,7 @@
   category: controller
   name: DualSense Astro Bot
   ebay_query: "dualsense astro bot"
-  match: '\bdualsense\b.*\bastro ?bot\b'
+  match: '\bdualsense\b.*\bastro ?bot\b|^(?!.*\b(consoles?|bundle|systems?|digital edition)\b).*\bastro ?bot\b.*\bdualsense\b'
   exclude: ['\bjoyful\b']
   max_price: null
 

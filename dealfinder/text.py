@@ -24,6 +24,8 @@ _BUILTIN_MASKS = (
     r"\bryzen ?[3579]\b",
     r"\bcore ?(ultra ?)?[3579]\b",
     r"\b32x\b",
+    # GPU cooler names with a fan count ("Ventus 3X", "Windforce 3X OC")
+    r"\b(ventus|windforce|eagle|gaming|twin|dual|aorus|tuf|trinity)( \w+)? \d ?x\b",
 )
 
 NUMBER_WORDS = {
