@@ -230,7 +230,7 @@
   category: controller
   name: DualShock 2 controller
   ebay_query: "ps2 dualshock 2 controller"
-  match: '\b(ps2|playstation ?2)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?2\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '\b(ps2|playstation ?2)\b.*\b(controllers?|gamepads?)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?2\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -238,7 +238,7 @@
   category: controller
   name: DualShock 3 controller
   ebay_query: "ps3 dualshock 3 controller"
-  match: '\b(ps3|playstation ?3)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(dualshock ?3|sixaxis)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '\b(ps3|playstation ?3)\b.*\b(controllers?|gamepads?)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(dualshock ?3|sixaxis)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -246,7 +246,7 @@
   category: controller
   name: DualShock 4 controller
   ebay_query: "ps4 dualshock 4 controller"
-  match: '\b(ps4|playstation ?4)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?4\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '\b(ps4|playstation ?4)\b.*\b(controllers?|gamepads?)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualshock ?4\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -254,7 +254,7 @@
   category: controller
   name: DualSense controller
   ebay_query: "ps5 dualsense controller"
-  match: '\b(ps5|playstation ?5)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualsense\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '\b(ps5|playstation ?5)\b.*\b(controllers?|gamepads?)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bdualsense\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -262,7 +262,7 @@
   category: controller
   name: Original Xbox controller
   ebay_query: "original xbox controller"
-  match: '\boriginal xbox\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|\bxbox\b(?! ?(360|one|series)\b).*\b(duke|controller s)\b'
+  match: '\boriginal xbox\b.*\b(controllers?|gamepads?)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|\bxbox\b(?! ?(360|one|series)\b).*\b(duke|controller s)\b'
   repair_cost: null
   success_rate: null
 
@@ -270,7 +270,7 @@
   category: controller
   name: Xbox 360 controller
   ebay_query: "xbox 360 controller"
-  match: '\bxbox ?360\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '\bxbox ?360\b.*\b(controllers?|gamepads?)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -278,7 +278,7 @@
   category: controller
   name: Xbox Wireless Controller (One / Series)
   ebay_query: "xbox wireless controller"
-  match: '\bxbox ?(one|series)\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|\bxbox wireless controllers?\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '\bxbox ?(one|series)\b.*\b(controllers?|gamepads?)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|\bxbox wireless controllers?\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -286,7 +286,7 @@
   category: controller
   name: Nintendo Switch Joy-Con
   ebay_query: "joy-con"
-  match: '(?<!switch 2 )(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bjoy ?cons?\b(?! 2\b)(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '(?<!switch 2 )(?<!with )(?<!and )(?<!with \d )(?<!and \d )\bjoy ?cons?\b(?! 2\b)(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -294,7 +294,7 @@
   category: controller
   name: Nintendo Switch Pro Controller
   ebay_query: "switch pro controller"
-  match: '\bswitch\b(?! 2\b).*\bpro controllers?\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '\bswitch\b(?! 2\b).*\bpro controllers?\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -302,7 +302,7 @@
   category: controller
   name: Nintendo GameCube controller
   ebay_query: "gamecube controller"
-  match: '\bgame ?cube\b.*\b(controllers?|gamepads?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|\bwavebird\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '\bgame ?cube\b.*\b(controllers?|gamepads?)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)|\bwavebird\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null
 
@@ -310,6 +310,6 @@
   category: controller
   name: Nintendo Wii Remote
   ebay_query: "wii remote"
-  match: '(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(wii ?(remotes?|motes?)|wiimotes?)\b(?!( \S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
+  match: '(?<!with )(?<!and )(?<!with \d )(?<!and \d )\b(wii ?(remotes?|motes?)|wiimotes?)\b(?!( (?!(with|and|w|plus|includes?|including)\b)\S+)? (chargers?|charging|battery|batteries|skins?|grips?|stands?|cables?|thumb ?sticks?|shells?|straps?|jackets?|sleeves?|covers?|docks?)\b)'
   repair_cost: null
   success_rate: null

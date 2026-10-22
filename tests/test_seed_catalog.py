@@ -84,7 +84,8 @@ def test_seed_loads():
     ("RTX 4060 Ti 16G", "rtx-4060-ti-16gb"),
     ("NVIDIA GeForce RTX 3080 Founders Edition", "rtx-3080-10gb"),
     ("EVGA RTX 3080 FTW3 Ultra 12GB", "rtx-3080-12gb"),
-    ("AMD Ryzen 9 7900X", "ryzen-7900x"),
+    ("AMD Ryzen 5 7600 6-Core Processor", "ryzen-7600"),
+    ("Ryzen 7 7800X3D AM5 CPU", "ryzen-7800x3d"),
 ])
 def test_single_collisions(title, expected):
     result = match_single(title, SEED.products)
@@ -103,6 +104,12 @@ def test_single_collisions(title, expected):
     "XFX Radeon RX 7600 8GB",
     "PowerColor Radeon 7700 XT",
     "Intel Arc B580 12GB",
+    # Radeon cards named without rx / radeon are not Ryzen CPUs
+    "Sapphire Pulse 7600 8GB",
+    "XFX Speedster SWFT 7600 8GB",
+    "ASRock Challenger 7600 8GB GDDR6",
+    "Gigabyte 7600 Gaming OC 8G",
+    "AMD 7900 20GB",
     "PS5 Astro Bot Joyful DualSense",
     "RTX 3050 6GB Low Profile",
     "God of War Ragnarök PS5 Bundle with DualSense",
@@ -155,6 +162,17 @@ def test_single_no_match(title):
     ("Lot of 10 PS2 games with cases", "game_lot", "ps2"),
     ("Lot of 5 PS4 controllers", "hardware_lot", "dualshock-4"),
     ("Lot of 6 DualSense controllers", "hardware_lot", "dualsense"),
+    # accessories listed as extras of a controller lot
+    ("Lot of 3 PS4 controllers with charging dock", "hardware_lot", "dualshock-4"),
+    ("Lot of 3 Joy-Con with straps", "hardware_lot", "joy-con"),
+    ("Lot of 3 Xbox 360 wireless controllers with battery packs", "hardware_lot",
+     "xbox-360-controller"),
+    ("Lot of 6 Wii Remotes with jackets", "hardware_lot", "wii-remote"),
+    ("Lot of 4 PS4 controllers w/ chargers", "hardware_lot", "dualshock-4"),
+    ("Lot of 4 Xbox One controllers and charging station", "hardware_lot",
+     "xbox-wireless-controller"),
+    ("Lot of 4 Joy-Cons with grips", "hardware_lot", "joy-con"),
+    ("Lot of 5 Ryzen 5 7600 CPUs", "hardware_lot", "bulk-ryzen-7600"),
 ])
 def test_lot_collisions(catalog, title, kind, key):
     result = _classify(title, catalog)
@@ -191,6 +209,9 @@ def test_classify_single(catalog, title, key):
     # Switch 2 pads are not Switch 1 pads
     "Lot of 3 Nintendo Switch 2 Pro Controllers",
     "Lot of 4 Switch 2 Joy-Con",
+    # Radeon cards named without rx / radeon are not Ryzen lots either
+    "Lot of 3 Sapphire Pulse 7600 8GB",
+    "Lot of 4 AMD 7900 20GB",
     # game cases are not games
     "Lot of 5 Nintendo DS game cases",
 ])

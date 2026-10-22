@@ -284,166 +284,166 @@
   category: cpu
   name: AMD Ryzen 5 7600
   ebay_query: "ryzen 5 7600"
-  match: '(?<!rx )(?<!radeon )\b7600\b(?! ?(x3d|x|xtx?|gre)\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7600\b(?! ?(x3d|x|xtx?|gre)\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-7600x
   category: cpu
   name: AMD Ryzen 5 7600X
   ebay_query: "ryzen 5 7600x"
-  match: '(?<!rx )(?<!radeon )\b7600 ?x\b(?! ?3d\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7600 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-7700
   category: cpu
   name: AMD Ryzen 7 7700
   ebay_query: "ryzen 7 7700"
-  match: '(?<!rx )(?<!radeon )\b7700\b(?! ?(x3d|x|xtx?|gre)\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7700\b(?! ?(x3d|x|xtx?|gre)\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-7700x
   category: cpu
   name: AMD Ryzen 7 7700X
   ebay_query: "ryzen 7 7700x"
-  match: '(?<!rx )(?<!radeon )\b7700 ?x\b(?! ?3d\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7700 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-7800x3d
   category: cpu
   name: AMD Ryzen 7 7800X3D
   ebay_query: "ryzen 7 7800x3d"
-  match: '(?<!rx )(?<!radeon )\b7800 ?x ?3d\b'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7800 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-7900
   category: cpu
   name: AMD Ryzen 9 7900
   ebay_query: "ryzen 9 7900"
-  match: '(?<!rx )(?<!radeon )\b7900\b(?! ?(x3d|x|xtx?|gre)\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7900\b(?! ?(x3d|x|xtx?|gre)\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-7900x
   category: cpu
   name: AMD Ryzen 9 7900X
   ebay_query: "ryzen 9 7900x"
-  match: '(?<!rx )(?<!radeon )\b7900 ?x\b(?! ?3d\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7900 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-7900x3d
   category: cpu
   name: AMD Ryzen 9 7900X3D
   ebay_query: "ryzen 9 7900x3d"
-  match: '(?<!rx )(?<!radeon )\b7900 ?x ?3d\b'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7900 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-7950x
   category: cpu
   name: AMD Ryzen 9 7950X
   ebay_query: "ryzen 9 7950x"
-  match: '(?<!rx )(?<!radeon )\b7950 ?x\b(?! ?3d\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7950 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-7950x3d
   category: cpu
   name: AMD Ryzen 9 7950X3D
   ebay_query: "ryzen 9 7950x3d"
-  match: '(?<!rx )(?<!radeon )\b7950 ?x ?3d\b'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b7950 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-9600
   category: cpu
   name: AMD Ryzen 5 9600
   ebay_query: "ryzen 5 9600"
-  match: '(?<!rx )(?<!radeon )\b9600\b(?! ?(x3d|x|xtx?|gre)\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b9600\b(?! ?(x3d|x|xtx?|gre)\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-9600x
   category: cpu
   name: AMD Ryzen 5 9600X
   ebay_query: "ryzen 5 9600x"
-  match: '(?<!rx )(?<!radeon )\b9600 ?x\b(?! ?3d\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b9600 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-9700x
   category: cpu
   name: AMD Ryzen 7 9700X
   ebay_query: "ryzen 7 9700x"
-  match: '(?<!rx )(?<!radeon )\b9700 ?x\b(?! ?3d\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b9700 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-9800x3d
   category: cpu
   name: AMD Ryzen 7 9800X3D
   ebay_query: "ryzen 7 9800x3d"
-  match: '(?<!rx )(?<!radeon )\b9800 ?x ?3d\b'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b9800 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-9900x
   category: cpu
   name: AMD Ryzen 9 9900X
   ebay_query: "ryzen 9 9900x"
-  match: '(?<!rx )(?<!radeon )\b9900 ?x\b(?! ?3d\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b9900 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-9900x3d
   category: cpu
   name: AMD Ryzen 9 9900X3D
   ebay_query: "ryzen 9 9900x3d"
-  match: '(?<!rx )(?<!radeon )\b9900 ?x ?3d\b'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b9900 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-9950x
   category: cpu
   name: AMD Ryzen 9 9950X
   ebay_query: "ryzen 9 9950x"
-  match: '(?<!rx )(?<!radeon )\b9950 ?x\b(?! ?3d\b)'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b9950 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-9950x3d
   category: cpu
   name: AMD Ryzen 9 9950X3D
   ebay_query: "ryzen 9 9950x3d"
-  match: '(?<!rx )(?<!radeon )\b9950 ?x ?3d\b'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b9950 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-5600x3d
   category: cpu
   name: AMD Ryzen 5 5600X3D
   ebay_query: "ryzen 5 5600x3d"
-  match: '(?<!rx )(?<!radeon )\b5600 ?x ?3d\b'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b5600 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-5700x3d
   category: cpu
   name: AMD Ryzen 7 5700X3D
   ebay_query: "ryzen 7 5700x3d"
-  match: '(?<!rx )(?<!radeon )\b5700 ?x ?3d\b'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b5700 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
 
 - id: ryzen-5800x3d
   category: cpu
   name: AMD Ryzen 7 5800X3D
   ebay_query: "ryzen 7 5800x3d"
-  match: '(?<!rx )(?<!radeon )\b5800 ?x ?3d\b'
-  exclude: []
+  match: '(?<!rx )(?<!radeon )\b5800 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
   max_price: null
