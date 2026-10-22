@@ -9,7 +9,7 @@ A personal, locally run web app that searches eBay, ShopGoodwill and HiBid
 for underpriced items in four kinds of listing, shows them in a ranked
 dashboard, and sends the best finds to Discord:
 
-1. **Single items** — recent-generation CPUs, graphics cards, and
+1. **Single items** — recent-generation CPUs, NVIDIA RTX graphics cards, and
    limited-edition consoles and controllers, in working condition.
 2. **Bulk hardware lots** — 3+ broken or untested units of the same console,
    controller, GPU or CPU, bought to repair and resell.
@@ -36,7 +36,7 @@ and without spending money on photo scanning unless I've switched it on.
 | Purpose | Both price-target alerts and resale-value scoring |
 | Sites | eBay, ShopGoodwill, HiBid |
 | Interface | Local web dashboard (no hosting, no accounts, single user) |
-| Single-item scope | Recent CPUs, GPUs, limited-edition consoles and controllers |
+| Single-item scope | Recent CPUs, NVIDIA RTX GPUs only, limited-edition consoles and controllers |
 | Single-item condition | Working only; new/sealed and used valued separately |
 | Bulk hardware lots | 3+ units, broken allowed, valued as repair-and-resell |
 | Game lots | 5+ working games, one platform, any generation |
@@ -136,8 +136,8 @@ Starter coverage:
 
 - **GPUs:** NVIDIA RTX 30, 40 and 50 series including Ti / Super variants and
   VRAM variants where both exist (e.g. RTX 3060 8GB vs 12GB, RTX 5060 Ti 8GB
-  vs 16GB); AMD RX 6000, 7000 and 9000 series (XT vs XTX kept distinct);
-  Intel Arc B-series.
+  vs 16GB). NVIDIA RTX only — no AMD Radeon or Intel Arc cards (scope
+  narrowed by the user on 2026-10-22).
 - **CPUs:** Intel Core 12th, 13th and 14th gen (i5/i7/i9, K/KF/F variants
   distinct), Intel Core Ultra 200S desktop; AMD Ryzen 7000 and 9000 desktop
   (X vs X3D distinct), plus Ryzen 5000 X3D.
@@ -350,7 +350,7 @@ controller 10; `lot_ship_base` 8, `lot_ship_per_game` 0.40; `min_profit` 30;
   pass completes every `ebay_full_pass_hours` (default 3, about 1,600
   calls/day plus item-detail calls for photo scans).
 - **ShopGoodwill and HiBid:** a fixed set of broad queries defined in config
-  (e.g. "rtx", "geforce", "radeon", "ryzen", "intel core", "ps5",
+  (e.g. "rtx", "geforce", "ryzen", "intel core", "ps5",
   "xbox series", "switch oled", "dualsense", "limited edition controller",
   "console lot", "controller lot", "video game lot", "games lot"). Every
   returned listing is classified locally.
@@ -535,7 +535,8 @@ toggles, catalog edits, scans and refresh without page reloads.
   form, unknown counts, game vs hardware vs single routing, console+games
   bundles, mixed lots.
 - **Single-item matcher:** variant collisions (4070 Ti vs Ti Super, 7800X vs
-  7800X3D, 7900 XT vs XTX, 3060 8GB vs 12GB), every exclude family,
+  7800X3D, Ryzen 7900X vs a Radeon "RX 7900 XT" title (must not match a CPU),
+  3060 8GB vs 12GB), every exclude family,
   ambiguous titles, condition detection.
 - **Lot matchers:** platform look-alikes (DS vs 3DS, Xbox vs 360 vs One, PS2
   vs PS3), "PS2 game lot" not matching a console, working-only game
