@@ -293,6 +293,14 @@ def test_every_pattern_matches_its_own_name():
     ("Nintendo DS Lite Pikachu Edition with Pokemon Diamond Game", "ds-lite-pikachu"),
     ("Nintendo 64 Pikachu Edition Console with Hey You Pikachu game", "n64-pikachu"),
     ("Nintendo 64 Pikachu Edition Blue Yellow", "n64-pikachu"),
+    # fix round 2: drive or box contents named after a console word
+    ("Xbox 360 Halo 3 Special Edition Console 20GB HDD", "xbox-360-halo-3-special-edition"),
+    ("Xbox 360 Halo Reach Limited Edition Console 250GB HDD",
+     "xbox-360-halo-reach-limited-edition"),
+    ("PS4 20th Anniversary Edition Console 500GB CUH-1200 HDD", "ps4-20th-anniversary"),
+    ("Xbox One X Cyberpunk 2077 Limited Edition Console 1TB HDD", "xbox-one-x-cyberpunk-2077"),
+    ("Xbox 360 Halo 3 Special Edition Console CIB Box Manual", "xbox-360-halo-3-special-edition"),
+    ("Nintendo DS Lite Pikachu Edition Console New Battery", "ds-lite-pikachu"),
     # a known single product with a counted set of games is valued as that product
     ("Xbox 360 Halo 3 Special Edition Console Bundle with 5 games",
      "xbox-360-halo-3-special-edition"),
@@ -376,6 +384,9 @@ def test_collectible_console(catalog, title, key):
     "3DS Zelda 25th Anniversary Edition AR Cards",
     "Zelda 25th Anniversary 3DS Bundle Box Insert",
     "Zelda 25th Anniversary Symphony CD 3DS",
+    # fix round 2: a console word right before the part names the part ("console manual")
+    "Xbox 360 Halo 3 Special Edition Console Manual",
+    "Xbox 360 Halo 3 Special Edition Console Box and Manual",
 ])
 def test_collectible_console_no_match(catalog, title):
     assert match_single(title, SEED.products) is None

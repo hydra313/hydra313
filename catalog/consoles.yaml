@@ -97,7 +97,9 @@
 # is an extra such as "console with Halo 3 game"); home consoles also need an
 # edition word and a console / system / storage marker. The shared excludes drop
 # games, parts and accessories unless they follow with / and / +, so "console
-# with Halo 3 game" or "with charger" still match.
+# with Halo 3 game" or "with charger" still match; drive, power and box-content
+# words also pass after a console / system word ("Console 20GB HDD"), but
+# motherboards and parts never do.
 
 # Microsoft, Sep 2007 (green and gold, 20GB)
 - id: xbox-360-halo-3-special-edition
@@ -105,7 +107,7 @@
   name: Xbox 360 Halo 3 Special Edition Console
   ebay_query: "xbox 360 halo 3 special edition console"
   match: '^(?=.*\bxbox ?360\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bhalo ?3\b(?!\W*odst))(?!.*\b(legendary|odst)\b)(?=.*\b((special|limited|spartan|collector\W?s?) edition|halo ?3 edition|spartan)\b|.*\bgreen\b.*\bgold\b|.*\bgold\b.*\bgreen\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?gb|spartan edition)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
-  exclude: &collectible_excludes ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '\bsteel ?books?\b', '\bguides?\b', '\bcustom\b', '\b(shells?|housings?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bgames?\b(?! ?(boy|cube|gear)\b)', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(carts?|cartridges?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(cases?|docks?|stands?|headsets?|stylus(es)?|pouch(es)?|screen protectors?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(hard drives?|hdds?|power supply|power bricks?|ac adapters?|chargers?|batter(y|ies)|hinges?|manuals?|inserts?|bags?|motherboards?|network adapters?|charge kits?|ar cards|(kinect )?sensors?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bbox( and| \+)? (manuals?|inserts?)\b']
+  exclude: &collectible_excludes ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '\bsteel ?books?\b', '\bguides?\b', '\bcustom\b', '\b(shells?|housings?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bgames?\b(?! ?(boy|cube|gear)\b)', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(carts?|cartridges?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(cases?|docks?|stands?|headsets?|stylus(es)?|pouch(es)?|screen protectors?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+|\b(consoles?|systems?)\b(?! (hard drives?|hdds?|power supply|power bricks?|ac adapters?|chargers?|batter(y|ies)|hinges?|manuals?|inserts?|bags?|network adapters?|charge kits?|ar cards|(kinect )?sensors?|box)\b)).)*\b(hard drives?|hdds?|power supply|power bricks?|ac adapters?|chargers?|batter(y|ies)|hinges?|manuals?|inserts?|bags?|network adapters?|charge kits?|ar cards|(kinect )?sensors?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+|\b(consoles?|systems?)\b(?! (hard drives?|hdds?|power supply|power bricks?|ac adapters?|chargers?|batter(y|ies)|hinges?|manuals?|inserts?|bags?|network adapters?|charge kits?|ar cards|(kinect )?sensors?|box)\b)).)*\bbox( and| \+)? (manuals?|inserts?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(motherboards?|parts)\b']
   max_price: null
 
 # Microsoft, Sep 2010 (Xbox 360 S, silver, 250GB)
