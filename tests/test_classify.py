@@ -22,12 +22,19 @@ CATALOG = Catalog(
         _prod("4090", "gpu", r"\b4090\b"),
         _prod("ps5-spider-man-2", "console", r"\b(ps5|playstation 5)\b.*\bspider man 2\b"),
         _prod("ps2-slim", "console", r"\b(ps2|playstation 2)\b.*\b(console|slim)\b"),
+        _prod("ps4-slim", "console", r"\b(ps4|playstation 4) slim\b"),
+        _prod("switch-2", "console", r"\b(nintendo )?switch 2\b"),
     ],
     bulk=[
         _bulk("ps2-console", "console",
               r"\b(ps2|playstation 2)\b.*\b(consoles?|systems?|slim|fat|scph)\b"),
         _bulk("xbox-360-console", "console", r"\bxbox 360\b.*\b(consoles?|systems?)\b"),
         _bulk("xbox-360-controller", "controller", r"\bxbox 360\b.*\bcontrollers?\b"),
+        _bulk("ps2-controller", "controller",
+              r"\b(ps2|playstation 2)\b.*\b(controllers?|dualshock)\b"),
+        _bulk("gameboy-console", "console", r"\bgame ?boy\b.*\b(consoles?|systems?)\b"),
+        _bulk("gba-console", "console", r"\bgame ?boy advance( sp)?\b"),
+        _bulk("ps5-console", "console", r"\b(ps5|playstation 5)\b.*\b(consoles?|systems?)\b"),
     ],
     platforms=[
         _plat("ps2", r"\b(ps2|playstation 2)\b"),
@@ -37,6 +44,13 @@ CATALOG = Catalog(
         _plat("xbox-360", r"\bxbox 360\b"),
         _plat("ds", r"\b(nintendo )?ds\b"),
         _plat("3ds", r"\b(nintendo )?3ds\b"),
+        _plat("ps4", r"\b(ps4|playstation 4)\b"),
+        _plat("switch", r"\b(nintendo )?switch\b"),
+        _plat("switch-2", r"\b(nintendo )?switch 2\b"),
+        _plat("nes", r"\b(nes|nintendo entertainment system)\b"),
+        _plat("snes", r"\b(snes|super nintendo( entertainment system)?)\b"),
+        _plat("gameboy", r"\bgame ?boy\b"),
+        _plat("gba", r"\bgame ?boy advance\b"),
     ],
 )
 CFG = Config()
@@ -103,6 +117,7 @@ def test_ps2_game_lot_not_a_console():
 def test_console_with_games_skipped():
     assert _c("PS2 console with 10 games") is None
     assert _c("PS2 Slim console + 12 games") is None
+    assert _c("PS2 1 console 12 games") is None
     assert _c("Lot of 2 PS2 consoles and games") is None
 
 
@@ -140,3 +155,41 @@ def test_single_path():
 
 def test_single_path_rejects_unmatched():
     assert _c("Random gaming mouse") is None
+
+
+def _kkq(title):
+    r = _c(title)
+    return None if r is None else (r.kind, r.key, r.quantity)
+
+
+def test_accessory_clause_does_not_pick_product():
+    assert _kkq("Lot of 4 Xbox 360 consoles with controllers") == (
+        "hardware_lot", "xbox-360-console", 4)
+    assert _kkq("Lot of 3 PS2 Slim consoles with 6 controllers") == (
+        "hardware_lot", "ps2-console", 3)
+    assert _kkq("Lot of 10 Xbox 360 controllers and 1 console") == (
+        "hardware_lot", "xbox-360-controller", 10)
+
+
+def test_single_console_with_one_game_reaches_single_path():
+    assert _kkq("PS4 Slim 500 GB console with game") == ("single", "ps4-slim", 1)
+    assert _kkq("Nintendo Switch 2 console with game") == ("single", "switch-2", 1)
+    assert _kkq("PS5 Console Spider-Man 2 Bundle with Game") == ("single", "ps5-spider-man-2", 1)
+
+
+def test_platform_names_are_not_game_or_hardware_words():
+    assert _kkq("Lot of 15 NES Nintendo Entertainment System games") == ("game_lot", "nes", 15)
+    assert _kkq("Lot of 12 Super Nintendo Entertainment System games") == (
+        "game_lot", "snes", 12)
+    assert _kkq("Lot of 5 Game Boy consoles for parts") == ("hardware_lot", "gameboy-console", 5)
+    assert _kkq("Lot of 6 Game Boy Advance SP") == ("hardware_lot", "gba-console", 6)
+
+
+def test_disc_edition_is_not_a_game_word():
+    assert _kkq("Lot of 3 PS5 Disc Edition consoles for parts") == (
+        "hardware_lot", "ps5-console", 3)
+
+
+def test_slim_is_a_hardware_word():
+    assert _c("PS2 Slim lot of 5 with 10 games") is None
+    assert _c("lot of 5 ps2 slim games only") is None

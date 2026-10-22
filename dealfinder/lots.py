@@ -9,7 +9,16 @@ from dealfinder.text import pick_most_specific
 
 GAME_WORDS = r"\b(games?|carts?|cartridges?|discs?)\b"
 HARDWARE_WORDS = (
-    r"\b(consoles?|systems?|controllers?|dualshock|dualsense|joy ?cons?|gamepads?|handhelds?)\b"
+    r"\b(consoles?|systems?|controllers?|dualshock|dualsense|joy ?cons?|gamepads?|handhelds?"
+    r"|slim|fat|scph)\b"
+)
+
+# "with controllers", "and 1 console", "+ cables": extras that must not decide the
+# bulk product (spec 6.5.2). Bulk patterns are "platform.*hardware word", so an
+# extra's hardware word later in the title would otherwise win as more specific.
+_ACCESSORY_CLAUSE = re.compile(
+    r"(?:\b(?:with|w|and|plus|includes?|including)\b|\+) ?(?:\d+ )?(?:\S+ ){0,2}?"
+    r"(?:controllers?|consoles?|cables?|games?|accessories|adapters?|power supplies)\b"
 )
 
 # Spec section 6.5. "For parts", "broken", "untested" and "as is" are allowed:
@@ -74,7 +83,9 @@ def match_hardware_lot(
     named = [(p, m) for p in platforms if (m := re.search(p.match, title_norm))]
     if len(named) >= 2 and pick_most_specific(named) is None:
         return None
-    return _match_lot(title_norm, bulk, HARDWARE_LOT_EXCLUDES, quantity, min_qty)
+    if any(re.search(p, title_norm) for p in HARDWARE_LOT_EXCLUDES):
+        return None
+    return _match_lot(_ACCESSORY_CLAUSE.sub(" ", title_norm), bulk, (), quantity, min_qty)
 
 
 def match_game_lot(

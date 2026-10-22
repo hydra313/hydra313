@@ -19,12 +19,15 @@ PLATFORMS = [
     _plat("xbox-360", r"\bxbox 360\b"),
     _plat("ds", r"\b(nintendo )?ds\b"),
     _plat("3ds", r"\b(nintendo )?3ds\b"),
+    _plat("gameboy", r"\bgame ?boy\b"),
+    _plat("gba", r"\bgame ?boy advance\b"),
 ]
 MASKS = [p.match for p in PLATFORMS]
 BULK = [
     _bulk("ps2-console", "console", r"\b(ps2|playstation 2)\b.*\b(consoles?|systems?|slim|fat|scph)\b"),
     _bulk("xbox-360-console", "console", r"\bxbox 360\b.*\b(consoles?|systems?)\b"),
     _bulk("xbox-360-controller", "controller", r"\bxbox 360\b.*\bcontrollers?\b"),
+    _bulk("ps2-controller", "controller", r"\b(ps2|playstation 2)\b.*\b(controllers?|dualshock)\b"),
 ]
 
 
@@ -78,6 +81,13 @@ def test_mixed_bulk_products_skipped():
 
 def test_nested_platforms_not_mixed():
     assert _hw("Lot of 5 Xbox 360 controllers") == ("xbox-360-controller", 5)
+
+
+def test_accessory_clause_ignored_for_product():
+    assert _hw("Lot of 4 Xbox 360 consoles with controllers") == ("xbox-360-console", 4)
+    assert _hw("Lot of 3 PS2 Slim consoles with 6 controllers") == ("ps2-console", 3)
+    assert _hw("Lot of 10 Xbox 360 controllers and 1 console") == ("xbox-360-controller", 10)
+    assert _hw("Lot of 5 PS2 controllers + power supplies") == ("ps2-controller", 5)
 
 
 def test_hardware_lot_no_bulk_match():

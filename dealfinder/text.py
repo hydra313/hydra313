@@ -71,10 +71,11 @@ def normalize(title: str) -> str:
     return " ".join(s.split())
 
 
-def _mask(text: str, patterns: Iterable[str]) -> str:
+def mask(text: str, patterns: Iterable[str]) -> str:
+    """Replace the union of all match spans of `patterns` with "_"."""
     spans = sorted(
         m.span()
-        for p in (*_BUILTIN_MASKS, *patterns)
+        for p in patterns
         for m in re.finditer(p, text)
         if m.end() > m.start()
     )
@@ -93,8 +94,14 @@ def _mask(text: str, patterns: Iterable[str]) -> str:
     return " ".join("".join(out).split())
 
 
+def quantity_mask(title_norm: str, mask_patterns: Iterable[str] = ()) -> str:
+    """The title parse_quantity reads counts from: thousands separators dropped,
+    built-in model/spec masks and `mask_patterns` (platform names) masked."""
+    return mask(_THOUSANDS.sub("", title_norm), (*_BUILTIN_MASKS, *mask_patterns))
+
+
 def parse_quantity(title_norm: str, mask_patterns: Iterable[str] = ()) -> int | None:
-    masked = _mask(_THOUSANDS.sub("", title_norm), mask_patterns)
+    masked = quantity_mask(title_norm, mask_patterns)
     for form in _FORMS:
         for m in form.finditer(masked):
             if form is _UNIT_FORM and _ACCESSORY_LEAD.search(masked, 0, m.start()):

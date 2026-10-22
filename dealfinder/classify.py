@@ -7,11 +7,20 @@ from dealfinder.config import Config
 from dealfinder.lots import GAME_WORDS, HARDWARE_WORDS, match_game_lot, match_hardware_lot
 from dealfinder.matcher import match_single
 from dealfinder.models import Classified, Listing
-from dealfinder.text import normalize, parse_quantity
+from dealfinder.text import mask, normalize, parse_quantity, quantity_mask
 
 # "console with 10 games": parse_quantity skips counts after "with", so the
-# bundle check also looks for a game count directly.
-_GAME_COUNT = re.compile(r"\b\d+ (\S+ ){0,3}games?\b")
+# bundle check also looks for a game count directly (read on the quantity-masked
+# title, so "switch 2 console with game" or "500 gb" never count).
+_GAME_COUNT = re.compile(r"\b(\d+)\b(?=(?: \S+){0,3} games\b)")
+# Masked with the platform names before the game/hardware word checks:
+# "disc edition" is not a game disc, "nintendo entertainment system" not hardware.
+_NOT_WORDS = (r"\bdisc (edition|version|drive)\b", r"\bdigital edition\b")
+
+
+def _has_game_count(title_norm: str, mask_patterns: list[str]) -> bool:
+    return any(
+        int(m[1]) >= 2 for m in _GAME_COUNT.finditer(quantity_mask(title_norm, mask_patterns)))
 
 
 def classify(listing: Listing, catalog: Catalog, cfg: Config) -> Classified | None:
@@ -19,10 +28,12 @@ def classify(listing: Listing, catalog: Catalog, cfg: Config) -> Classified | No
     if not listing.shipping_offered:
         return None
     title_norm = normalize(listing.title)
-    quantity = parse_quantity(title_norm, catalog.mask_patterns())
+    mask_patterns = catalog.mask_patterns()
+    quantity = parse_quantity(title_norm, mask_patterns)
     names_platform = any(re.search(p.match, title_norm) for p in catalog.platforms)
-    has_games = re.search(GAME_WORDS, title_norm) is not None
-    has_hardware = re.search(HARDWARE_WORDS, title_norm) is not None
+    words = mask(title_norm, (*mask_patterns, *_NOT_WORDS))
+    has_games = re.search(GAME_WORDS, words) is not None
+    has_hardware = re.search(HARDWARE_WORDS, words) is not None
 
     # A count of 1 can never be a game lot (min_game_lot >= 2), so such titles
     # ("PS5 Spider-Man 2 Limited Edition Bundle with game") go to the single path.
@@ -35,7 +46,7 @@ def classify(listing: Listing, catalog: Catalog, cfg: Config) -> Classified | No
                           key=platform.id, condition=None, quantity=qty, category=None)
 
     if names_platform and has_games and has_hardware and (
-            quantity != 1 or _GAME_COUNT.search(title_norm)):
+            quantity != 1 or _has_game_count(title_norm, mask_patterns)):
         return None  # console + games bundle: neither lot type
 
     if quantity is None or quantity >= 2:
