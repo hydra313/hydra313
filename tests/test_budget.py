@@ -213,3 +213,61 @@ def test_lock_is_shared_across_instances(conn, tmp_path):
     assert b1.lock is b2.lock
     assert b1.lock is SCAN_LOCK
     other_conn.close()
+
+
+@pytest.mark.parametrize("bad", ["nan", "inf", "-inf", "abc", "", "-5"])
+@pytest.mark.parametrize("key", ["daily_cap", "monthly_cap", "max_scan_price"])
+def test_bad_stored_cap_falls_back_to_config_default(conn, key, bad):
+    b = make_budget(conn)
+    b.set_scan_enabled(True)
+    db.set_setting(conn, key, bad)
+    assert b.caps() == Caps(5.0, 50.0, 300.0)
+    # the gate still enforces the default cap
+    spend(conn, 4.80, NOW)
+    assert b.can_auto_scan(10) == GateDecision(False, "daily cap reached")
+    assert b.can_auto_scan(301) == GateDecision(False, "over max scan price")
+
+
+def test_nan_daily_cap_does_not_open_the_gate(conn):
+    b = make_budget(conn)
+    b.set_scan_enabled(True)
+    db.set_setting(conn, "daily_cap", "nan")
+    db.set_setting(conn, "monthly_cap", "nan")
+    spend(conn, 60.0, NOW)
+    assert b.can_auto_scan(10).allowed is False
+    assert b.can_manual_scan().allowed is False
+
+
+def test_record_rejects_negative_or_non_finite_cost(conn):
+    b = make_budget(conn)
+    for bad in (-0.01, math.nan, math.inf):
+        with pytest.raises(ValueError):
+            b.record(1, 10, 10, bad)
+    assert conn.execute("SELECT COUNT(*) FROM vision_spend").fetchone()[0] == 0
+    b.record(1, 10, 10, 0.0)
+    assert b.spent_today() == 0.0
+
+
+def test_set_caps_non_numeric_raises_value_error(conn):
+    b = make_budget(conn)
+    for bad in ("abc", "", object(), [1]):
+        with pytest.raises(ValueError):
+            b.set_caps(daily=bad)
+    assert b.caps() == Caps(5.0, 50.0, 300.0)
+    b.set_caps(daily="7.5")  # numeric strings are coerced
+    assert b.caps().daily == 7.5
+
+
+def test_naive_clock_is_rejected(conn):
+    b = Budget(conn, Config(), lambda: datetime(2026, 10, 22, 12, 0))
+    b.set_scan_enabled(True)
+    for call in (
+        b.spent_today,
+        b.spent_this_month,
+        lambda: b.record(1, 1, 1, 0.01),
+        lambda: b.can_auto_scan(10),
+        b.can_manual_scan,
+    ):
+        with pytest.raises(ValueError):
+            call()
+    assert conn.execute("SELECT COUNT(*) FROM vision_spend").fetchone()[0] == 0

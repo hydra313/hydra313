@@ -42,6 +42,12 @@ class Budget:
         self.cfg = cfg
         self.clock = clock
 
+    def _now(self) -> datetime:
+        now = self.clock()
+        if now.tzinfo is None:
+            raise ValueError("clock must return an aware datetime")
+        return now
+
     @property
     def lock(self) -> threading.Lock:
         return SCAN_LOCK
@@ -69,8 +75,19 @@ class Budget:
     # --- caps -------------------------------------------------------------
 
     def _number(self, key: str, default: float) -> float:
+        """A stored cap; absent, unparseable, non-finite or negative values yield `default`.
+
+        Falling back to the configured default (rather than trusting a bad value) keeps
+        the gate closed: `spent > nan` is never true, so a nan cap would allow every scan.
+        """
         value = db.get_setting(self.conn, key)
-        return default if value is None else float(value)
+        if value is None:
+            return default
+        try:
+            number = float(value)
+        except ValueError:
+            return default
+        return number if math.isfinite(number) and number >= 0 else default
 
     def caps(self) -> Caps:
         return Caps(
@@ -91,22 +108,29 @@ class Budget:
             "monthly_cap": monthly,
             "max_scan_price": max_scan_price,
         }
+        numbers: dict[str, float] = {}
         for key, value in given.items():
-            if value is not None and (not math.isfinite(value) or value < 0):
+            if value is None:
+                continue
+            try:
+                number = float(value)
+            except (TypeError, ValueError):
+                raise ValueError(f"{key} must be a number, got {value!r}") from None
+            if not math.isfinite(number) or number < 0:
                 raise ValueError(f"{key} must be a finite number >= 0, got {value!r}")
-        for key, value in given.items():
-            if value is not None:
-                db.set_setting(self.conn, key, repr(float(value)))
+            numbers[key] = number
+        for key, number in numbers.items():
+            db.set_setting(self.conn, key, repr(number))
 
     # --- spend ------------------------------------------------------------
 
     def spent_today(self) -> float:
-        now = self.clock()
+        now = self._now()
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         return db.spend_between(self.conn, start, start + timedelta(days=1))
 
     def spent_this_month(self) -> float:
-        now = self.clock()
+        now = self._now()
         start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         if start.month == 12:
             end = start.replace(year=start.year + 1, month=1)
@@ -117,8 +141,10 @@ class Budget:
     def record(
         self, listing_id: int, input_tokens: int, output_tokens: int, cost_usd: float
     ) -> None:
+        if not math.isfinite(cost_usd) or cost_usd < 0:
+            raise ValueError(f"cost_usd must be a finite number >= 0, got {cost_usd!r}")
         db.record_spend(
-            self.conn, listing_id, input_tokens, output_tokens, cost_usd, self.clock()
+            self.conn, listing_id, input_tokens, output_tokens, cost_usd, self._now()
         )
 
     # --- gate -------------------------------------------------------------
