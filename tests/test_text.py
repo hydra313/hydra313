@@ -39,13 +39,43 @@ def test_quantity_forms(title, expected):
     assert parse_quantity(title, MASKS) == expected
 
 
+PS4 = r"\b(ps4|playstation 4)\b"
+
+
+@pytest.mark.parametrize(
+    "raw, extra_masks, expected",
+    [
+        ("MSI RTX 3080 10GB PCI Express 4.0 x16 Graphics Card", [], 1),
+        ("EVGA GTX 1080 Ti PCIe Gen3 x16", [], 1),
+        ("RTX 3070 PCIe 16x", [], 1),
+        ("ASUS RTX 3080 Ti 12GB 2x 8-Pin", [], 1),
+        ("Sony PS5 Disc Console Bundle with 2 Controllers", [], 1),
+        ("Xbox Series X 1TB Console w/ 2 Controllers and 3 Games", [], 1),
+        ("Nintendo Switch OLED w/ 3 Games", [], 1),
+        ("PS4 Slim 1TB + 10 Games", [PS4], 1),
+        ("Nintendo 3DS XL with 5 Games", [], 1),
+        ("Sony DualShock 4 PS4 Controllers", [PS4], 1),
+        ("Ryzen 5 3600 Processors", [], 1),
+        ("Sega Genesis 32X Console", [], 1),
+        ("lot of 5 ps2 consoles with 3 controllers", [], 5),
+        ("Lot of 3 w/ cables", [], 3),
+        ("Xbox 360 Lot of 4 w/ AC Adapters", [], 4),
+        ("Huge lots of PS2 games", [], None),
+        ("Lot of 1,200 Pokemon Cards", [], None),
+    ],
+)
+def test_quantity_raw_titles(raw, extra_masks, expected):
+    assert parse_quantity(normalize(raw), MASKS + extra_masks) == expected
+
+
 def test_quantity_out_of_range_hit_is_ignored():
     assert parse_quantity("lot of 500 ps2 consoles", MASKS) is None
+    assert parse_quantity("lot of 500 ps2 (12)", MASKS) == 12
     assert parse_quantity("xbox one controllers", MASKS) == 1
 
 
 def test_lot_words():
-    assert LOT_WORDS == ("lot", "box of", "collection", "bulk", "wholesale")
+    assert LOT_WORDS == ("lot", "lots", "box of", "collection", "bulk", "wholesale")
 
 
 @pytest.mark.parametrize(
@@ -60,6 +90,8 @@ def test_lot_words():
         ("Xbox-360,  Controller | Black™", "xbox 360 controller black"),
         ("RTX 3080 PCIe 4.0 x16", "rtx 3080 pcie 4.0 x16"),
         ("PS2 Games 1/2 Price", "ps2 games 1/2 price"),
+        ("Lot of 3 w/ cables, w/o box", "lot of 3 with cables without box"),
+        ("Lot of 1,200 Pokemon Cards", "lot of 1,200 pokemon cards"),
     ],
 )
 def test_normalize(raw, expected):
