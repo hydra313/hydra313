@@ -193,6 +193,32 @@ def set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
     conn.commit()
 
 
+def record_spend(
+    conn: sqlite3.Connection,
+    listing_id: int,
+    input_tokens: int,
+    output_tokens: int,
+    cost_usd: float,
+    at: datetime,
+) -> None:
+    conn.execute(
+        "INSERT INTO vision_spend (scanned_at, listing_id, input_tokens, output_tokens, cost_usd)"
+        " VALUES (?, ?, ?, ?, ?)",
+        (_iso(at), listing_id, input_tokens, output_tokens, cost_usd),
+    )
+    conn.commit()
+
+
+def spend_between(conn: sqlite3.Connection, start: datetime, end: datetime) -> float:
+    """Total vision spend with start <= scanned_at < end."""
+    row = conn.execute(
+        "SELECT COALESCE(SUM(cost_usd), 0) AS total FROM vision_spend"
+        " WHERE julianday(scanned_at) >= julianday(?) AND julianday(scanned_at) < julianday(?)",
+        (_iso(start), _iso(end)),
+    ).fetchone()
+    return float(row["total"])
+
+
 def upsert_listing(
     conn: sqlite3.Connection,
     listing: Listing,
