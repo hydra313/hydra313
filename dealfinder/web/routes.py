@@ -17,7 +17,7 @@ from dealfinder.budget import Budget
 from dealfinder.catalog import Catalog, load_catalog
 from dealfinder.config import Config
 from dealfinder.models import BulkProduct, MarketValue
-from dealfinder.pipeline import SCAN_KINDS
+from dealfinder.pipeline import SCAN_KINDS, stale_before
 from dealfinder.web.app import local_now, utc_now
 
 log = logging.getLogger(__name__)
@@ -332,7 +332,8 @@ def deals(request: Request, category: str | None = None, source: str | None = No
         conn, ["single"], now,
         category=filters["category"], source=filters["source"],
         ending_within_h=filters["ending_within_h"],
-        new_since=new_since if new_only else None, target_only=target_only)
+        new_since=new_since if new_only else None, target_only=target_only,
+        stale_before=stale_before(cfg, now))
     names = _product_names(conn, cfg)
     ctx = {"deals": [_deal(conn, cfg, r, names, new_since, now) for r in rows]}
     if partial:
@@ -413,7 +414,8 @@ def hardware_lots(request: Request, photo_finds_only: bool = False,
     cfg = request.app.state.cfg
     now = utc_now()
     rows = db.query_listings(conn, ["hardware_lot", "scan_only"], now,
-                             photo_finds_only=photo_finds_only)
+                             photo_finds_only=photo_finds_only,
+                             stale_before=stale_before(cfg, now))
     catalog = _catalog(conn, cfg)
     ctx = {"lots": [_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
                     for r in rows if not _is_game_row(r)]}
@@ -435,7 +437,8 @@ def game_lots(request: Request, platform: str | None = None,
         "ending_within_h": _hours(ending_within_h),
         "photo_finds_only": photo_finds_only,
     }
-    rows = db.query_listings(conn, ["game_lot", "scan_only"], now, **filters)
+    rows = db.query_listings(conn, ["game_lot", "scan_only"], now, **filters,
+                             stale_before=stale_before(cfg, now))
     catalog = _catalog(conn, cfg)
     ctx = {"lots": [_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
                     for r in rows if _is_game_row(r)]}
@@ -521,7 +524,8 @@ def listing_detail(request: Request, listing_id: int,
         "ended": ended,
         "dismissed": bool(row["dismissed"]),
         "scan": _scan_view(scan) if scan is not None else None,
-        "can_scan": row["kind"] in SCAN_KINDS and not ended and scan is None,
+        "can_scan": (row["kind"] in SCAN_KINDS and not ended and scan is None
+                     and _parse_time(row["last_seen"]) >= stale_before(cfg, now)),
         "scanner_available": bool(cfg.anthropic_api_key),
     }
     ctx.update(_header(request, conn))

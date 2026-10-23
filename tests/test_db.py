@@ -216,3 +216,15 @@ def test_market_value_and_comps_round_trip(tmp_path):
     row = conn.execute("SELECT platform, title, completeness FROM item_prices").fetchone()
     assert tuple(row) == ("snes", "chrono trigger", "cib")
     assert db.get_market_value(conn, "snes|chrono trigger", "cib", table="item_prices") == item
+
+
+def test_stale_rows_hidden_and_not_scan_candidates(tmp_path):
+    conn = db.connect(tmp_path / "d.sqlite")
+    lot = make_class(category="console", kind="hardware_lot", key="ps2-console")
+    add(conn, make_listing("stale"), lot, now=T0 - timedelta(hours=7))
+    add(conn, make_listing("fresh"), lot, now=T0 - timedelta(hours=1))
+    cutoff = T0 - timedelta(hours=6)
+    assert sorted(keys(db.query_listings(conn, ["hardware_lot"], T0))) == ["fresh", "stale"]
+    assert keys(db.query_listings(conn, ["hardware_lot"], T0, stale_before=cutoff)) == ["fresh"]
+    assert sorted(keys(db.scan_candidates(conn, T0))) == ["fresh", "stale"]
+    assert keys(db.scan_candidates(conn, T0, stale_before=cutoff)) == ["fresh"]

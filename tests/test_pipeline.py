@@ -13,7 +13,8 @@ from dealfinder.budget import Budget
 from dealfinder.catalog import Catalog
 from dealfinder.config import Config
 from dealfinder.models import (
-    BulkProduct, Listing, MarketValue, Platform, Product, ScanItem, ScanResult,
+    BulkProduct, Classified, Listing, MarketValue, Platform, Product, ScanItem, ScanResult,
+    Scored,
 )
 from dealfinder.notify import Notifier
 from dealfinder.pipeline import (
@@ -847,3 +848,25 @@ def test_source_errors_when_every_listing_fails(conn, cfg):
     assert p.refresh().per_source["ebay"] == ("error", 2)
     run = db.latest_runs(conn)[0]
     assert run["status"] == "error" and "2 listings skipped" in run["error"]
+
+
+def _seed_bin_lot(conn, source_id, last_seen):
+    lot = listing(source_id, "Lot of 20 SNES games", price=40)
+    c = Classified(kind="game_lot", key="snes", condition=None, quantity=20, category=None)
+    scored = Scored(total_cost=40, shipping_estimated=False, profit=100, discount_pct=0.5,
+                    is_target_hit=False, is_deal=True, rank_score=100)
+    return db.upsert_listing(conn, lot, c, scored, last_seen)
+
+
+def test_stale_buy_it_now_rows_not_scanned(conn, cfg):
+    assert cfg.ebay_full_pass_hours == 3  # stale after 6 h unseen
+    stale = _seed_bin_lot(conn, "stale", T0 - timedelta(hours=7))
+    fresh = _seed_bin_lot(conn, "fresh", T0 - timedelta(hours=1))
+    scanner = FakeScanner()
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay")}, scanner=scanner)
+    p.budget.set_scan_enabled(True)
+    assert p.refresh().scanned == 1
+    assert [title for _, title in scanner.calls] == ["Lot of 20 SNES games"]
+    assert db.get_scan(conn, fresh) is not None and db.get_scan(conn, stale) is None
+    assert p.scan_listing(stale, manual=True) is None
+    assert len(scanner.calls) == 1

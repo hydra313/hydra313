@@ -7,7 +7,7 @@ import math
 import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from dealfinder import db
 from dealfinder.budget import Budget
@@ -89,8 +89,17 @@ def _row_classified(row: sqlite3.Row) -> Classified:
                       quantity=row["quantity"], category=row["category"])
 
 
-def _ended(row: sqlite3.Row, now: datetime) -> bool:
-    return bool(row["end_time"]) and datetime.fromisoformat(row["end_time"]) < now
+def stale_before(cfg: Config, now: datetime) -> datetime:
+    """Rows last seen before this are stale: two full eBay passes went by without any
+    search returning them (a sold or withdrawn Buy It Now never gets an end time)."""
+    return now - timedelta(hours=2 * cfg.ebay_full_pass_hours)
+
+
+def _ended(row: sqlite3.Row, now: datetime, cfg: Config) -> bool:
+    """Ended, or stale, which counts as ended."""
+    if row["end_time"] and datetime.fromisoformat(row["end_time"]) < now:
+        return True
+    return datetime.fromisoformat(row["last_seen"]) < stale_before(cfg, now)
 
 
 class Pipeline:
@@ -130,7 +139,7 @@ class Pipeline:
         now = self.clock()
         for listing_id, reasons in pending.items():
             row = db.get_listing(self.conn, listing_id)
-            if row is None or row["dismissed"] or _ended(row, now):
+            if row is None or row["dismissed"] or _ended(row, now, self.cfg):
                 continue
             for reason, details in reasons.items():
                 if self._notify(listing_id, reason, details):
@@ -301,7 +310,8 @@ class Pipeline:
 
     def _auto_scan(self, catalog: Catalog) -> tuple[int, int]:
         scanned = notified = 0
-        for row in db.scan_candidates(self.conn, self.clock()):
+        now = self.clock()
+        for row in db.scan_candidates(self.conn, now, stale_before(self.cfg, now)):
             decision = self.budget.can_auto_scan(self._gate_cost(row))
             if not decision.allowed:
                 if decision.reason in _GATE_STOPS:
@@ -348,7 +358,7 @@ class Pipeline:
         with self.budget.lock:
             now = self.clock()
             row = db.get_listing(self.conn, listing_id)
-            if (row is None or row["kind"] not in SCAN_KINDS or _ended(row, now)
+            if (row is None or row["kind"] not in SCAN_KINDS or _ended(row, now, self.cfg)
                     or db.get_scan(self.conn, listing_id) is not None):
                 return None
             cost = self._gate_cost(row)

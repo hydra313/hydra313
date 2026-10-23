@@ -294,7 +294,10 @@ def query_listings(
     target_only: bool = False,
     photo_finds_only: bool = False,
     deals_only: bool = True,
+    stale_before: datetime | None = None,
 ) -> list[sqlite3.Row]:
+    """`stale_before` hides rows last seen before it: a listing no search returns
+    any more (a sold or withdrawn Buy It Now) has no end time to expire it."""
     if not kinds:
         return []
     where = [
@@ -324,6 +327,9 @@ def query_listings(
         where.append(_PHOTO_FIND)
     if deals_only:
         where.append(f"(l.is_deal = 1 OR {_PHOTO_FIND})")
+    if stale_before is not None:
+        where.append("julianday(l.last_seen) >= julianday(?)")
+        params.append(_iso(stale_before))
     sql = (
         f"SELECT l.*, CASE WHEN {_PHOTO_FIND} THEN 1 ELSE 0 END AS photo_find,"
         " COALESCE(s.is_rare_find, 0) AS is_rare_find,"
@@ -688,14 +694,20 @@ def get_scan_by_source(
     ).fetchone()
 
 
-def scan_candidates(conn: sqlite3.Connection, now: datetime) -> list[sqlite3.Row]:
-    """Spec 11.1: live, undismissed lots and unknown-quantity lots never scanned, best first."""
+def scan_candidates(
+    conn: sqlite3.Connection, now: datetime, stale_before: datetime | None = None
+) -> list[sqlite3.Row]:
+    """Spec 11.1: live, undismissed lots and unknown-quantity lots never scanned, best first.
+    Rows last seen before `stale_before` are not live."""
+    stale = "" if stale_before is None else " AND julianday(l.last_seen) >= julianday(?)"
+    params = (_iso(now),) if stale_before is None else (_iso(now), _iso(stale_before))
     return conn.execute(
         "SELECT l.* FROM listings l"
         " WHERE l.kind IN ('hardware_lot', 'game_lot', 'scan_only')"
         " AND l.dismissed = 0"
         " AND (l.end_time IS NULL OR julianday(l.end_time) >= julianday(?))"
+        f"{stale}"
         " AND NOT EXISTS (SELECT 1 FROM scans s WHERE s.listing_id = l.id)"
         " ORDER BY l.rank_score DESC, l.id",
-        (_iso(now),),
+        params,
     ).fetchall()

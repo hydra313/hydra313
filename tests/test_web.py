@@ -888,3 +888,24 @@ def test_every_post_in_templates_uses_htmx():
         html = path.read_text()
         assert not re.search(r"method=[\"']?post", html, re.IGNORECASE), path
         assert not re.search(r"<form(?![^>]*\bhx-(get|post)=)", html), path
+
+
+# --- stale listings ------------------------------------------------------------------
+
+
+def test_stale_listings_hidden(client, conn):
+    assert client.app.state.cfg.ebay_full_pass_hours == 3
+    stale = seed(conn, "old", title="RTX 4090 gone", first_seen=now_utc() - timedelta(hours=7))
+    fresh = seed(conn, "new", title="RTX 4090 here", first_seen=now_utc() - timedelta(hours=1))
+    html = client.get("/").text
+    assert row_html(html, fresh) is not None and row_html(html, stale) is None
+    old_lot = seed_lot(conn, "oldlot")
+    conn.execute("UPDATE listings SET last_seen = ? WHERE id = ?",
+                 ((now_utc() - timedelta(hours=7)).isoformat(), old_lot))
+    conn.commit()
+    new_lot = seed_lot(conn, "newlot")
+    html = client.get("/lots/hardware").text
+    assert f"/listing/{new_lot}" in html and f"/listing/{old_lot}" not in html
+    client.app.state.cfg.anthropic_api_key = "sk-ant-test"
+    assert "Scan this lot" in client.get(f"/listing/{new_lot}").text
+    assert "Scan this lot" not in client.get(f"/listing/{old_lot}").text
