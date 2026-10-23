@@ -3,9 +3,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
+import pytest
 import respx
 
-from dealfinder.sources.base import HttpClient
+from dealfinder.sources.base import HttpClient, SourceError
 from dealfinder.sources.ebay import (
     ITEM_URL,
     SEARCH_URL,
@@ -175,3 +176,37 @@ def test_photos_capped_at_eight():
     }
     respx.get(url__startswith="https://api.ebay.com/buy/browse/v1/item/").respond(200, json=item)
     assert make_source().photos("abc", []) == [f"u{i}" for i in range(8)]
+
+
+# --- final review: robustness --------------------------------------------------
+
+
+def test_malformed_item_skipped_rest_parsed():
+    bad = [
+        {"title": "no item id", "price": {"value": "10.00"}},
+        {"itemId": "x", "price": {"value": "not a number"}},
+        {"itemId": "y", "price": {"value": "10"}, "itemEndDate": "garbage",
+         "buyingOptions": ["FIXED_PRICE"]},
+        {"itemId": "z", "price": {"value": "10"}, "image": "not a dict"},
+    ]
+    data = {"itemSummaries": [bad[0], SEARCH["itemSummaries"][0], *bad[1:],
+                              SEARCH["itemSummaries"][1]]}
+    assert [l.source_id for l in parse_search(data)] == [
+        l.source_id for l in parse_search(SEARCH)]
+
+
+@respx.mock
+def test_search_json_error_is_source_error():
+    respx.post(TOKEN_URL).respond(200, json={"access_token": "tok", "expires_in": 7200})
+    respx.get(SEARCH_URL).respond(200, text="<html>oops</html>")
+    with pytest.raises(SourceError, match="JSON"):
+        make_source().search("rtx 4070")
+
+
+@respx.mock
+def test_photos_json_error_is_source_error():
+    respx.post(TOKEN_URL).respond(200, json={"access_token": "tok", "expires_in": 7200})
+    respx.get(url__startswith="https://api.ebay.com/buy/browse/v1/item/").respond(
+        200, text="not json")
+    with pytest.raises(SourceError):
+        make_source().photos("abc", [])

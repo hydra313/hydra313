@@ -511,3 +511,28 @@ def test_game_title_words_do_not_exclude_its_own_comps(conn):
     sold = FakeSold([comp("System Shock 2 PC big box", 60), comp("System Shock 2 PC bundle", 300)])
     mv = make_service(conn, sold).item_price("PC", "System Shock 2", "loose")
     assert (mv.value, mv.comp_count) == (60, 1)
+
+
+# --- final review: any fetch failure is a SourceError ---------------------------
+
+
+def test_unexpected_sold_fetch_error_is_memoized_source_error(conn):
+    sold = FakeSold(error=ValueError("malformed page"))
+    svc = make_service(conn, sold)
+    assert svc.product_value(PRODUCTS[0], "used") is None
+    assert svc.item_price("SNES", "Chrono Trigger", "loose") is None
+    assert svc.product_value(PRODUCTS[0], "used") is None
+    assert sold.queries == ["rtx 4070 ti", "SNES Chrono Trigger"]  # memoized per run
+
+
+def test_unexpected_bin_fetch_error_is_source_error(conn):
+    class BrokenEbay(FakeEbay):
+        def search(self, query, fixed_price_only=False):
+            self.calls.append((query, fixed_price_only))
+            raise KeyError("itemSummaries")
+
+    ebay = BrokenEbay([])
+    svc = make_service(conn, FakeSold([]), ebay=ebay)
+    assert svc.product_value(PRODUCTS[0], "used") is None
+    assert svc.product_value(PRODUCTS[0], "new") is None
+    assert len(ebay.calls) == 1

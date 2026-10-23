@@ -814,3 +814,36 @@ def test_gpu_lot_falls_back_to_estimate_without_hardware_items(conn, cfg, items,
     p.scan_listing(rows(conn)["gpus"]["id"], manual=True)
     stored = rows(conn)["gpus"]
     assert (stored["kind"], stored["quantity"]) == (kind, quantity)
+
+
+class PickyMarket(FakeMarket):
+    """Valuing the RTX 4070 blows up; everything else works."""
+
+    def product_value(self, p, condition):
+        if p.id == "4070":
+            raise RuntimeError("value exploded")
+        return super().product_value(p, condition)
+
+
+def test_one_bad_listing_does_not_abort_the_source(conn, cfg):
+    ebay = FakeSource("ebay", [
+        listing("bad", "RTX 4070 12GB", price=300),
+        listing("good", "RTX 4090 Founders Edition 24GB", price=600),
+        listing("games", "Lot of 20 SNES games", price=50),
+    ])
+    p = make_pipeline(conn, cfg, {"ebay": ebay}, market=PickyMarket())
+    report = p.refresh()
+    assert report.per_source["ebay"] == ("ok", 3)
+    assert set(rows(conn)) == {"good", "games"}
+    run = db.latest_runs(conn)[0]
+    assert run["status"] == "ok"
+    assert "1 listing skipped" in run["error"] and "value exploded" in run["error"]
+
+
+def test_source_errors_when_every_listing_fails(conn, cfg):
+    ebay = FakeSource("ebay", [listing("a", "RTX 4070 12GB", price=300),
+                               listing("b", "RTX 4070 Super", price=400)])
+    p = make_pipeline(conn, cfg, {"ebay": ebay}, market=PickyMarket())
+    assert p.refresh().per_source["ebay"] == ("error", 2)
+    run = db.latest_runs(conn)[0]
+    assert run["status"] == "error" and "2 listings skipped" in run["error"]

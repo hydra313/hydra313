@@ -98,6 +98,12 @@ def label_condition(label: str | None) -> Condition | None:
     return None
 
 
+def _source_error(e: Exception) -> SourceError:
+    error = SourceError(f"{type(e).__name__}: {e}")
+    error.__cause__ = e
+    return error
+
+
 def _listing_comp(listing: Listing) -> Comp:
     return Comp(
         title=listing.title,
@@ -313,6 +319,8 @@ class MarketService:
                 self._sold_memo[query] = self._sold.fetch(query)
             except SourceError as e:
                 self._sold_memo[query] = e
+            except Exception as e:  # noqa: BLE001 - a parse bug is a failed fetch
+                self._sold_memo[query] = _source_error(e)
         result = self._sold_memo[query]
         if isinstance(result, SourceError):
             raise result
@@ -325,6 +333,8 @@ class MarketService:
                 self._bin_memo[query] = self._ebay.search(query, fixed_price_only=True)
             except SourceError as e:
                 self._bin_memo[query] = e
+            except Exception as e:  # noqa: BLE001 - a parse bug is a failed fetch
+                self._bin_memo[query] = _source_error(e)
         result = self._bin_memo[query]
         if isinstance(result, SourceError):
             raise result

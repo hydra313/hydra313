@@ -31,6 +31,11 @@ def time_weight(listing: Listing, now: datetime) -> float:
     return 0.4
 
 
+def _usable(value: MarketValue | None, qty: int = 1) -> bool:
+    """A zero or negative value or quantity cannot be scored: the listing stays unscored."""
+    return value is not None and value.value > 0 and qty > 0
+
+
 def _rank(profit: float | None, listing: Listing, now: datetime) -> float:
     return max(profit or 0, 0) * time_weight(listing, now)
 
@@ -41,7 +46,7 @@ def score_single(listing: Listing, product: Product, value: MarketValue | None,
     target_hit = product.max_price is not None and cost <= product.max_price
     profit = discount = None
     resale_deal = False
-    if value is not None:
+    if _usable(value):
         resale_net = value.value * (1 - cfg.sell_fee_rate) - cfg.sell_shipping[product.category]
         profit = resale_net - cost
         discount = 1 - cost / value.value
@@ -57,7 +62,7 @@ def score_hardware_lot(listing: Listing, bulk: BulkProduct, qty: int,
         listing, cfg, cfg.buy_shipping_estimate[bulk.category] * qty)
     profit = discount = None
     deal = False
-    if unit_value is not None:
+    if _usable(unit_value, qty):
         unit_net = unit_value.value * (1 - cfg.sell_fee_rate) - cfg.sell_shipping[bulk.category]
         revenue = qty * bulk.success_rate * unit_net
         profit = revenue - qty * bulk.repair_cost - cost
@@ -74,7 +79,7 @@ def score_game_lot(listing: Listing, qty: int, per_game: MarketValue | None,
     cost, estimated = total_cost(listing, cfg, lot_shipping)
     profit = discount = None
     deal = False
-    if per_game is not None:
+    if _usable(per_game, qty):
         gross = qty * per_game.value
         profit = gross * (1 - cfg.sell_fee_rate) - lot_shipping - cost
         discount = 1 - cost / gross

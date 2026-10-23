@@ -5,7 +5,7 @@ from typing import Callable
 from urllib.parse import quote
 
 from dealfinder.models import Listing
-from dealfinder.sources.base import HttpClient
+from dealfinder.sources.base import HttpClient, SourceError
 
 TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
 SEARCH_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
@@ -48,35 +48,49 @@ def _image_urls(item: dict) -> list[str]:
     return urls
 
 
+def _parse_item(item: dict) -> Listing | None:
+    options = item.get("buyingOptions") or []
+    is_auction = "AUCTION" in options
+    price = None
+    if is_auction:
+        price = _money(item.get("currentBidPrice"))
+    if price is None:
+        price = _money(item.get("price"))
+    if price is None:
+        return None
+    return Listing(
+        source="ebay",
+        source_id=item["itemId"],
+        title=item.get("title", ""),
+        url=item.get("itemWebUrl", ""),
+        price=price,
+        shipping=_shipping(item),
+        shipping_offered=True,
+        image_urls=_image_urls(item),
+        is_auction=is_auction,
+        end_time=_parse_end_time(item.get("itemEndDate")),
+        bid_count=item.get("bidCount") or 0,
+        condition_id=item.get("conditionId"),
+    )
+
+
 def parse_search(data: dict) -> list[Listing]:
     listings = []
     for item in data.get("itemSummaries") or []:
-        options = item.get("buyingOptions") or []
-        is_auction = "AUCTION" in options
-        price = None
-        if is_auction:
-            price = _money(item.get("currentBidPrice"))
-        if price is None:
-            price = _money(item.get("price"))
-        if price is None:
+        try:  # one malformed item never costs the rest of the page
+            listing = _parse_item(item)
+        except (KeyError, TypeError, ValueError, AttributeError, OverflowError):
             continue
-        listings.append(
-            Listing(
-                source="ebay",
-                source_id=item["itemId"],
-                title=item.get("title", ""),
-                url=item.get("itemWebUrl", ""),
-                price=price,
-                shipping=_shipping(item),
-                shipping_offered=True,
-                image_urls=_image_urls(item),
-                is_auction=is_auction,
-                end_time=_parse_end_time(item.get("itemEndDate")),
-                bid_count=item.get("bidCount") or 0,
-                condition_id=item.get("conditionId"),
-            )
-        )
+        if listing is not None:
+            listings.append(listing)
     return listings
+
+
+def _json(resp) -> dict:
+    try:
+        return resp.json()
+    except ValueError as e:
+        raise SourceError(f"eBay returned invalid JSON: {e}") from e
 
 
 class EbaySource:
@@ -126,9 +140,9 @@ class EbaySource:
         resp = self._http.request(
             "GET", SEARCH_URL, params=params, headers=self._auth_headers()
         )
-        return parse_search(resp.json())
+        return parse_search(_json(resp))
 
     def photos(self, source_id: str, known: list[str]) -> list[str]:
         url = ITEM_URL.format(item_id=quote(source_id, safe=""))
         resp = self._http.request("GET", url, headers=self._auth_headers())
-        return _image_urls(resp.json())[:MAX_PHOTOS]
+        return _image_urls(_json(resp))[:MAX_PHOTOS]

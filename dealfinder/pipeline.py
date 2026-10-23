@@ -160,23 +160,37 @@ class Pipeline:
         pending: dict[int, dict[Reason, list[str]]],
     ) -> tuple[str, int]:
         run_id = db.start_run(self.conn, name, self.clock())
-        seen = 0
+        seen = skipped = 0
+        last_error: Exception | None = None
         try:
             queries = self._queries(name, catalog)
             for query in queries:
                 listings = source.search(query)
                 seen += len(listings)
                 for listing in listings:
-                    self._process(listing, catalog, pending)
+                    try:
+                        self._process(listing, catalog, pending)
+                    except Exception as e:  # noqa: BLE001 - one bad listing never stops a run
+                        self.conn.rollback()
+                        log.warning("%s listing %s skipped: %s", name, listing.source_id, e)
+                        skipped += 1
+                        last_error = e
         except Exception as e:  # noqa: BLE001 - one failing source never stops the others
             log.warning("source %s failed: %s", name, e)
             db.finish_run(self.conn, run_id, "error", seen, f"{type(e).__name__}: {e}",
                           self.clock())
             return "error", seen
+        note = None
+        if last_error is not None:
+            noun = "listing" if skipped == 1 else "listings"
+            note = f"{skipped} {noun} skipped: {type(last_error).__name__}: {last_error}"
         # A source can only report what it parsed, so zero listings across every
         # query of the run stands in for "the site answered but nothing parsed".
-        status = "site_change" if queries and seen == 0 else "ok"
-        db.finish_run(self.conn, run_id, status, seen, None, self.clock())
+        if skipped and skipped == seen:
+            status = "error"
+        else:
+            status = "site_change" if queries and seen == 0 else "ok"
+        db.finish_run(self.conn, run_id, status, seen, note, self.clock())
         return status, seen
 
     def _process(

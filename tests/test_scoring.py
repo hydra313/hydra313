@@ -172,3 +172,28 @@ def test_rank_score_applies_time_weight():
                            end_time=NOW + timedelta(hours=30))
     s = score_single(listing, make_product(), make_value(value=500), Config(), NOW)
     assert s.rank_score == pytest.approx(113.75 * 0.7)
+
+
+# --- final review: zero values and quantities are unscored ---------------------
+
+
+@pytest.mark.parametrize("value", [0.0, -5.0])
+def test_single_zero_value_unscored(value):
+    s = score_single(make_listing(price=100), make_product(), make_value(value=value),
+                     Config(), NOW)
+    assert (s.profit, s.discount_pct, s.is_deal) == (None, None, False)
+
+
+@pytest.mark.parametrize("qty, value", [(0, 60.0), (3, 0.0), (-1, 60.0)])
+def test_hardware_lot_zero_unscored(qty, value):
+    bulk = BulkProduct(id="b", category="console", name="B", ebay_query="q", match="m",
+                       repair_cost=25, success_rate=0.6)
+    s = score_hardware_lot(make_listing(price=10), bulk, qty, make_value(value=value),
+                           Config(), NOW)
+    assert (s.profit, s.discount_pct, s.is_deal) == (None, None, False)
+
+
+@pytest.mark.parametrize("qty, value", [(0, 10.0), (10, 0.0)])
+def test_game_lot_zero_unscored(qty, value):
+    s = score_game_lot(make_listing(price=10), qty, make_value(value=value), Config(), NOW)
+    assert (s.profit, s.discount_pct, s.is_deal) == (None, None, False)
