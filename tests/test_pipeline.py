@@ -448,11 +448,18 @@ def test_scan_only_rescored_from_estimate(conn, cfg):
     assert {r["kind"] for r in before.values()} == {"scan_only"}
     assert all(r["total_cost"] is None for r in before.values())
 
-    p.scanner = FakeScanner(scan_result(estimate=12))
+    # The lot quantity comes from the identified items of the lot's kind; the
+    # photo-wide unit_count_estimate (which counts accessories) is ignored.
+    p.scanner = FakeScanner(scan_result([_item("game", "Game A", 7),
+                                         _item("game", "Game B", 5, confidence="low"),
+                                         _item("accessory", "Memory card", 4)],
+                                        estimate=16))
     p.scan_listing(before["games"]["id"], manual=True)
-    p.scanner = FakeScanner(scan_result(estimate=3))
+    p.scanner = FakeScanner(scan_result([_item("game", "Game C", 3)], estimate=9))
     p.scan_listing(before["few"]["id"], manual=True)  # 3 < min_game_lot 5
-    p.scanner = FakeScanner(scan_result(estimate=4))
+    p.scanner = FakeScanner(scan_result([_item("console", "PS2 Slim", 4),
+                                         _item("controller", "DualShock 2", 2)],
+                                        estimate=6))
     p.scan_listing(before["consoles"]["id"], manual=True)  # 4 >= min_hardware_lot 3
 
     def check(after):
@@ -469,8 +476,8 @@ def test_scan_only_rescored_from_estimate(conn, cfg):
         assert consoles["profit"] == pytest.approx(4 * 0.6 * unit_net - 4 * 25 - 45)
 
     check(rows(conn))
-    assert db.get_scan(conn, before["games"]["id"])["unit_count_estimate"] == 12
-    p.refresh()  # the title still says "lot" with no count; the scan's estimate is kept
+    assert db.get_scan(conn, before["games"]["id"])["unit_count_estimate"] == 16
+    p.refresh()  # the title still says "lot" with no count; the scan's count is kept
     check(rows(conn))
 
 
@@ -766,3 +773,44 @@ def test_scan_items_priced_with_their_kind(conn, cfg):
     p.refresh()
     p.scan_listing(rows(conn)["cheap"]["id"], manual=True)
     assert market.item_kinds == [("Halo 3", "game"), ("Halo 3", "console")]
+
+
+def test_hardware_lot_quantity_counts_only_its_own_kind(conn, cfg):
+    items = [_item("console", "PS2 Fat", 2), _item("console", "PS2 Slim", 1, confidence="low"),
+             _item("controller", "DualShock 2", 6), _item("accessory", "Memory card", 10)]
+    ebay = FakeSource("ebay", [listing("ps2", "PS2 consoles lot", price=40, shipping=5)])
+    p = make_pipeline(conn, cfg, {"ebay": ebay},
+                      scanner=FakeScanner(scan_result(items, estimate=19)))
+    p.refresh()
+    assert rows(conn)["ps2"]["kind"] == "scan_only"
+    p.scan_listing(rows(conn)["ps2"]["id"], manual=True)
+    stored = rows(conn)["ps2"]
+    assert (stored["kind"], stored["quantity"]) == ("hardware_lot", 3)
+    p.refresh()
+    assert (rows(conn)["ps2"]["kind"], rows(conn)["ps2"]["quantity"]) == ("hardware_lot", 3)
+
+
+def test_hardware_lot_below_minimum_stays_scan_only(conn, cfg):
+    items = [_item("console", "PS2 Slim", 2), _item("controller", "DualShock 2", 6)]
+    ebay = FakeSource("ebay", [listing("ps2", "PS2 consoles lot", price=40, shipping=5)])
+    p = make_pipeline(conn, cfg, {"ebay": ebay},
+                      scanner=FakeScanner(scan_result(items, estimate=8)))
+    p.refresh()
+    p.scan_listing(rows(conn)["ps2"]["id"], manual=True)
+    stored = rows(conn)["ps2"]
+    assert (stored["kind"], stored["quantity"], stored["total_cost"]) == ("scan_only", None, None)
+
+
+@pytest.mark.parametrize("items, kind, quantity", [
+    ([_item("other", "RTX 4090", 1), _item("accessory", "Power cable", 2)], "hardware_lot", 4),
+    ([_item("other", "RTX 4090", 1), _item("console", "PS2", 1)], "scan_only", None),
+])
+def test_gpu_lot_falls_back_to_estimate_without_hardware_items(conn, cfg, items, kind,
+                                                               quantity):
+    ebay = FakeSource("ebay", [listing("gpus", "RTX 4090 lot", price=400, shipping=5)])
+    p = make_pipeline(conn, cfg, {"ebay": ebay},
+                      scanner=FakeScanner(scan_result(items, estimate=4)))
+    p.refresh()
+    p.scan_listing(rows(conn)["gpus"]["id"], manual=True)
+    stored = rows(conn)["gpus"]
+    assert (stored["kind"], stored["quantity"]) == (kind, quantity)

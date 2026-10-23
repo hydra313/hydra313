@@ -72,7 +72,8 @@ anniversary editions, special-color consoles) in "edition"; use null otherwise.
 - "completeness": "loose" for a bare cartridge, disc or device, "cib" when the \
 box and manual are present, "sealed" for factory-sealed, "unknown" when the \
 photos do not show it.
-- "quantity" is the number of identical copies of that item you can see.
+- "quantity" is the number of identical copies of that item you can see. \
+Count each physical copy once, even when it appears in several photos.
 - "photo_index" is the 0-based position of the photo that shows the item best, \
 in the order the photos were given.
 - "confidence": "high" when the title and platform are clearly readable, \

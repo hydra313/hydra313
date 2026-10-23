@@ -27,6 +27,7 @@ log = logging.getLogger(__name__)
 ROTATION_SETTING = "ebay_rotation_index"
 SCAN_KINDS = ("hardware_lot", "game_lot", "scan_only")
 _GATE_STOPS = ("scanning is off", "daily cap reached", "monthly cap reached")
+_HARDWARE_ITEM_KINDS = ("console", "controller")  # scan item kinds that are bulk categories
 
 
 class SpendNotRecorded(Exception):
@@ -188,7 +189,8 @@ class Pipeline:
         if c.kind == "scan_only":
             scan = db.get_scan_by_source(self.conn, listing.source, listing.source_id)
             if scan is not None:
-                c = self._lot_from_estimate(c, scan["unit_count_estimate"], catalog) or c
+                items = [(i["kind"], i["quantity"]) for i in json.loads(scan["items"] or "[]")]
+                c = self._lot_from_scan(c, items, scan["unit_count_estimate"], catalog) or c
         scored = self._score(listing, c, catalog, now)
         listing_id = db.upsert_listing(self.conn, listing, c, scored, now)
         if scored is not None:
@@ -212,21 +214,34 @@ class Pipeline:
             return score_game_lot(listing, c.quantity, value, self.cfg, now)
         return None  # scan_only: no quantity to score until a scan estimates one
 
-    def _lot_from_estimate(
-        self, c: Classified, estimate: int | None, catalog: Catalog
+    def _lot_from_scan(
+        self, c: Classified, items: list[tuple[str, int]], estimate: int | None,
+        catalog: Catalog,
     ) -> Classified | None:
-        """The lot kind a scan_only listing becomes once photos give it a count."""
-        if estimate is None:
-            return None
+        """The lot kind a scan_only listing becomes once photos give it a count.
+
+        The count is the identified items of the lot's own kind (low-confidence ones
+        too: it is a count, not a valuation), never the photo-wide unit estimate,
+        which includes accessories. Items have no gpu/cpu kind, so a gpu or cpu lot
+        uses the estimate, unless the photos show consoles or controllers."""
         if c.category is None:  # platform key: a game lot
-            if estimate >= self.cfg.min_game_lot:
+            quantity = sum(q for kind, q in items if kind == "game")
+            if quantity >= self.cfg.min_game_lot:
                 return Classified(kind="game_lot", key=c.key, condition=None,
-                                  quantity=estimate, category=None)
+                                  quantity=quantity, category=None)
             return None
         bulk = next((b for b in catalog.bulk if b.id == c.key), None)
-        if bulk is not None and estimate >= self.cfg.min_hardware_lot:
+        if bulk is None:
+            return None
+        if bulk.category in _HARDWARE_ITEM_KINDS:
+            quantity: int | None = sum(q for kind, q in items if kind == bulk.category)
+        elif any(kind in _HARDWARE_ITEM_KINDS for kind, _ in items):
+            quantity = None
+        else:
+            quantity = estimate
+        if quantity is not None and quantity >= self.cfg.min_hardware_lot:
             return Classified(kind="hardware_lot", key=c.key, condition=None,
-                              quantity=estimate, category=bulk.category)
+                              quantity=quantity, category=bulk.category)
         return None
 
     def _deal_reasons(
@@ -336,8 +351,7 @@ class Pipeline:
             try:
                 if result.status == "ok":
                     if row["kind"] == "scan_only":
-                        cost = self._rescore(row, result.unit_count_estimate, catalog,
-                                             now) or cost
+                        cost = self._rescore(row, result, catalog, now) or cost
                     find_eval = evaluate_finds(
                         result,
                         lambda item: self.market.item_price(
@@ -408,10 +422,12 @@ class Pipeline:
         return minimal
 
     def _rescore(
-        self, row: sqlite3.Row, estimate: int | None, catalog: Catalog, now: datetime
+        self, row: sqlite3.Row, result: ScanResult, catalog: Catalog, now: datetime
     ) -> float | None:
-        """Re-score a scan_only row as a lot from the scan's unit count; its total cost."""
-        c = self._lot_from_estimate(_row_classified(row), estimate, catalog)
+        """Re-score a scan_only row as a lot from the scan's count; its total cost."""
+        items = [(item.kind, item.quantity) for item in result.items]
+        c = self._lot_from_scan(_row_classified(row), items, result.unit_count_estimate,
+                                catalog)
         if c is None:
             return None
         listing = _row_listing(row)

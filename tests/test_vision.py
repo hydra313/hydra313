@@ -306,3 +306,7 @@ def test_prompt_instructions():
     lower = PROMPT.lower()
     for phrase in ("game", "console", "controller", "readable", "limited", "count"):
         assert phrase in lower
+
+
+def test_prompt_counts_each_copy_once():
+    assert "count each physical copy once" in PROMPT.lower()
