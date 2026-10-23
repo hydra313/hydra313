@@ -29,6 +29,17 @@ SCAN_KINDS = ("hardware_lot", "game_lot", "scan_only")
 _GATE_STOPS = ("scanning is off", "daily cap reached", "monthly cap reached")
 
 
+class SpendNotRecorded(Exception):
+    """A paid scan was saved, but its cost could not be written to vision_spend, so
+    the caps do not see it. Raised after saving; callers stop scanning."""
+
+    def __init__(self, listing_id: int, result: ScanResult, photo_find_sent: bool) -> None:
+        super().__init__(f"spend of ${result.cost_usd:.4f} for listing {listing_id}"
+                         " was not recorded")
+        self.result = result
+        self.photo_find_sent = photo_find_sent
+
+
 @dataclass
 class RefreshReport:
     per_source: dict[str, tuple[str, int]] = field(default_factory=dict)
@@ -272,6 +283,11 @@ class Pipeline:
             except ScanDeferred as e:
                 log.info("photo scans deferred: %s", e)
                 break
+            except SpendNotRecorded as e:
+                log.error("stopping photo scans for this run: %s", e)
+                scanned += 1
+                notified += e.photo_find_sent
+                break
             except Exception as e:  # noqa: BLE001 - a failed scan never stops a refresh
                 log.warning("photo scan of listing %s failed: %s", row["id"], e)
                 continue
@@ -281,6 +297,8 @@ class Pipeline:
         return scanned, notified
 
     def scan_listing(self, listing_id: int, manual: bool) -> ScanResult | None:
+        """Raises SpendNotRecorded (after saving the scan) when its cost could not be
+        recorded."""
         if self.scanner is None:
             return None
         catalog = self.catalog_loader()  # loaded before taking the scan lock
@@ -313,11 +331,9 @@ class Pipeline:
             result = self.scanner.scan(photos, row["title"])  # ScanDeferred propagates
             # The scan is paid for: from here on a scans row must be written, whatever
             # fails, or the listing would stay a candidate and be billed again.
+            spend_recorded = result.cost_usd <= 0 or self._record_spend(listing_id, result)
             find_eval = None
             try:
-                if result.cost_usd > 0:
-                    self.budget.record(listing_id, result.input_tokens, result.output_tokens,
-                                       result.cost_usd)
                 if result.status == "ok":
                     if row["kind"] == "scan_only":
                         cost = self._rescore(row, result.unit_count_estimate, catalog,
@@ -335,7 +351,27 @@ class Pipeline:
         sent = False
         if find_eval is not None and (find_eval.is_rare_find or find_eval.is_lot_find):
             sent = self._notify(listing_id, "photo_find", self._find_details(find_eval, cost))
+        if not spend_recorded:
+            raise SpendNotRecorded(listing_id, result, sent)
         return result, sent
+
+    def _record_spend(self, listing_id: int, result: ScanResult) -> bool:
+        """Record a scan's cost, retrying once; False when it could not be recorded."""
+        error: Exception | None = None
+        for _ in range(2):
+            try:
+                self.budget.record(listing_id, result.input_tokens, result.output_tokens,
+                                   result.cost_usd)
+                return True
+            except Exception as e:  # noqa: BLE001 - the scan must still be saved
+                self.conn.rollback()
+                if error is None:
+                    log.warning("recording spend for listing %s failed (%s); retrying",
+                                listing_id, e)
+                error = e
+        log.error("spend of $%.4f for listing %s could not be recorded; the caps do not"
+                  " include it", result.cost_usd, listing_id, exc_info=error)
+        return False
 
     def _photos(self, row: sqlite3.Row) -> list[str]:
         stored = json.loads(row["image_urls"] or "[]")

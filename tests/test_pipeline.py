@@ -16,7 +16,9 @@ from dealfinder.models import (
     BulkProduct, Listing, MarketValue, Platform, Product, ScanItem, ScanResult,
 )
 from dealfinder.notify import Notifier
-from dealfinder.pipeline import Pipeline, RefreshReport, ebay_queries, rotation_slice
+from dealfinder.pipeline import (
+    Pipeline, RefreshReport, SpendNotRecorded, ebay_queries, rotation_slice,
+)
 from dealfinder.sources.base import SourceBlocked
 from dealfinder.vision import ScanDeferred
 
@@ -684,3 +686,61 @@ def test_price_change_does_not_realert(conn, cfg, http, webhook):
     assert p.refresh().notified == 0
     assert rows(conn)["games"]["total_cost"] == pytest.approx(40)
     assert webhook.call_count == 2
+
+
+# --- fix round 2: spend that cannot be recorded ------------------------------
+
+
+def _failing_record(monkeypatch, failures):
+    """Patch Budget.record to raise `failures` times (None = always) before working."""
+    real_record = Budget.record
+    calls = []
+
+    def record(self, *args, **kwargs):
+        calls.append(args)
+        if failures is None or len(calls) <= failures:
+            raise sqlite3.OperationalError("database is locked")
+        return real_record(self, *args, **kwargs)
+
+    monkeypatch.setattr(Budget, "record", record)
+    return calls
+
+
+def test_record_retried_once_then_succeeds(conn, cfg, monkeypatch):
+    calls = _failing_record(monkeypatch, failures=1)
+    scanner = FakeScanner(scan_result(cost=0.20))
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay", _three_game_lots())},
+                      scanner=scanner)
+    p.budget.set_scan_enabled(True)
+    report = p.refresh()
+    assert report.scanned == 3 and len(scanner.calls) == 3  # the loop carried on
+    assert len(calls) == 4  # one retry, then one call per later scan
+    assert p.budget.spent_today() == pytest.approx(0.60)
+    assert {r["status"] for r in conn.execute("SELECT status FROM scans")} == {"ok"}
+
+
+def test_record_always_failing_stops_auto_scans(conn, cfg, monkeypatch):
+    calls = _failing_record(monkeypatch, failures=None)
+    scanner = FakeScanner(scan_result(cost=0.20))
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay", _three_game_lots())},
+                      scanner=scanner)
+    p.budget.set_scan_enabled(True)
+    report = p.refresh()
+    assert len(scanner.calls) == 1 and report.scanned == 1
+    assert len(calls) == 2
+    (scan,) = conn.execute("SELECT * FROM scans").fetchall()
+    assert scan["cost_usd"] == pytest.approx(0.20)
+    assert p.budget.spent_today() == 0
+
+
+def test_manual_scan_with_record_failing_raises_after_saving(conn, cfg, monkeypatch):
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay", _three_game_lots())},
+                      scanner=FakeScanner(scan_result(cost=0.20)))
+    p.refresh()
+    lid = rows(conn)["cheap"]["id"]
+    _failing_record(monkeypatch, failures=None)
+    with pytest.raises(SpendNotRecorded) as info:
+        p.scan_listing(lid, manual=True)
+    assert info.value.result.status == "ok"
+    assert db.get_scan(conn, lid)["cost_usd"] == pytest.approx(0.20)
+    assert not p.budget.lock.locked()
