@@ -18,6 +18,8 @@ MAX_PHOTOS = 8
 MAX_EDGE = 1568
 MAX_TOKENS = 16000
 BETAS = ["server-side-fallback-2026-07-01"]
+MAX_ITEM_QUANTITY = 50  # a larger count is a misreading, not a lot
+UNKNOWN_MODEL_PRICES = (10.0, 50.0)  # USD per million input/output tokens, at least
 
 # Spec 11.4, strict for structured outputs: every object closes its properties
 # and requires all of them; nullable fields use type arrays.
@@ -124,9 +126,11 @@ def compute_cost(
             getattr(usage, "input_tokens", 0) or 0,
             getattr(usage, "output_tokens", 0) or 0,
         )]
-    # A model missing from the table is priced at the highest configured rate,
-    # so unknown fallback usage never under-counts spend.
-    highest = (max(p[0] for p in prices.values()), max(p[1] for p in prices.values()))
+    # A model missing from the table is priced at the highest configured rate, and
+    # at no less than UNKNOWN_MODEL_PRICES, so unknown fallback usage never
+    # under-counts spend.
+    highest = (max(UNKNOWN_MODEL_PRICES[0], *(p[0] for p in prices.values())),
+               max(UNKNOWN_MODEL_PRICES[1], *(p[1] for p in prices.values())))
     total_in = total_out = 0
     cost = 0.0
     for model, inp, out in entries:
@@ -148,7 +152,7 @@ def _item(raw: dict, sent: list[int]) -> ScanItem:
         title=raw["title"],
         edition=raw["edition"],
         completeness=raw["completeness"],
-        quantity=max(1, int(raw["quantity"])),
+        quantity=min(MAX_ITEM_QUANTITY, max(1, int(raw["quantity"]))),
         confidence=raw["confidence"],
         photo_index=sent[raw_index] if 0 <= raw_index < len(sent) else -1,
     )

@@ -17,7 +17,7 @@ dependencies = [
     "pyyaml",
     "apscheduler>=3,<4",
     "pillow",
-    "anthropic",
+    "anthropic>=2.1",
     "tzdata",
 ]
 

@@ -75,8 +75,13 @@ class Config:
     # vision scanning
     vision_model: str = "claude-opus-5-5"
     vision_prices: dict[str, tuple[float, float]] = field(
-        default_factory=lambda: {"claude-opus-5-5": (4.00, 20.00)})
-    scan_cost_ceiling: float = 0.40
+        default_factory=lambda: {
+            "claude-opus-5-5": (4.00, 20.00),
+            # server-side fallback models
+            "claude-opus-5": (5.0, 25.0),
+            "claude-opus-4-8": (5.0, 25.0),
+        })
+    scan_cost_ceiling: float = 0.50  # one scan including a fallback-model retry
     initial_daily_cap: float = 5.0
     initial_monthly_cap: float = 50.0
     initial_max_scan_price: float = 300.0

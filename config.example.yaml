@@ -91,7 +91,9 @@ broad_queries:                  # search terms sent to ShopGoodwill and HiBid ea
 vision_model: claude-opus-5-5   # model used to read lot photos
 vision_prices:                  # USD per million tokens: [input, output]; used to compute spend
   claude-opus-5-5: [4.00, 20.00]
-scan_cost_ceiling: 0.40         # worst-case cost of one scan (USD); a scan only starts if spend + this fits under the caps
+  claude-opus-5: [5.00, 25.00]    # server-side fallback models; a model missing here is
+  claude-opus-4-8: [5.00, 25.00]  # priced at the highest rate, and at least [10, 50]
+scan_cost_ceiling: 0.50         # worst-case cost of one scan incl. a fallback-model retry (USD); a scan only starts if spend + this fits under the caps
 initial_daily_cap: 5.0          # starting daily spend cap (USD); once you edit it in the header, the saved value wins
 initial_monthly_cap: 50.0       # starting monthly spend cap (USD); once you edit it in the header, the saved value wins
 initial_max_scan_price: 300.0   # lots costing more than this (USD) are not scanned automatically; header edits win

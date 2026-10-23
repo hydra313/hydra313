@@ -141,8 +141,23 @@ def test_cost_sums_iterations_and_prices_unknown_model_high():
         ])
     inp, out, cost = compute_cost(response, "claude-opus-5-5", prices)
     assert (inp, out) == (35_000, 4_500)
-    # 0.04 + 0.02 | unknown model at the highest rate: 0.08 + 0.06 | 0.02 + 0.01
-    assert cost == pytest.approx(0.23)
+    # 0.04 + 0.02 | unknown model at no less than $10 / $50: 0.20 + 0.15 | 0.02 + 0.01
+    assert cost == pytest.approx(0.44)
+
+
+def test_unknown_model_priced_at_table_maximum_when_higher():
+    prices = {"claude-opus-5-5": (4.0, 20.0), "pricey": (12.0, 60.0)}
+    response = make_response(iterations=[
+        SimpleNamespace(input_tokens=1_000_000, output_tokens=1_000_000, model="mystery")])
+    assert compute_cost(response, "claude-opus-5-5", prices)[2] == pytest.approx(72.0)
+
+
+def test_fallback_models_priced_from_default_table():
+    response = make_response(iterations=[
+        SimpleNamespace(input_tokens=1_000_000, output_tokens=0, model="claude-opus-5"),
+        SimpleNamespace(input_tokens=0, output_tokens=1_000_000, model="claude-opus-4-8")])
+    assert compute_cost(response, "claude-opus-5-5", Config().vision_prices)[2] == (
+        pytest.approx(30.0))
 
 
 def test_cost_without_iterations_uses_top_level_usage():
@@ -230,6 +245,11 @@ def test_photo_index_out_of_range_is_unknown():
     assert result.items[0].photo_index == -1
     scanner, _ = make_scanner(make_response(text=one_item_json(photo_index=-2)))
     assert scanner.scan(URLS, "lot").items[0].photo_index == -1
+
+
+def test_quantity_clamped_to_at_most_fifty():
+    scanner, _ = make_scanner(make_response(text=one_item_json(quantity=5000)))
+    assert scanner.scan(URLS, "lot").items[0].quantity == 50
 
 
 def test_quantity_clamped_to_at_least_one():

@@ -6,7 +6,10 @@ from dealfinder.config import load_config
 def test_defaults_without_file():
     cfg = load_config(None, env={})
     assert cfg.sell_fee_rate == 0.1325 and cfg.min_lot_profit == 50
-    assert cfg.scan_cost_ceiling == 0.40
+    assert cfg.scan_cost_ceiling == 0.50  # one scan including a fallback-model retry
+    assert cfg.vision_prices == {"claude-opus-5-5": (4.00, 20.00),
+                                 "claude-opus-5": (5.0, 25.0),
+                                 "claude-opus-4-8": (5.0, 25.0)}
     assert cfg.sell_shipping == {"gpu": 20, "cpu": 8, "console": 30, "controller": 10}
     assert cfg.repair_defaults["console"] == (25, 0.60)
     assert cfg.notify_reasons["resale_deal"] is False

@@ -24,7 +24,9 @@ in the database, not in the YAML, so updating the seed files never loses them.
 
 ## Install
 
-You need Python 3.11 or newer.
+You need Python 3.11 or newer, and SQLite 3.35 or newer (bundled with Python 3.11+
+on Windows and macOS; on Linux check
+`python -c 'import sqlite3; print(sqlite3.sqlite_version)'`).
 
 ```
 python -m venv .venv
@@ -92,7 +94,7 @@ photos to Claude to identify the items and value them.
 **It is off by default.** Turn it on with the "Photo scanning" switch in the
 dashboard header. It also needs `ANTHROPIC_API_KEY`.
 
-- **Cost:** each scan costs roughly $0.05 to $0.12, and at most about $0.40.
+- **Cost:** each scan costs roughly $0.05 to $0.12, and at most about $0.50.
 - **Caps:** the defaults are $5 per day and $50 per month. Only lots under $300
   are scanned automatically. The daily cap, monthly cap and max scan price are
   all editable in the header, and the header shows what you have spent today
