@@ -128,6 +128,7 @@ def test_filters_query_params(client, conn):
         return {i for i in (gpu, console, target) if row_html(html, i) is not None}
 
     assert ids({}) == {gpu, console, target}
+    assert 'hx-push-url="true"' in client.get("/").text  # filters survive a reload
     assert ids({"category": "console"}) == {console}
     assert ids({"source": "hibid"}) == {console}
     assert ids({"ending_within_h": "3"}) == {console}
@@ -249,6 +250,48 @@ def test_refresh_runs_pipeline_once_when_double_clicked(cfg, fake):
         assert fake.calls == 2
 
 
+def test_scheduler_refreshes_at_startup_then_every_interval(cfg, fake):
+    app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=True)
+    with TestClient(app):
+        assert fake.started.wait(5)  # the first refresh runs right after startup
+        jobs = app.state.scheduler.get_jobs()
+        assert len(jobs) == 1
+        assert jobs[0].trigger.interval == timedelta(minutes=cfg.refresh_minutes)
+    assert not app.state.scheduler.running
+
+
+def test_header_polls_only_while_refreshing(cfg, fake):
+    fake.block = True
+    app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
+    with TestClient(app) as client:
+        assert 'hx-trigger="every 3s"' not in client.get("/header").text
+        started = client.post("/refresh").text
+        assert 'hx-trigger="every 3s"' in started and 'id="header-controls"' in started
+        assert fake.started.wait(5)
+        polled = client.get("/header").text
+        assert 'hx-trigger="every 3s"' in polled and "Refreshing" in polled
+        assert 'hx-trigger="every 3s"' in client.get("/").text
+        fake.release.set()
+        app.state.runner.thread.join(5)
+        assert 'hx-trigger="every 3s"' not in client.get("/header").text
+
+
+def test_shutdown_closes_shared_clients(cfg):
+    cfg.discord_webhook_url = "https://discord.com/api/webhooks/1/TOKEN"
+    factory = default_pipeline_factory(cfg)
+    app = create_app(cfg, build_pipeline=factory, start_scheduler=False)
+    with TestClient(app):
+        refresh_pipeline = app.state.runner.pipeline
+    scan_conn = db.connect(cfg.db_path)
+    scan_pipeline = factory(scan_conn)
+    scan_conn.close()
+    # Every pipeline shares one HttpClient and one notifier client; both are closed.
+    assert scan_pipeline.market._sold._http is refresh_pipeline.market._sold._http
+    assert scan_pipeline.notifier.http is refresh_pipeline.notifier.http
+    assert refresh_pipeline.market._sold._http._client.is_closed
+    assert refresh_pipeline.notifier.http.is_closed
+
+
 def test_refresh_pipeline_built_once_on_its_own_connection(cfg, fake):
     built: list[sqlite3.Connection] = []
 
@@ -362,7 +405,9 @@ def test_default_factory_wires_optional_features(cfg, conn):
     cfg.ebay_client_secret = "secret"
     cfg.anthropic_api_key = "sk-ant-test"
     cfg.discord_webhook_url = "https://discord.com/api/webhooks/1/TOKEN"
-    pipeline = default_pipeline_factory(cfg)(conn)
+    factory = default_pipeline_factory(cfg)
+    pipeline = factory(conn)
     assert set(pipeline.sources) == {"ebay", "shopgoodwill", "hibid"}
     assert pipeline.scanner is not None
     assert pipeline.notifier is not None
+    factory.close()

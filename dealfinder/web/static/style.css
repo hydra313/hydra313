@@ -69,10 +69,11 @@ input[type="number"] { width: 6rem; }
 .error { color: var(--error); margin: 0; flex-basis: 100%; }
 
 .runs { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; list-style: none; padding: 0; margin: 0; color: var(--muted); }
+.runs li { overflow-wrap: anywhere; min-width: 0; }
 .runs .src { font-weight: 600; color: var(--text); }
 
 .banner ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
-.banner li { padding: 0.4rem 0.6rem; border-radius: 6px; }
+.banner li { padding: 0.4rem 0.6rem; border-radius: 6px; overflow-wrap: anywhere; }
 .banner li.warn { background: var(--warn-bg); color: var(--warn-text); }
 .banner li.info { background: var(--info-bg); color: var(--info-text); }
 

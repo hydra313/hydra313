@@ -61,11 +61,21 @@ class _LiveCatalog:
         return getattr(self.current, name)
 
 
-def default_pipeline_factory(cfg: Config) -> PipelineFactory:
-    """Real sources and services; eBay, photo scanning and Discord only when configured."""
+class DefaultPipelineFactory:
+    """Real sources and services; eBay, photo scanning and Discord only when configured.
 
-    def build(conn: sqlite3.Connection) -> Pipeline:
-        http = HttpClient()
+    Every pipeline it builds (the refresh pipeline and each manual scan's) shares one
+    HttpClient, so per-host throttling holds across threads, and one Discord client.
+    """
+
+    def __init__(self, cfg: Config) -> None:
+        self.cfg = cfg
+        self.http = HttpClient()
+        self.notify_http = (httpx.Client(timeout=NOTIFY_TIMEOUT_S)
+                            if cfg.discord_webhook_url else None)
+
+    def __call__(self, conn: sqlite3.Connection) -> Pipeline:
+        cfg, http = self.cfg, self.http
         catalog = _LiveCatalog(load_catalog(cfg.catalog_dir, conn, cfg))
 
         def load() -> Catalog:
@@ -86,12 +96,19 @@ def default_pipeline_factory(cfg: Config) -> PipelineFactory:
             client = anthropic.Anthropic(api_key=cfg.anthropic_api_key, max_retries=1)
             scanner = VisionScanner(client, http, cfg)
         notifier = None
-        if cfg.discord_webhook_url:
-            notifier = Notifier(conn, cfg, httpx.Client(timeout=NOTIFY_TIMEOUT_S))
+        if self.notify_http is not None:
+            notifier = Notifier(conn, cfg, self.notify_http)
         return Pipeline(conn, cfg, load, sources, market, scanner,
                         Budget(conn, cfg, local_now), notifier, utc_now)
 
-    return build
+    def close(self) -> None:
+        self.http.close()
+        if self.notify_http is not None:
+            self.notify_http.close()
+
+
+def default_pipeline_factory(cfg: Config) -> DefaultPipelineFactory:
+    return DefaultPipelineFactory(cfg)
 
 
 class Runner:
@@ -105,6 +122,10 @@ class Runner:
         self.pipeline = build_pipeline(self.conn)
         self.lock = threading.Lock()
         self.thread: threading.Thread | None = None
+
+    @property
+    def refresh_running(self) -> bool:
+        return self.lock.locked()
 
     def start_refresh(self) -> bool:
         """Start a refresh in the background; False when one is already running."""
@@ -181,22 +202,29 @@ def create_app(
 ) -> FastAPI:
     from dealfinder.web.routes import router
 
-    runner = Runner(cfg, build_pipeline or default_pipeline_factory(cfg))
+    factory = build_pipeline or default_pipeline_factory(cfg)
+    runner = Runner(cfg, factory)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         scheduler = None
         if start_scheduler:
             scheduler = BackgroundScheduler()
+            # First run right away: an unattended alert app should not wait an interval.
             scheduler.add_job(runner.scheduled_refresh, "interval",
-                              minutes=cfg.refresh_minutes, max_instances=1, coalesce=True)
+                              minutes=cfg.refresh_minutes, max_instances=1, coalesce=True,
+                              next_run_time=datetime.now())
             scheduler.start()
+        app.state.scheduler = scheduler
         try:
             yield
         finally:
             if scheduler is not None:
                 scheduler.shutdown(wait=False)
             runner.close()
+            close = getattr(factory, "close", None)
+            if callable(close):
+                close()
 
     app = FastAPI(title="dealfinder", lifespan=lifespan)
     app.state.cfg = cfg

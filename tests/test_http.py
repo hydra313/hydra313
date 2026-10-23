@@ -128,3 +128,43 @@ def test_sends_browser_user_agent():
 )
 def test_is_bot_block(resp, expected):
     assert is_bot_block(resp) is expected
+
+
+@respx.mock
+def test_throttle_is_thread_safe():
+    import threading
+    import time
+
+    respx.get("https://example.com/a").respond(200, json={})
+    sleeps: list[float] = []
+    record = threading.Lock()
+
+    def clock():
+        time.sleep(0.01)  # widen the window between reading and reserving a slot
+        return 1000.0  # frozen: concurrent sleeps must not move a shared clock
+
+    def sleep(seconds):
+        with record:
+            sleeps.append(seconds)
+
+    client = HttpClient(sleep=sleep, clock=clock)
+    start = threading.Barrier(3)
+
+    def worker():
+        start.wait()
+        client.request("GET", "https://example.com/a")
+
+    threads = [threading.Thread(target=worker) for _ in range(3)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(5)
+    # Requests start at 1000, 1002 and 1004: each one waits for its own reserved slot.
+    assert sorted(sleeps) == [2.0, 4.0]
+    client.close()
+
+
+def test_close_closes_the_underlying_client():
+    client = HttpClient()
+    client.close()
+    assert client._client.is_closed

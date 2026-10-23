@@ -128,10 +128,15 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime) -> list[dict]
     return banners
 
 
-def _header(conn: sqlite3.Connection, cfg: Config, caps_error: str | None = None) -> dict:
+def _header(request: Request, conn: sqlite3.Connection, caps_error: str | None = None,
+            refresh_status: str | None = None) -> dict:
+    cfg = request.app.state.cfg
+    refreshing = request.app.state.runner.refresh_running
     budget = Budget(conn, cfg, local_now)
     now = utc_now()
     return {
+        "refreshing": refreshing,
+        "refresh_status": refresh_status or ("Refreshing…" if refreshing else ""),
         "scan_enabled": budget.scan_enabled(),
         "paused": budget.paused(),
         "spent_today": budget.spent_today(),
@@ -144,9 +149,16 @@ def _header(conn: sqlite3.Connection, cfg: Config, caps_error: str | None = None
 
 
 def _header_response(request: Request, conn: sqlite3.Connection,
-                     caps_error: str | None = None, status_code: int = 200):
-    ctx = _header(conn, request.app.state.cfg, caps_error)
+                     caps_error: str | None = None, status_code: int = 200,
+                     refresh_status: str | None = None):
+    ctx = _header(request, conn, caps_error, refresh_status)
     return _render(request, "partials/header_controls.html", ctx, status_code)
+
+
+@router.get("/header", response_class=HTMLResponse)
+def header(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    """The header partial; it keeps polling this route while a refresh runs."""
+    return _header_response(request, conn)
 
 
 @router.post("/controls/scan", response_class=HTMLResponse)
@@ -175,10 +187,10 @@ def set_caps(request: Request, daily: str = Form(""), monthly: str = Form(""),
 
 
 @router.post("/refresh", response_class=HTMLResponse)
-def refresh(request: Request):
-    if request.app.state.runner.start_refresh():
-        return HTMLResponse("Refreshing…")
-    return HTMLResponse("Refresh already running")
+def refresh(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    started = request.app.state.runner.start_refresh()
+    status = "Refreshing…" if started else "Refresh already running"
+    return _header_response(request, conn, refresh_status=status)
 
 
 @router.post("/listing/{listing_id}/dismiss")
@@ -294,6 +306,6 @@ def deals(request: Request, category: str | None = None, source: str | None = No
     if partial:
         return _render(request, "partials/listing_rows.html", ctx)
     db.set_setting(conn, LAST_VISIT, now.isoformat())
-    ctx.update(_header(conn, cfg))
+    ctx.update(_header(request, conn))
     ctx.update(filters=filters, categories=CATEGORIES, sites=SITE_NAMES)
     return _render(request, "deals.html", ctx)

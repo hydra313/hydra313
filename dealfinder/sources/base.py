@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import time
 from typing import Callable, Protocol
 from urllib.parse import urlsplit
@@ -54,19 +55,27 @@ class HttpClient:
         self._sleep = sleep
         self._clock = clock
         self._last_request: dict[str, float] = {}
+        self._throttle_lock = threading.Lock()
         self._client = httpx.Client(
             timeout=timeout_s,
             transport=transport,
             headers={"User-Agent": USER_AGENT},
         )
 
+    def close(self) -> None:
+        self._client.close()
+
     def _throttle(self, host: str) -> None:
-        last = self._last_request.get(host)
-        if last is not None:
-            wait = self._min_interval_s - (self._clock() - last)
-            if wait > 0:
-                self._sleep(wait)
-        self._last_request[host] = self._clock()
+        """Reserve this host's next free slot under the lock, then sleep until it outside
+        the lock, so threads sharing the client keep min_interval_s apart per host."""
+        with self._throttle_lock:
+            now = self._clock()
+            last = self._last_request.get(host)
+            slot = now if last is None else max(now, last + self._min_interval_s)
+            self._last_request[host] = slot
+        wait = slot - now
+        if wait > 0:
+            self._sleep(wait)
 
     def _send(self, method: str, url: str, host: str, **kwargs) -> httpx.Response | None:
         """One throttled attempt; None means a retryable failure (network error or 5xx)."""

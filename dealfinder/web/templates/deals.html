@@ -2,7 +2,7 @@
 {% block title %}Deals · dealfinder{% endblock %}
 {% block content %}
 <h1>Deals</h1>
-<form class="filters" hx-get="/" hx-target="#deal-rows" hx-trigger="change, submit">
+<form class="filters" hx-get="/" hx-target="#deal-rows" hx-trigger="change, submit" hx-push-url="true">
   <label>Category
     <select name="category">
       <option value="">All</option>
