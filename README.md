@@ -17,8 +17,10 @@ http://127.0.0.1:8000.
   cost and success rate.
 - **Working video game lots:** priced per game against market value per game.
 
-The product lists live in `catalog/` (YAML) and can be edited from the
-dashboard's Catalog page.
+The YAML files in `catalog/` are the seed lists. The Catalog page lets you turn
+products on or off, set a target max price per product, tune repair cost and
+success rate for bulk lots, and add your own entries. Those changes are stored
+in the database, not in the YAML, so updating the seed files never loses them.
 
 ## Install
 
@@ -98,7 +100,9 @@ dashboard header. It also needs `ANTHROPIC_API_KEY`.
   `initial_max_scan_price` in `config.yaml` set the starting values; once you
   edit them in the header, the saved values win.)
 - **One lot at a time:** the "Scan this lot" button on a listing's page runs a
-  single scan, even for lots over the max scan price. The caps still apply.
+  single scan. It works even when the scanning switch is off, as long as
+  `ANTHROPIC_API_KEY` is set and the daily and monthly caps allow it, and it
+  ignores the max scan price filter.
 
 As a backstop, also set a monthly spend limit on the API key in the Anthropic
 Console (console.anthropic.com, Settings, Limits). Then even a bug or a
