@@ -3,9 +3,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
+import pytest
 import respx
 
-from dealfinder.sources.base import HttpClient
+from dealfinder.sources.base import HttpClient, SourceBlocked
 from dealfinder.sources.shopgoodwill import (
     ITEM_URL,
     SEARCH_URL,
@@ -118,3 +119,24 @@ def test_sgw_photos_falls_back_to_known_on_error():
         return_value=httpx.Response(404)
     )
     assert make_source().photos("240000001", ["thumb"]) == ["thumb"]
+
+
+@respx.mock
+def test_sgw_photos_without_detail_images_keep_known():
+    respx.get(ITEM_URL.format(item_id="240000001")).mock(
+        return_value=httpx.Response(200, json={"imageUrlString": None}))
+    assert make_source().photos("240000001", ["thumb"]) == ["thumb"]
+
+
+@respx.mock
+def test_sgw_photos_invalid_json_keep_known():
+    respx.get(ITEM_URL.format(item_id="240000001")).mock(
+        return_value=httpx.Response(200, text="<html>not json</html>"))
+    assert make_source().photos("240000001", ["thumb"]) == ["thumb"]
+
+
+@respx.mock
+def test_sgw_photos_block_is_raised():
+    respx.get(ITEM_URL.format(item_id="240000001")).mock(return_value=httpx.Response(429))
+    with pytest.raises(SourceBlocked):
+        make_source().photos("240000001", ["thumb"])

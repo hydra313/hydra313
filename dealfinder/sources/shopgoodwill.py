@@ -6,7 +6,7 @@ from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from dealfinder.models import Listing
-from dealfinder.sources.base import HttpClient, SourceError
+from dealfinder.sources.base import HttpClient, SourceBlocked, SourceError
 
 # ShopGoodwill has no public API. Everything below is an ASSUMPTION about the
 # buyer API's shape; fix URLs, the request body and field names here.
@@ -107,6 +107,9 @@ class ShopGoodwillSource:
         url = ITEM_URL.format(item_id=quote(source_id, safe=""))
         try:
             resp = self._http.request("GET", url)
-        except SourceError:
+            data = resp.json()
+        except SourceBlocked:
+            raise  # a block stops the source; it is not a missing photo
+        except (SourceError, ValueError):
             return known
-        return parse_item_detail(resp.json())
+        return parse_item_detail(data) or known
