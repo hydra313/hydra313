@@ -12,7 +12,8 @@ from pathlib import Path
 import anthropic
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -36,6 +37,30 @@ WEB_DIR = Path(__file__).resolve().parent
 NOTIFY_TIMEOUT_S = 20.0
 
 PipelineFactory = Callable[[sqlite3.Connection], Pipeline]
+
+LOCAL_HOSTS = ("127.0.0.1", "localhost")
+SAFE_METHODS = ("GET", "HEAD")
+
+
+def _local_port(host: str) -> str | None:
+    """The port of a "127.0.0.1:<port>" or "localhost:<port>" Host header, else None."""
+    name, _, port = host.rpartition(":")
+    return port if name in LOCAL_HOSTS and port.isdigit() else None
+
+
+def request_allowed(method: str, headers) -> bool:
+    """CSRF and DNS-rebinding guard: a state-changing request must come from htmx
+    (a custom header forces a CORS preflight, which the app never grants), be sent to
+    a local Host, and carry a local Origin on the same port when it has one."""
+    if method in SAFE_METHODS:
+        return True
+    if headers.get("hx-request") != "true":
+        return False
+    port = _local_port(headers.get("host", ""))
+    if port is None:
+        return False
+    origin = headers.get("origin")
+    return origin is None or origin in {f"http://{h}:{port}" for h in LOCAL_HOSTS}
 
 
 def money(value: float) -> str:
@@ -235,6 +260,13 @@ def create_app(
                 close()
 
     app = FastAPI(title="dealfinder", lifespan=lifespan)
+
+    @app.middleware("http")
+    async def csrf_guard(request: Request, call_next):
+        if not request_allowed(request.method, request.headers):
+            return PlainTextResponse("Forbidden", status_code=403)
+        return await call_next(request)
+
     app.state.cfg = cfg
     app.state.runner = runner
     app.state.templates = Jinja2Templates(directory=WEB_DIR / "templates")

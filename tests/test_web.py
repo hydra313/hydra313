@@ -17,6 +17,19 @@ from dealfinder.pipeline import RefreshReport, SpendNotRecorded
 from dealfinder.web.app import create_app, default_pipeline_factory
 
 CATALOG_DIR = Path(__file__).resolve().parent.parent / "catalog"
+# The app only accepts state-changing requests sent by htmx to a local Host.
+BASE_URL = "http://127.0.0.1:8000"
+HTMX = {"HX-Request": "true"}
+
+
+class HtmxClient(TestClient):
+    """A local client whose POSTs come from htmx, like the dashboard's."""
+
+    def __init__(self, app, **kwargs):
+        super().__init__(app, base_url=BASE_URL, **kwargs)
+
+    def post(self, url, *, headers=None, **kwargs):
+        return super().post(url, headers={**HTMX, **(headers or {})}, **kwargs)
 
 
 def now_utc():
@@ -68,7 +81,7 @@ def fake():
 @pytest.fixture
 def client(cfg, fake):
     app = create_app(cfg, build_pipeline=lambda conn: fake, start_scheduler=False)
-    with TestClient(app) as c:
+    with HtmxClient(app) as c:
         yield c
 
 
@@ -113,7 +126,8 @@ def test_deals_page_lists_deals(client, conn):
     resp = client.get("/")
     assert resp.status_code == 200
     html = resp.text
-    assert "https://unpkg.com/htmx.org@2.0.4" in html
+    assert '<script src="/static/htmx.min.js"></script>' in html
+    assert "unpkg.com" not in html
     assert row_html(html, plain) is not None
     assert "RTX 4090 Founders" in html
     assert "GeForce RTX 4090" in html  # product name from the catalog
@@ -226,7 +240,7 @@ def test_pause_toggle(client, cfg, conn):
 
 def test_scheduled_refresh_skips_when_paused(cfg, fake, conn):
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
-    with TestClient(app):
+    with HtmxClient(app):
         runner = app.state.runner
         Budget(conn, cfg, local_now).set_paused(True)
         runner.scheduled_refresh()
@@ -239,7 +253,7 @@ def test_scheduled_refresh_skips_when_paused(cfg, fake, conn):
 def test_refresh_runs_pipeline_once_when_double_clicked(cfg, fake):
     fake.block = True
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
-    with TestClient(app) as client:
+    with HtmxClient(app) as client:
         runner = app.state.runner
         first = client.post("/refresh")
         assert first.status_code == 200 and "Refreshing" in first.text
@@ -259,7 +273,7 @@ def test_refresh_runs_pipeline_once_when_double_clicked(cfg, fake):
 
 def test_scheduler_refreshes_at_startup_then_every_interval(cfg, fake):
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=True)
-    with TestClient(app):
+    with HtmxClient(app):
         assert fake.started.wait(5)  # the first refresh runs right after startup
         jobs = app.state.scheduler.get_jobs()
         assert len(jobs) == 1
@@ -270,7 +284,7 @@ def test_scheduler_refreshes_at_startup_then_every_interval(cfg, fake):
 def test_header_status_polls_only_while_refreshing(cfg, fake):
     fake.block = True
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
-    with TestClient(app) as client:
+    with HtmxClient(app) as client:
         assert 'hx-trigger="every 3s"' not in client.get("/header/status").text
         started = client.post("/refresh").text
         assert 'hx-trigger="every 3s"' in started and 'id="header-status"' in started
@@ -300,7 +314,7 @@ def test_shutdown_closes_shared_clients(cfg):
     cfg.discord_webhook_url = "https://discord.com/api/webhooks/1/TOKEN"
     factory = default_pipeline_factory(cfg)
     app = create_app(cfg, build_pipeline=factory, start_scheduler=False)
-    with TestClient(app):
+    with HtmxClient(app):
         refresh_pipeline = app.state.runner.pipeline
     scan_conn = db.connect(cfg.db_path)
     scan_pipeline = factory(scan_conn)
@@ -320,7 +334,7 @@ def test_refresh_pipeline_built_once_on_its_own_connection(cfg, fake):
         return fake
 
     app = create_app(cfg, build_pipeline=factory, start_scheduler=False)
-    with TestClient(app) as client:
+    with HtmxClient(app) as client:
         client.post("/refresh")
         app.state.runner.thread.join(5)
         client.post("/refresh")
@@ -355,7 +369,7 @@ def test_banner_on_site_change(client, conn):
 
 def test_banner_missing_keys(cfg, fake):
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
-    with TestClient(app) as client:
+    with HtmxClient(app) as client:
         banner = client.get("/").text
     assert "EBAY_CLIENT_ID" in banner and "EBAY_CLIENT_SECRET" in banner
     assert "ANTHROPIC_API_KEY" in banner
@@ -366,7 +380,7 @@ def test_banner_missing_keys(cfg, fake):
     cfg.anthropic_api_key = "sk-ant-secret-value"
     cfg.discord_webhook_url = "https://discord.com/api/webhooks/1/hook-secret-value"
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
-    with TestClient(app) as client:
+    with HtmxClient(app) as client:
         html = client.get("/").text
     assert "EBAY_CLIENT_ID" not in html
     assert "ANTHROPIC_API_KEY" not in html
@@ -397,7 +411,7 @@ def test_manual_scan_uses_fresh_connection_and_logs_errors(cfg, fake, caplog):
         return fake
 
     app = create_app(cfg, build_pipeline=factory, start_scheduler=False)
-    with TestClient(app):
+    with HtmxClient(app):
         runner = app.state.runner
         result = ScanResult(status="ok", items=[], unit_count_estimate=None, notes="",
                             model="m", input_tokens=1, output_tokens=1, cost_usd=0.1)
@@ -612,7 +626,7 @@ def test_scan_button_only_for_unscanned_live_lots(cfg, fake, conn):
     scanned = seed_lot(conn, "u4")
     add_scan(conn, scanned, status="failed", error="no usable photos")
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
-    with TestClient(app) as client:
+    with HtmxClient(app) as client:
         for lid in (unscanned, scan_only):
             html = client.get(f"/listing/{lid}").text
             assert "Scan this lot" in html and f'hx-post="/listing/{lid}/scan"' in html
@@ -622,7 +636,7 @@ def test_scan_button_only_for_unscanned_live_lots(cfg, fake, conn):
 
     cfg.anthropic_api_key = None
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
-    with TestClient(app) as client:
+    with HtmxClient(app) as client:
         html = client.get(f"/listing/{unscanned}").text
     assert "Scan this lot" not in html and "ANTHROPIC_API_KEY" in html
 
@@ -804,3 +818,73 @@ def test_custom_product_added(client, cfg, conn):
         "id": "other", "category": "gpu", "name": "Other", "ebay_query": "other",
         "match": r"\bother\b"})
     assert resp.status_code == 400 and "bulk-other" in resp.text
+
+
+# --- CSRF and origin protection ------------------------------------------------
+
+
+def test_cross_origin_post_forbidden(client, cfg, conn):
+    resp = client.post("/controls/scan", data={"on": "true"},
+                       headers={"Origin": "https://evil.example"})
+    assert resp.status_code == 403
+    assert Budget(conn, cfg, local_now).scan_enabled() is False
+
+
+def test_post_without_hx_request_forbidden(cfg, fake, conn):
+    app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
+    with TestClient(app, base_url=BASE_URL) as plain:
+        resp = plain.post("/controls/scan", data={"on": "true"},
+                          headers={"Origin": BASE_URL})
+    assert resp.status_code == 403
+    assert Budget(conn, cfg, local_now).scan_enabled() is False
+
+
+@pytest.mark.parametrize("host", ["evil.example:8000", "evil.example", "127.0.0.1",
+                                  "127.0.0.1.evil.example:8000", "localhost:abc"])
+def test_bad_host_forbidden(client, cfg, conn, fake, host):
+    lid = seed_lot(conn, "c1")
+    resp = client.post(f"/listing/{lid}/scan", headers={"Host": host})
+    assert resp.status_code == 403
+    assert fake.scanned == []
+
+
+@pytest.mark.parametrize("origin", ["http://127.0.0.1:9999", "http://localhost:9999",
+                                    "https://127.0.0.1:8000", "null"])
+def test_origin_must_match_local_host_and_port(client, origin):
+    resp = client.post("/controls/caps", headers={"Origin": origin},
+                       data={"daily": "3", "monthly": "40", "max_scan_price": "200"})
+    assert resp.status_code == 403
+
+
+@pytest.mark.parametrize("host, origin", [
+    ("127.0.0.1:8000", "http://127.0.0.1:8000"),
+    ("127.0.0.1:8000", "http://localhost:8000"),
+    ("localhost:8123", "http://localhost:8123"),
+    ("localhost:8123", None),
+])
+def test_htmx_post_from_local_origin_allowed(client, cfg, conn, host, origin):
+    headers = {"Host": host, **({"Origin": origin} if origin else {})}
+    resp = client.post("/controls/scan", data={"on": "true"}, headers=headers)
+    assert resp.status_code == 200
+    assert Budget(conn, cfg, local_now).scan_enabled() is True
+
+
+def test_get_unaffected(cfg, fake):
+    app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
+    with TestClient(app) as plain:  # default "testserver" host, no htmx header
+        assert plain.get("/").status_code == 200
+        assert plain.get("/catalog", headers={"Origin": "https://evil.example"}).status_code == 200
+
+
+def test_htmx_served_locally(client):
+    resp = client.get("/static/htmx.min.js")
+    assert resp.status_code == 200
+    assert "htmx" in resp.text[:200]
+
+
+def test_every_post_in_templates_uses_htmx():
+    templates = Path(__file__).resolve().parent.parent / "dealfinder" / "web" / "templates"
+    for path in templates.rglob("*.html"):
+        html = path.read_text()
+        assert not re.search(r"method=[\"']?post", html, re.IGNORECASE), path
+        assert not re.search(r"<form(?![^>]*\bhx-(get|post)=)", html), path
