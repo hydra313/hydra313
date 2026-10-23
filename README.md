@@ -45,6 +45,13 @@ Then open http://127.0.0.1:8000. The first refresh starts immediately, and then
 one runs every 30 minutes (`refresh_minutes` in `config.yaml`). The header has
 a Pause button and a "Refresh now" button.
 
+On Windows, after installation, double-click **Start-Dealfinder.cmd** in the
+project folder. It starts the app in the background, waits for the dashboard,
+and opens your browser. Double-clicking again opens the running app. Keep the
+launcher with the project and its `.venv` folder; a Windows shortcut can point
+to it from anywhere. Startup errors appear in the launcher window, with app
+logs saved in `logs/`. The app keeps running after you close the browser.
+
 Use **Show all listings** on Deals, Bulk lots or Game lots to inspect results that
 have no market value or do not meet the deal thresholds. It also exposes lots
 whose quantity is unknown, so you can open them for a manual photo scan. Missing
@@ -54,6 +61,26 @@ automatically while keeping the current filters.
 The database, `dealfinder.db`, is created in the folder you run from. If you
 ran a pre-release build of this project, delete the old `dealfinder.db` first,
 because the schema changed during development.
+
+## HiBid browser import
+
+HiBid's direct API currently returns HTTP 403, so the default mode imports
+results that you load in your normal browser. Open **HiBid import** in the
+dashboard, choose a search, and wait for lots to load. Complete any sign-in or
+verification in HiBid's tab. Press **Ctrl+A**, **Ctrl+C**, then paste into the
+import box and click **Import HiBid results**. Alternatively, save the loaded
+page as **Webpage, Complete** and upload its HTML file.
+
+Only USD lots with shipping, a payable bid and a closing countdown are accepted.
+The app matches them against your catalog. Imports expire after 30 minutes;
+refresh HiBid and import again to update prices. Expired prices are hidden and
+excluded from scans and alerts. Importing itself sends no alerts and starts no
+paid scans. Shipping costs and premiums remain estimates; check the auction.
+
+This is a manual browser capture, not unattended HiBid search. No cookies or raw
+page HTML are stored in the database. `hibid_mode` can be `browser` (default),
+`api` (legacy adapter) or `off`; `hibid_snapshot_minutes` accepts 1–120 minutes.
+See [the HiBid validation report](docs/hibid-browser-import.md).
 
 ## API keys and the webhook (all optional)
 
@@ -150,9 +177,9 @@ Parts of this app depend on sites that give no stability guarantees.
   verified against live responses on October 23, 2026. Requests include explicit
   price bounds and exclude pickup-only listings. Actual shipping still needs to
   be checked on the seller's listing; the dashboard labels shipping estimates.
-- **HiBid** uses an unofficial endpoint. Live requests returned HTTP 403 on
-  October 23, 2026, so its response schema remains unverified. GraphQL errors are
-  reported as failures rather than being mistaken for an empty search.
+- **HiBid** defaults to browser import, verified with real copied results on
+  October 23, 2026. The legacy API still returns HTTP 403. Browser imports require
+  manual refreshes and depend on the visible card markup.
 - **eBay sold prices** (the market values) are scraped from eBay's public
   sold-listings page, whose markup changes from time to time. The live check
   returned HTTP 403. A block stops further sold-price requests for that refresh

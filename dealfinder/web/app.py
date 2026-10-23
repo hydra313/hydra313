@@ -28,6 +28,7 @@ from dealfinder.sources.base import HttpClient, Source
 from dealfinder.sources.ebay import EbaySource
 from dealfinder.sources.ebay_sold import SoldFetcher
 from dealfinder.sources.hibid import HiBidSource
+from dealfinder.sources.hibid_browser import HiBidBrowserSource
 from dealfinder.sources.shopgoodwill import ShopGoodwillSource
 from dealfinder.vision import VisionScanner
 
@@ -114,7 +115,10 @@ class DefaultPipelineFactory:
         if ebay is not None:
             sources["ebay"] = ebay
         sources["shopgoodwill"] = ShopGoodwillSource(http)
-        sources["hibid"] = HiBidSource(http, utc_now)
+        if cfg.hibid_mode == "browser":
+            sources["hibid"] = HiBidBrowserSource(conn, cfg, utc_now)
+        elif cfg.hibid_mode == "api":
+            sources["hibid"] = HiBidSource(http, utc_now)
         market = MarketService(conn, cfg, SoldFetcher(http), ebay, catalog, utc_now)
         scanner = None
         if cfg.anthropic_api_key:

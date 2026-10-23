@@ -4,3 +4,4 @@ __pycache__/
 dealfinder.db*
 .pytest_cache/
 config.yaml
+logs/

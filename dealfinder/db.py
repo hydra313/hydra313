@@ -256,7 +256,7 @@ def upsert_listing(
         "end_time": _iso(listing.end_time) if listing.end_time else None,
         "bid_count": listing.bid_count,
         "first_seen": ts,
-        "last_seen": ts,
+        "last_seen": _iso(listing.observed_at) if listing.observed_at else ts,
         "total_cost": scored.total_cost if scored else None,
         "profit": scored.profit if scored else None,
         "discount_pct": scored.discount_pct if scored else None,
@@ -272,10 +272,15 @@ def upsert_listing(
     row = conn.execute(
         f"INSERT INTO listings ({cols}) VALUES ({marks})"
         f" ON CONFLICT (source, source_id) DO UPDATE SET {updates}"
+        " WHERE listings.source != 'hibid'"
+        " OR julianday(excluded.last_seen) >= julianday(listings.last_seen)"
         " RETURNING id",
         values,
     ).fetchone()
     conn.commit()
+    if row is None:  # an older browser snapshot cannot replace a newer price
+        row = conn.execute("SELECT id FROM listings WHERE source = ? AND source_id = ?",
+                           (listing.source, listing.source_id)).fetchone()
     return row["id"]
 
 
@@ -297,6 +302,7 @@ def query_listings(
     photo_finds_only: bool = False,
     deals_only: bool = True,
     stale_before: datetime | None = None,
+    hibid_before: datetime | None = None,
 ) -> list[sqlite3.Row]:
     """`stale_before` hides rows with no end time last seen before it: a listing no
     search returns any more (a sold or withdrawn Buy It Now) has no end time to expire
@@ -333,6 +339,9 @@ def query_listings(
     if stale_before is not None:
         where.append(_NOT_STALE)
         params.append(_iso(stale_before))
+    if hibid_before is not None:
+        where.append("(l.source != 'hibid' OR julianday(l.last_seen) > julianday(?))")
+        params.append(_iso(hibid_before))
     sql = (
         f"SELECT l.*, CASE WHEN {_PHOTO_FIND} THEN 1 ELSE 0 END AS photo_find,"
         " COALESCE(s.is_rare_find, 0) AS is_rare_find,"
@@ -698,12 +707,16 @@ def get_scan_by_source(
 
 
 def scan_candidates(
-    conn: sqlite3.Connection, now: datetime, stale_before: datetime | None = None
+    conn: sqlite3.Connection, now: datetime, stale_before: datetime | None = None,
+    *, hibid_before: datetime | None = None,
 ) -> list[sqlite3.Row]:
     """Spec 11.1: live, undismissed lots and unknown-quantity lots never scanned, best first.
     Rows with no end time last seen before `stale_before` are not live."""
     stale = "" if stale_before is None else f" AND {_NOT_STALE}"
     params = (_iso(now),) if stale_before is None else (_iso(now), _iso(stale_before))
+    if hibid_before is not None:
+        stale += " AND (l.source != 'hibid' OR julianday(l.last_seen) > julianday(?))"
+        params += (_iso(hibid_before),)
     return conn.execute(
         "SELECT l.* FROM listings l"
         " WHERE l.kind IN ('hardware_lot', 'game_lot', 'scan_only')"

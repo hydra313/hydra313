@@ -51,7 +51,9 @@ handling_fee:                   # flat handling fee added per order (USD)
   hibid: 0.0
 
 # --- search ---
-broad_queries:                  # search terms sent to ShopGoodwill and HiBid each refresh
+hibid_mode: browser             # browser page import; api = legacy adapter; off = disable
+hibid_snapshot_minutes: 30      # imported prices expire; integer 1-120 minutes
+broad_queries:                  # automatic source queries; HiBid browser mode uses these as search links
   shopgoodwill:
     - rtx
     - geforce

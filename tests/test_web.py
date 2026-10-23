@@ -50,6 +50,11 @@ class FakePipeline:
         self.scan_result: ScanResult | None = None
         self.scanned: list[tuple[int, bool]] = []
         self.scan_done = threading.Event()
+        self.imported = []
+
+    def import_listings(self, listings):
+        self.imported.extend(listings)
+        return len(listings)
 
     def refresh(self):
         self.calls += 1
@@ -105,7 +110,8 @@ def seed(conn, source_id, *, source="ebay", key="rtx-4090", category="gpu",
     s = Scored(total_cost=price + 20.0, shipping_estimated=False, profit=profit,
                discount_pct=0.3, is_target_hit=target, is_deal=deal or target,
                rank_score=profit)
-    return db.upsert_listing(conn, listing, c, s, first_seen or now_utc() - timedelta(hours=1))
+    default_age = timedelta(minutes=5) if source == "hibid" else timedelta(hours=1)
+    return db.upsert_listing(conn, listing, c, s, first_seen or now_utc() - default_age)
 
 
 def row_html(html, listing_id):
@@ -297,7 +303,8 @@ def test_header_status_polls_only_while_refreshing(cfg, fake):
         assert 'hx-trigger="every 3s"' not in client.get("/header/status").text
 
 
-def test_polled_status_never_replaces_the_controls(client, conn):
+def test_polled_status_never_replaces_the_controls(client, conn, cfg):
+    cfg.hibid_mode = "api"
     run = db.start_run(conn, "hibid", now_utc())
     db.finish_run(conn, run, "site_change", 0, None, now_utc())
     polled = client.get("/header/status").text
@@ -345,7 +352,8 @@ def test_refresh_pipeline_built_once_on_its_own_connection(cfg, fake):
 # --- banner --------------------------------------------------------------------
 
 
-def test_banner_on_site_change(client, conn):
+def test_banner_on_site_change(client, conn, cfg):
+    cfg.hibid_mode = "api"
     run = db.start_run(conn, "hibid", now_utc())
     db.finish_run(conn, run, "site_change", 0, None, now_utc())
     run = db.start_run(conn, "shopgoodwill", now_utc())
@@ -1000,4 +1008,74 @@ def test_manual_scan_rejects_missing_key_and_ineligible_listings(client, cfg, co
         assert "Not scanned" in client.post(f"/listing/{listing_id}/scan").text
         assert "Scan this lot" not in client.get(f"/listing/{listing_id}").text
     assert client.post("/listing/999999/scan").status_code == 404
+    assert fake.scanned == []
+
+
+def test_hibid_browser_page_and_import(client, cfg, conn, fake):
+    from dealfinder.sources.hibid_browser import snapshot_status
+    page = client.get("/sources/hibid")
+    assert page.status_code == 200
+    assert "Open HiBid" in page.text and "captured_at" in page.text
+    assert "browser import" in client.get("/header/status").text.lower()
+    html = (Path(__file__).parent / "fixtures/hibid/browser_search.html").read_text(encoding="utf-8")
+    response = client.post("/sources/hibid/import", data={"page_html": html, "query": "rtx",
+                           "captured_at": local_now().isoformat()})
+    assert response.status_code == 200
+    assert response.headers["HX-Redirect"] == "/sources/hibid"
+    assert len(fake.imported) == 2
+    assert snapshot_status(conn, cfg, now_utc())["state"] == "ready"
+    assert "HTTP 403" not in client.get("/header/status").text
+
+
+@pytest.mark.parametrize("capture", ["bad time", "", "2020-01-01T00:00", "2099-01-01T00:00"])
+def test_hibid_import_rejects_invalid_or_stale_capture_time(client, capture, fake):
+    response = client.post("/sources/hibid/import", data={"captured_at": capture,
+                           "page_html": "<html>results</html>"})
+    assert response.status_code == 400
+    assert fake.imported == []
+
+
+def test_hibid_import_html_file_and_csrf(client, fake):
+    html = (Path(__file__).parent / "fixtures/hibid/browser_search.html").read_bytes()
+    response = client.post("/sources/hibid/import", data={"query": "rtx",
+                           "captured_at": local_now().isoformat()},
+                           files={"page_file": ("results.html", html, "text/html")})
+    assert response.status_code == 200 and len(fake.imported) == 2
+    response = client.post("/sources/hibid/import", headers={"Origin": "https://hibid.com"},
+                           data={"page_html": "x", "captured_at": local_now().isoformat()})
+    assert response.status_code == 403
+
+
+def test_hibid_import_accepts_html_over_one_megabyte(client, fake):
+    html = (Path(__file__).parent / "fixtures/hibid/browser_search.html").read_text(encoding="utf-8")
+    response = client.post("/sources/hibid/import", data={"query": "rtx",
+                           "captured_at": local_now().isoformat(), "page_html": html + " " * 1500000})
+    assert response.status_code == 200, response.text[:300]
+    assert len(fake.imported) == 2
+
+
+def test_hibid_import_rejects_empty_results_and_large_upload(client, fake):
+    html = (Path(__file__).parent / "fixtures/hibid/browser_search.html").read_text(encoding="utf-8")
+    response = client.post("/sources/hibid/import", data={"page_html": html.replace("USD", "CAD"),
+                           "captured_at": local_now().isoformat()})
+    assert response.status_code == 400
+    assert "usable" in response.text
+    response = client.post("/sources/hibid/import", data={"page_html": "x" * (5 * 1024 * 1024 + 1),
+                           "captured_at": local_now().isoformat()})
+    assert response.status_code == 413
+    assert fake.imported == []
+
+
+def test_expired_hibid_prices_hide_and_cannot_be_scanned(client, cfg, conn, fake):
+    lid = seed(conn, "old-hibid", source="hibid", end_in_h=24,
+               first_seen=now_utc() - timedelta(minutes=31))
+    lot = seed_lot(conn, "old-hibid-lot", end_in_h=24)
+    conn.execute("UPDATE listings SET source = 'hibid', last_seen = ? WHERE id = ?",
+                 ((now_utc() - timedelta(minutes=31)).isoformat(), lot))
+    conn.commit()
+    assert row_html(client.get("/?show_all=true").text, lid) is None
+    assert row_html(client.get("/lots/hardware?show_all=true").text, lot) is None
+    cfg.anthropic_api_key = "test"
+    assert "Scan this lot" not in client.get(f"/listing/{lot}").text
+    assert "Not scanned" in client.post(f"/listing/{lot}/scan").text
     assert fake.scanned == []

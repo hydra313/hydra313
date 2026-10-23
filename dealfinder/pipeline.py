@@ -19,7 +19,7 @@ from dealfinder.market import MarketService
 from dealfinder.models import Classified, Listing, MarketValue, ScanResult, Scored
 from dealfinder.notify import Notifier, Reason
 from dealfinder.scoring import score_game_lot, score_hardware_lot, score_single, total_cost
-from dealfinder.sources.base import Source
+from dealfinder.sources.base import Source, SourceNeedsAttention
 from dealfinder.vision import ScanDeferred, VisionScanner
 
 log = logging.getLogger(__name__)
@@ -94,6 +94,8 @@ def _row_listing(row: sqlite3.Row) -> Listing:
         end_time=datetime.fromisoformat(row["end_time"]) if row["end_time"] else None,
         bid_count=row["bid_count"],
         buyer_premium_pct=row["buyer_premium_pct"],
+        observed_at=(datetime.fromisoformat(row["last_seen"]) if row["source"] == "hibid"
+                     else None),
     )
 
 
@@ -111,9 +113,18 @@ def stale_before(cfg: Config, now: datetime) -> datetime:
 
 def _ended(row: sqlite3.Row, now: datetime, cfg: Config) -> bool:
     """Ended; a row with no end time also counts as ended once stale."""
+    cutoff = hibid_snapshot_before(cfg, now)
+    if (row["source"] == "hibid" and cutoff is not None
+            and datetime.fromisoformat(row["last_seen"]) <= cutoff):
+        return True
     if row["end_time"]:
         return datetime.fromisoformat(row["end_time"]) < now
     return datetime.fromisoformat(row["last_seen"]) < stale_before(cfg, now)
+
+
+def hibid_snapshot_before(cfg: Config, now: datetime) -> datetime | None:
+    return (now - timedelta(minutes=cfg.hibid_snapshot_minutes)
+            if cfg.hibid_mode == "browser" else None)
 
 
 class Pipeline:
@@ -165,6 +176,8 @@ class Pipeline:
         return report
 
     def _queries(self, name: str, catalog: Catalog) -> list[str]:
+        if name == "hibid" and getattr(self.sources[name], "browser_assisted", False):
+            return [""]  # one pass over all captured queries; no network requests
         if name != "ebay":
             return list(self.cfg.broad_queries.get(name, []))
         try:
@@ -200,9 +213,10 @@ class Pipeline:
                         last_error = e
         except Exception as e:  # noqa: BLE001 - one failing source never stops the others
             log.warning("source %s failed: %s", name, e)
-            db.finish_run(self.conn, run_id, "error", seen, f"{type(e).__name__}: {e}",
+            status = "needs_attention" if isinstance(e, SourceNeedsAttention) else "error"
+            db.finish_run(self.conn, run_id, status, seen, f"{type(e).__name__}: {e}",
                           self.clock())
-            return "error", seen
+            return status, seen
         note = None
         if last_error is not None:
             noun = "listing" if skipped == 1 else "listings"
@@ -216,9 +230,17 @@ class Pipeline:
         db.finish_run(self.conn, run_id, status, seen, note, self.clock())
         return status, seen
 
+    def import_listings(self, listings: list[Listing]) -> int:
+        """Score a browser snapshot immediately; imports do not scan or send alerts."""
+        if any(l.source != "hibid" or l.observed_at is None for l in listings):
+            raise ValueError("Only timestamped HiBid browser listings can be imported")
+        catalog = self.catalog_loader()
+        self.market.begin_run()
+        return sum(self._process(listing, catalog, {}) is not None for listing in listings)
+
     def _process(
         self, listing: Listing, catalog: Catalog, pending: dict[int, dict[Reason, list[str]]]
-    ) -> None:
+    ) -> int | None:
         c = classify(listing, catalog, self.cfg)
         if c is None:
             return
@@ -234,6 +256,7 @@ class Pipeline:
             reasons = self._deal_reasons(c, scored, catalog, value)
             if reasons:
                 pending.setdefault(listing_id, {}).update(reasons)
+        return listing_id
 
     def _score(
         self, listing: Listing, c: Classified, catalog: Catalog, now: datetime
@@ -330,7 +353,8 @@ class Pipeline:
     def _auto_scan(self, catalog: Catalog) -> tuple[int, int]:
         scanned = notified = 0
         now = self.clock()
-        for row in db.scan_candidates(self.conn, now, stale_before(self.cfg, now)):
+        for row in db.scan_candidates(self.conn, now, stale_before(self.cfg, now),
+                                      hibid_before=hibid_snapshot_before(self.cfg, now)):
             decision = self.budget.can_auto_scan(self._gate_cost(row))
             if not decision.allowed:
                 if decision.reason in _GATE_STOPS:

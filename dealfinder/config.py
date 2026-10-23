@@ -66,6 +66,8 @@ class Config:
         default_factory=lambda: {"ebay": 0.0, "shopgoodwill": 5.0, "hibid": 0.0})
 
     # search
+    hibid_mode: str = "browser"  # browser page import; api is the legacy, unverified adapter
+    hibid_snapshot_minutes: int = 30
     broad_queries: dict[str, list[str]] = field(
         default_factory=lambda: {
             "shopgoodwill": list(_BROAD_QUERIES),
@@ -133,4 +135,9 @@ def load_config(path: Path | None = None, env: Mapping[str, str] | None = None) 
     env = os.environ if env is None else env
     for attr, var in _SECRET_ENV.items():
         setattr(cfg, attr, env.get(var) or None)
+    if cfg.hibid_mode not in ("browser", "api", "off"):
+        raise ValueError("hibid_mode must be browser, api or off")
+    if (type(cfg.hibid_snapshot_minutes) is not int or cfg.hibid_snapshot_minutes <= 0
+            or cfg.hibid_snapshot_minutes > 120):
+        raise ValueError("hibid_snapshot_minutes must be an integer between 1 and 120")
     return cfg

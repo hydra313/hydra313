@@ -7,6 +7,9 @@
     {{ kind }} · {{ d.product }} · {{ d.site }} · time left {{ d.time_left }}{% if ended %} (ended){% endif %}{% if dismissed %} · dismissed{% endif %}
     {% if d.url %} · <a href="{{ d.url }}" target="_blank" rel="noopener">Open listing</a>{% endif %}
   </p>
+  {% if d.snapshot_at %}<p class="meta">HiBid browser snapshot: {{ d.snapshot_at }}.
+    {% if snapshot_expired %}<strong>Expired: refresh and reimport before using this price.</strong>{% endif %}
+    Shipping and buyer premium may be estimates. <a href="/sources/hibid">Refresh browser import</a></p>{% endif %}
   {% if d.image %}<img class="lead" src="{{ d.image }}" alt="" loading="lazy">{% endif %}
 
   <section>

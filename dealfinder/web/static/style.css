@@ -54,8 +54,17 @@ input[type="number"] { width: 6rem; }
   padding: 0.75rem 1rem;
 }
 
-.top nav { display: flex; gap: 1rem; align-items: baseline; margin-bottom: 0.5rem; }
+.top nav { display: flex; flex-wrap: wrap; gap: 1rem; align-items: baseline; margin-bottom: 0.5rem; }
 .brand { font-size: 1.1rem; }
+
+.import-status { border: 1px solid var(--border); background: var(--panel); padding: 1rem; border-radius: 8px; max-width: 65rem; }
+.import-status h2 { margin-top: 0; }
+.import-searches { display: flex; flex-wrap: wrap; gap: .6rem 1rem; }
+.import-form { display: grid; gap: .8rem; max-width: 65rem; }
+.import-form label { display: grid; gap: .3rem; }
+.import-form textarea { width: 100%; resize: vertical; font: inherit; padding: .5rem; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
+.import-form button { justify-self: start; }
+.import-form p { margin: 0; }
 
 .controls { display: flex; flex-direction: column; gap: 0.5rem; }
 .controls .row, .controls form { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; margin: 0; }

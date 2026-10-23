@@ -62,6 +62,7 @@ class Listing:
     bid_count: int = 0
     buyer_premium_pct: float | None = None
     condition_id: str | None = None
+    observed_at: datetime | None = None  # browser snapshot time; never renewed by refresh
 
 
 @dataclass

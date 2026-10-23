@@ -7,10 +7,12 @@ import math
 import re
 import sqlite3
 from collections.abc import Iterator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
+from starlette.concurrency import run_in_threadpool
+from starlette.datastructures import UploadFile
 
 from dealfinder import db
 from dealfinder.budget import Budget
@@ -18,7 +20,10 @@ from dealfinder.catalog import Catalog, load_catalog
 from dealfinder.config import Config
 from dealfinder.models import BulkProduct, MarketValue
 from dealfinder.market import SOLD_ERROR_SETTING
-from dealfinder.pipeline import SCAN_KINDS, stale_before
+from dealfinder.pipeline import SCAN_KINDS, stale_before, hibid_snapshot_before
+from dealfinder.sources.hibid_browser import (
+    IMPORT_LOCK, MAX_PAGE_BYTES, parse_browser_page, save_snapshot, search_link, snapshot_status,
+)
 from dealfinder.web.app import local_now, utc_now
 
 log = logging.getLogger(__name__)
@@ -127,6 +132,8 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
                         + sold_error[:_ERROR_MAX] + ". Market values may be unavailable"
                         " or cached. Use Show all listings to inspect unpriced items."})
     for run in db.latest_runs(conn):
+        if run["source"] == "hibid" and cfg.hibid_mode != "api":
+            continue  # browser mode reports its snapshot state, not a historical API error
         site = SITE_NAMES.get(run["source"], run["source"])
         if run["status"] == "error":
             error = (run["error"] or "unknown error")[:_ERROR_MAX]
@@ -135,6 +142,16 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
             banners.append({"level": "warn",
                             "text": f"{site}: probable site change, the last run found"
                                     " no listings"})
+    if cfg.hibid_mode == "browser":
+        snapshot = snapshot_status(conn, cfg, now)
+        state = snapshot["state"]
+        text = (f"HiBid browser snapshot: {snapshot['count']} usable lots. Prices expire after "
+                f"{cfg.hibid_snapshot_minutes} minutes; refresh the browser page and import again."
+                if state == "ready" else "HiBid needs your attention: "
+                + ("browser snapshot expired. Import fresh results."
+                   if state == "expired" else "browser import needed. Open a HiBid search first."))
+        banners.append({"level": "info" if state == "ready" else "warn", "text": text,
+                        "link": "/sources/hibid", "link_text": "HiBid browser import"})
     failures = db.notification_failures_since(conn, now - timedelta(hours=24))
     if failures:
         noun = "notification" if failures == 1 else "notifications"
@@ -306,6 +323,8 @@ def _deal(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, names: dict[s
         "time_left": _time_left(row["end_time"], now),
         "target": bool(row["is_target_hit"]),
         "new": new_since is None or (first_seen is not None and first_seen > new_since),
+        "snapshot_at": (_parse_time(row["last_seen"]).astimezone().strftime("%Y-%m-%d %H:%M")
+                        if row["source"] == "hibid" else None),
     }
 
 
@@ -345,7 +364,7 @@ def deals(request: Request, category: str | None = None, source: str | None = No
         ending_within_h=filters["ending_within_h"],
         new_since=new_since if new_only else None, target_only=target_only,
         deals_only=not show_all,
-        stale_before=stale_before(cfg, now))
+        stale_before=stale_before(cfg, now), hibid_before=hibid_snapshot_before(cfg, now))
     names = _product_names(conn, cfg)
     ctx = {"deals": [_deal(conn, cfg, r, names, new_since, now) for r in rows]}
     if partial:
@@ -409,6 +428,8 @@ def _lot(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, catalog: Catal
         "discount": row["discount_pct"],
         "time_left": _time_left(row["end_time"], now),
         "find": find,
+        "snapshot_at": (_parse_time(row["last_seen"]).astimezone().strftime("%Y-%m-%d %H:%M")
+                        if row["source"] == "hibid" else None),
     }
     if _is_game_row(row):
         lot["product"] = _platform_names(catalog).get(row["key"], row["key"])
@@ -428,7 +449,8 @@ def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bo
     rows = db.query_listings(conn, ["hardware_lot", "scan_only"], now,
                              photo_finds_only=photo_finds_only,
                              deals_only=not show_all,
-                             stale_before=stale_before(cfg, now))
+                             stale_before=stale_before(cfg, now),
+                             hibid_before=hibid_snapshot_before(cfg, now))
     catalog = _catalog(conn, cfg)
     ctx = {"lots": [_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
                     for r in rows if not _is_game_row(r)]}
@@ -453,7 +475,8 @@ def game_lots(request: Request, platform: str | None = None,
     }
     rows = db.query_listings(conn, ["game_lot", "scan_only"], now, **filters,
                              deals_only=not show_all,
-                             stale_before=stale_before(cfg, now))
+                             stale_before=stale_before(cfg, now),
+                             hibid_before=hibid_snapshot_before(cfg, now))
     filters["show_all"] = show_all
     catalog = _catalog(conn, cfg)
     ctx = {"lots": [_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
@@ -530,6 +553,9 @@ def listing_detail(request: Request, listing_id: int,
              for c in (db.get_comps(conn, *key) if key else [])]
     end = _parse_time(row["end_time"])
     ended = end is not None and end < now
+    cutoff = hibid_snapshot_before(cfg, now)
+    snapshot_expired = (row["source"] == "hibid" and cutoff is not None
+                        and _parse_time(row["last_seen"]) <= cutoff)
     ctx = {
         "d": d,
         "row": row,
@@ -540,7 +566,8 @@ def listing_detail(request: Request, listing_id: int,
         "ended": ended,
         "dismissed": bool(row["dismissed"]),
         "scan": _scan_view(scan) if scan is not None else None,
-        "can_scan": (row["kind"] in SCAN_KINDS and not row["dismissed"]
+        "snapshot_expired": snapshot_expired,
+        "can_scan": (row["kind"] in SCAN_KINDS and not row["dismissed"] and not snapshot_expired
                      and not ended and scan is None
                      and (end is not None
                           or _parse_time(row["last_seen"]) >= stale_before(cfg, now))),
@@ -561,7 +588,10 @@ def scan_listing(request: Request, listing_id: int,
         raise HTTPException(status_code=404, detail="listing not found")
     now = utc_now()
     end = _parse_time(row["end_time"])
+    cutoff = hibid_snapshot_before(cfg, now)
     unavailable = (row["dismissed"] or row["kind"] not in SCAN_KINDS
+                   or (row["source"] == "hibid" and cutoff is not None
+                       and _parse_time(row["last_seen"]) <= cutoff)
                    or (end is not None and end <= now)
                    or (end is None and _parse_time(row["last_seen"]) < stale_before(cfg, now)))
     if unavailable or db.get_scan(conn, listing_id) is not None:
@@ -578,6 +608,73 @@ def scan_listing(request: Request, listing_id: int,
     return _render(request, "partials/scan_status.html",
                    {"error": False, "message": "Scanning… reload this page in a minute"
                                                " to see the results."})
+
+
+# --- HiBid browser-page imports ------------------------------------------------
+
+
+@router.get("/sources/hibid", response_class=HTMLResponse)
+def hibid_browser_page(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    cfg = request.app.state.cfg
+    ctx = _header(request, conn)
+    ctx.update(snapshot=snapshot_status(conn, cfg, utc_now()), mode=cfg.hibid_mode,
+               snapshot_minutes=cfg.hibid_snapshot_minutes,
+               captured_default=local_now().strftime("%Y-%m-%dT%H:%M"),
+               searches=[{"query": q, "url": search_link(q)}
+                         for q in cfg.broad_queries.get("hibid", [])])
+    return _render(request, "hibid_browser.html", ctx)
+
+
+def _import_hibid(runner, conn, html: str, query: str, captured_at: datetime) -> int:
+    with IMPORT_LOCK:
+        page = parse_browser_page(html, captured_at)
+        if not page.listings:
+            raise ValueError("No usable USD lots with shipping and a closing countdown. "
+                             + "; ".join(f"{v} {k}" for k, v in page.skipped.items()))
+        pipeline = runner.build_pipeline(conn)
+        matched = pipeline.import_listings(page.listings)
+        save_snapshot(conn, query, page, captured_at, matched)
+        run_id = db.start_run(conn, "hibid", captured_at)
+        db.finish_run(conn, run_id, "ok", len(page.listings), "Browser page import", utc_now())
+        return matched
+
+
+@router.post("/sources/hibid/import", response_class=HTMLResponse)
+async def import_hibid_page(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    cfg = request.app.state.cfg
+    if cfg.hibid_mode != "browser":
+        raise HTTPException(status_code=400, detail="Enable hibid_mode: browser in config.yaml")
+    if int(request.headers.get("content-length", "0")) > MAX_PAGE_BYTES:
+        raise HTTPException(status_code=413, detail="HiBid import must be at most 5 MB")
+    form = None
+    try:
+        form = await request.form(max_files=1, max_fields=6, max_part_size=MAX_PAGE_BYTES + 1)
+        captured_at = datetime.fromisoformat(str(form.get("captured_at", ""))).astimezone(timezone.utc)
+        age = utc_now() - captured_at
+        if age < -timedelta(minutes=2) or age >= timedelta(minutes=cfg.hibid_snapshot_minutes):
+            raise ValueError("Capture time must be recent and cannot be in the future. "
+                             "Refresh HiBid and import its current results.")
+        html = str(form.get("page_html") or "")
+        upload = form.get("page_file")
+        if not html and isinstance(upload, UploadFile):
+            raw = await upload.read(MAX_PAGE_BYTES + 1)
+            await upload.close()
+            if len(raw) > MAX_PAGE_BYTES:
+                raise HTTPException(status_code=413, detail="HiBid page exceeds 5 MB")
+            html = raw.decode("utf-8-sig")
+        if len(html.encode("utf-8")) > MAX_PAGE_BYTES:
+            raise HTTPException(status_code=413, detail="HiBid page exceeds 5 MB")
+        query = str(form.get("query") or "browser search")[:120]
+        await run_in_threadpool(_import_hibid, request.app.state.runner, conn, html, query, captured_at)
+    except (ValueError, UnicodeError) as e:
+        return _render(request, "partials/scan_status.html",
+                       {"error": True, "message": f"Not imported: {e}"}, status_code=400)
+    finally:
+        if form is not None:
+            await form.close()
+    response = HTMLResponse("Imported. Opening HiBid browser import status…")
+    response.headers["HX-Redirect"] = "/sources/hibid"
+    return response
 
 
 # --- catalog ---------------------------------------------------------------------

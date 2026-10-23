@@ -66,6 +66,28 @@ def test_connect_creates_tables_and_pragmas(tmp_path):
     db.connect(tmp_path / "d.sqlite").close()  # idempotent
 
 
+def test_snapshot_time_is_preserved_and_old_prices_do_not_replace_new(tmp_path):
+    conn = db.connect(tmp_path / "snapshot.db")
+    listing = make_listing(source="hibid", end_time=T0 + timedelta(days=1))
+    listing.observed_at = T0
+    lid = add(conn, listing, now=T0 + timedelta(minutes=10))
+    assert db.get_listing(conn, lid)["last_seen"] == T0.isoformat()
+    listing.price = 999
+    listing.observed_at = T0 - timedelta(minutes=1)
+    assert add(conn, listing, now=T0 + timedelta(minutes=11)) == lid
+    assert db.get_listing(conn, lid)["price"] == 100
+
+
+def test_expired_hibid_snapshot_is_hidden_even_when_auction_has_not_ended(tmp_path):
+    conn = db.connect(tmp_path / "expired.db")
+    listing = make_listing(source="hibid", end_time=T0 + timedelta(days=1))
+    lid = add(conn, listing, c=make_class(kind="hardware_lot"))
+    cutoff = T0 + timedelta(minutes=1)
+    assert db.query_listings(conn, ["hardware_lot"], T0, hibid_before=cutoff) == []
+    assert db.scan_candidates(conn, T0, hibid_before=cutoff) == []
+    assert db.get_listing(conn, lid) is not None  # retained for history
+
+
 def test_upsert_preserves_first_seen_and_dismissed(tmp_path):
     conn = db.connect(tmp_path / "d.sqlite")
     t1, t2 = T0, T0 + timedelta(hours=1)

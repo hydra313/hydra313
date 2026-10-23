@@ -25,6 +25,10 @@ class SourceBlocked(SourceError):
     pass
 
 
+class SourceNeedsAttention(SourceError):
+    """A user action is needed before this source can supply fresh listings."""
+
+
 def is_bot_block(resp: httpx.Response) -> bool:
     if resp.status_code == 403:
         return True

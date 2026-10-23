@@ -185,6 +185,28 @@ def rows(conn):
     return {r["source_id"]: r for r in conn.execute("SELECT * FROM listings")}
 
 
+def test_browser_import_scores_and_stores_without_scanning_or_notifying(conn, cfg):
+    scanner = FakeScanner()
+    p = make_pipeline(conn, cfg, {}, scanner=scanner)
+    gpu = listing("browser", "RTX 4090", source="hibid", price=200)
+    gpu.observed_at = T0 - timedelta(minutes=5)
+    assert p.import_listings([gpu]) == 1
+    row = rows(conn)["browser"]
+    assert row["source"] == "hibid" and row["is_target_hit"]
+    assert row["last_seen"] == gpu.observed_at.isoformat()
+    assert scanner.calls == []
+    assert conn.execute("SELECT COUNT(*) FROM notifications").fetchone()[0] == 0
+
+
+def test_browser_source_is_read_once_and_needs_attention_is_distinct(conn, cfg):
+    from dealfinder.sources.base import SourceNeedsAttention
+    source = FakeSource("hibid", error=SourceNeedsAttention("browser import needed"))
+    source.browser_assisted = True
+    p = make_pipeline(conn, cfg, {"hibid": source})
+    assert p.refresh().per_source["hibid"] == ("needs_attention", 0)
+    assert len(source.queries) == 1
+
+
 def sent_payloads(route):
     return [json.loads(call.request.content) for call in route.calls]
 

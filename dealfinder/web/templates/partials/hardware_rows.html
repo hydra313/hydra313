@@ -4,6 +4,7 @@
   <td data-label="Title" class="title">
     <a href="/listing/{{ d.id }}">{{ d.title }}</a>
     {% if d.find %}<span class="find" title="Photo find">💎</span>{% endif %}
+    {% if d.snapshot_at %}<span class="badge low" title="Captured {{ d.snapshot_at }}">Browser snapshot</span>{% endif %}
   </td>
   <td data-label="Product">{{ d.product }}</td>
   <td data-label="Qty" class="num">{{ d.quantity if d.quantity is not none else '?' }}</td>

@@ -28,12 +28,18 @@ Deals are sent to Discord.
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 840 tests pass with no warnings.
+- 863 tests pass with no warnings.
 - **The first live run is complete for ShopGoodwill search and detail photos.**
   Explicit price bounds and normalized image paths fixed real adapter failures.
-  HiBid and eBay sold pages returned HTTP 403; their live integration remains
-  open. eBay Browse, Anthropic and Discord need credentials for live checks.
+  HiBid browser import is verified: 68 real cards, 3 usable USD lots, 1 catalog
+  match. Direct HiBid API and eBay sold requests remain blocked. eBay Browse,
+  Anthropic and Discord need credentials for live checks.
   See `docs/live-validation-2026-10-23.md` for evidence and remaining limits.
+- HiBid defaults to manual browser capture with 30-minute expiry. See
+  `docs/hibid-browser-import.md`; no database reset is needed for this change.
+- Windows users can double-click `Start-Dealfinder.cmd` after installation.
+  It starts a hidden server, waits for readiness and opens the dashboard; repeated
+  launches reuse the server. Logs go in the ignored `logs/` folder.
 - The dashboard can show unpriced listings and unknown-quantity lots with
   **Show all listings**. Refresh completion updates the current filtered rows.
   Explicit Intel/AMD conflicts reject CPU matches, including hardware lots.
@@ -122,7 +128,7 @@ at the top of each module, so a fix is usually a one-place edit:
 | Site | File | What may be wrong |
 | --- | --- | --- |
 | ShopGoodwill | `dealfinder/sources/shopgoodwill.py` | `SEARCH_URL` / `ITEM_URL`, request body (`build_search_body`), `RESULTS_PATH`, `FIELD_*` names, the Pacific-time `endTime` assumption |
-| HiBid | `dealfinder/sources/hibid.py` | `GRAPHQL_URL`, `LOT_SEARCH_QUERY`, `RESULTS_PATH` and field names (`lead`, `lotState`, `pictures`, `buyerPremium`, `shippingOffered`) |
+| HiBid | `dealfinder/sources/hibid_browser.py` (default), `hibid.py` (legacy API) | Browser card `SELECTORS`, visible USD/shipping/countdown markup; API remains blocked |
 | eBay sold prices | `dealfinder/sources/ebay_sold.py` | the `SELECTORS` dict (covers both the `li.s-item` and `li.s-card` layouts); eBay may bot-block the scrape |
 | eBay Browse API | `dealfinder/sources/ebay.py` | documented API, lowest risk; needs production keys |
 
@@ -167,7 +173,8 @@ Steps:
 
 ## Known gaps (prioritized)
 
-1. HiBid and eBay sold requests are blocked; authenticated eBay Browse, Anthropic
+1. Direct HiBid API and eBay sold requests are blocked; HiBid browser import works
+   but needs manual capture. Authenticated eBay Browse, Anthropic
    and Discord still need live credential checks. ShopGoodwill is verified
    against captured search and photo responses; adapters fetch one page only.
 2. GPU/CPU hardware lots still take their quantity from the photo-wide unit

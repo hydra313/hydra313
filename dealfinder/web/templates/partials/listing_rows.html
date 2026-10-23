@@ -5,6 +5,7 @@
     {% if d.url %}<a href="{{ d.url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}
     {% if d.target %}<span class="target" title="Target hit">🎯</span>{% endif %}
     {% if d.new %}<span class="badge new">NEW</span>{% endif %}
+    {% if d.snapshot_at %}<span class="badge low" title="Captured {{ d.snapshot_at }}">Browser snapshot</span>{% endif %}
   </td>
   <td data-label="Product">{{ d.product }}</td>
   <td data-label="Condition">{{ d.condition }}</td>
