@@ -99,6 +99,37 @@ table.deals { width: 100%; border-collapse: collapse; background: var(--panel); 
 .badge.low { background: var(--warn-bg); color: var(--warn-text); }
 .badge.new { background: var(--on); color: #fff; font-weight: 600; }
 
+.muted { color: var(--muted); }
+.note { color: var(--on); margin: 0; flex-basis: 100%; }
+h2 { font-size: 1.1rem; margin: 1.25rem 0 0.5rem; }
+h3 { font-size: 1rem; margin: 0; flex-basis: 100%; }
+
+/* Listing detail */
+.detail h1 { overflow-wrap: anywhere; }
+.detail .meta { color: var(--muted); overflow-wrap: anywhere; }
+.detail img.lead { display: block; max-width: min(320px, 100%); height: auto; border-radius: 6px; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.scan { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; }
+.scan .photos { display: flex; flex-wrap: wrap; gap: 0.5rem; flex: 1 1 260px; max-width: 100%; }
+.scan .photos figure { margin: 0; width: 120px; }
+.scan .photos img { display: block; width: 120px; height: 120px; object-fit: cover; border-radius: 4px; }
+.scan .photos figure:target img { outline: 3px solid var(--accent); }
+.scan .photos figcaption { font-size: 0.8rem; color: var(--muted); }
+.scan table.items { flex: 3 1 420px; width: auto; }
+#scan-action { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; }
+
+/* Catalog */
+.catalog-table input[type="number"] { width: 6.5rem; }
+.catalog-table form { margin: 0; }
+.custom-forms { display: flex; flex-wrap: wrap; gap: 1rem; }
+form.custom { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: flex-end; flex: 1 1 340px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; }
+form.custom label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.9rem; min-width: 0; }
+textarea { font: inherit; padding: 0.25rem 0.4rem; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--panel); color: var(--text); max-width: 100%; }
+
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Narrow screens: each row becomes a card. */

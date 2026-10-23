@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Bulk lots · dealfinder{% endblock %}
+{% block content %}
+<h1>Bulk hardware lots</h1>
+<form class="filters" hx-get="/lots/hardware" hx-target="#lot-rows" hx-trigger="change, submit" hx-push-url="true">
+  <label class="check"><input type="checkbox" name="photo_finds_only" value="1"{% if filters.photo_finds_only %} checked{% endif %}> 💎 Photo finds only</label>
+</form>
+<table class="deals">
+  <thead>
+    <tr>
+      <th><span class="sr-only">Image</span></th><th>Title</th><th>Product</th><th>Qty</th>
+      <th>Cost per unit</th><th>Working value</th><th>Expected profit</th><th>Repair per unit</th>
+      <th>Success rate</th><th>Site</th><th>Time left</th><th><span class="sr-only">Actions</span></th>
+    </tr>
+  </thead>
+  <tbody id="lot-rows">
+    {% include "partials/hardware_rows.html" %}
+  </tbody>
+</table>
+{% endblock %}

@@ -15,6 +15,7 @@
   <td data-label="Discount" class="num">{% if d.discount is not none %}{{ '%.0f'|format(d.discount * 100) }}%{% else %}—{% endif %}</td>
   <td data-label="Time left">{{ d.time_left }}</td>
   <td class="actions">
+    <a href="/listing/{{ d.id }}">Details</a>
     {% if d.url %}<a href="{{ d.url }}" target="_blank" rel="noopener">Open</a>{% endif %}
     <button type="button" hx-post="/listing/{{ d.id }}/dismiss" hx-target="closest tr" hx-swap="outerHTML">Dismiss</button>
   </td>

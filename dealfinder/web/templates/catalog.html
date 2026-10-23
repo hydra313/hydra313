@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Catalog · dealfinder{% endblock %}
+{% block content %}
+<h1>Catalog</h1>
+<p class="muted">A blank number field uses the value shown greyed out (the catalog's own value or the category default).</p>
+{% if catalog_error %}<p class="error" role="alert">The catalog failed to load; see the log.</p>{% endif %}
+{% for section in sections %}
+<section class="catalog">
+  <h2>{{ section.title }} <span class="muted">({{ section.rows|length }})</span></h2>
+  <table class="deals catalog-table">
+    <thead>
+      <tr>
+        <th>Name</th>{% if section.table != 'platform' %}<th>Category</th>{% endif %}<th>Enabled</th>
+        {% if section.table == 'product' %}<th>Max price $</th>{% elif section.table == 'bulk' %}<th>Repair per unit $</th><th>Success rate (0–1)</th>{% endif %}
+        <th>Market value</th><th><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in section.rows %}{% include "partials/catalog_row.html" %}{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+<section class="catalog">
+  <h2>Add a custom entry</h2>
+  <p class="muted">Patterns are Python regular expressions matched against the lowercased title.</p>
+  <div class="custom-forms">
+    {% for f in forms %}{% with kind=f.kind, v=f.v, error=f.error, message=f.message, categories=f.categories %}{% include "partials/custom_form.html" %}{% endwith %}{% endfor %}
+  </div>
+</section>
+{% endblock %}

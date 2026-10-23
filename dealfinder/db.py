@@ -668,6 +668,16 @@ def get_scan(conn: sqlite3.Connection, listing_id: int) -> sqlite3.Row | None:
     return conn.execute("SELECT * FROM scans WHERE listing_id = ?", (listing_id,)).fetchone()
 
 
+def scan_failures_since(conn: sqlite3.Connection, since: datetime) -> list[int]:
+    """Listing ids whose scan failed or was refused at or after `since`, newest first."""
+    rows = conn.execute(
+        "SELECT listing_id FROM scans WHERE status IN ('failed', 'refused')"
+        " AND julianday(scanned_at) >= julianday(?) ORDER BY julianday(scanned_at) DESC, id DESC",
+        (_iso(since),),
+    ).fetchall()
+    return [r["listing_id"] for r in rows]
+
+
 def get_scan_by_source(
     conn: sqlite3.Connection, source: str, source_id: str
 ) -> sqlite3.Row | None:

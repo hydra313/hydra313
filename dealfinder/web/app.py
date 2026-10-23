@@ -122,6 +122,8 @@ class Runner:
         self.pipeline = build_pipeline(self.conn)
         self.lock = threading.Lock()
         self.thread: threading.Thread | None = None
+        # The last manual scan's error and its listing, shown until a manual scan succeeds.
+        self.scan_error: tuple[int, str] | None = None
 
     @property
     def refresh_running(self) -> bool:
@@ -179,11 +181,17 @@ class Runner:
         conn = None
         try:
             conn = db.connect(self.cfg.db_path)
-            self.build_pipeline(conn).scan_listing(listing_id, manual=True)
+            result = self.build_pipeline(conn).scan_listing(listing_id, manual=True)
+            if result is not None and result.status == "ok":
+                self.scan_error = None
         except SpendNotRecorded as e:
             log.error("manual scan of listing %s: %s", listing_id, e)
-        except Exception:  # noqa: BLE001 - a background scan has no caller to raise to
+            self.scan_error = (listing_id, "Manual photo scan: spend not recorded"
+                                           " — caps may be off by one scan")
+        except Exception as e:  # noqa: BLE001 - a background scan has no caller to raise to
             log.exception("manual scan of listing %s failed", listing_id)
+            self.scan_error = (listing_id,
+                               f"Manual photo scan failed: {type(e).__name__}: {e}")
         finally:
             if conn is not None:
                 conn.close()

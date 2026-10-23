@@ -9,7 +9,7 @@
   {% if banners %}
   <div class="banner" role="status">
     <ul>
-      {% for b in banners %}<li class="{{ b.level }}">{{ b.text }}</li>{% endfor %}
+      {% for b in banners %}<li class="{{ b.level }}">{{ b.text }}{% if b.listings %} (see {{ 'listing' if b.listings|length == 1 else 'listings' }} {% for id in b.listings %}<a href="/listing/{{ id }}">#{{ id }}</a>{% if not loop.last %}, {% endif %}{% endfor %}){% endif %}</li>{% endfor %}
     </ul>
   </div>
   {% endif %}

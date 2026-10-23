@@ -1,3 +1,4 @@
+import json
 import re
 import sqlite3
 import threading
@@ -10,7 +11,8 @@ from fastapi.testclient import TestClient
 from dealfinder import db
 from dealfinder.budget import Budget
 from dealfinder.config import Config
-from dealfinder.models import Classified, Listing, ScanResult, Scored
+from dealfinder.catalog import load_catalog
+from dealfinder.models import Classified, Comp, Listing, MarketValue, ScanResult, Scored
 from dealfinder.pipeline import RefreshReport, SpendNotRecorded
 from dealfinder.web.app import create_app, default_pipeline_factory
 
@@ -32,7 +34,9 @@ class FakePipeline:
         self.started = threading.Event()
         self.release = threading.Event()
         self.scan_error: Exception | None = None
+        self.scan_result: ScanResult | None = None
         self.scanned: list[tuple[int, bool]] = []
+        self.scan_done = threading.Event()
 
     def refresh(self):
         self.calls += 1
@@ -43,9 +47,12 @@ class FakePipeline:
 
     def scan_listing(self, listing_id, manual):
         self.scanned.append((listing_id, manual))
-        if self.scan_error is not None:
-            raise self.scan_error
-        return None
+        try:
+            if self.scan_error is not None:
+                raise self.scan_error
+            return self.scan_result
+        finally:
+            self.scan_done.set()
 
 
 @pytest.fixture
@@ -424,3 +431,376 @@ def test_default_factory_wires_optional_features(cfg, conn):
     assert pipeline.scanner is not None
     assert pipeline.notifier is not None
     factory.close()
+
+
+# --- lot pages, listing detail, manual scans and catalog (task 18) ------------
+
+
+def seed_lot(conn, source_id, *, kind="hardware_lot", key="ps2-console", category="console",
+             quantity=4, title=None, price=80.0, end_in_h=None, profit=80.0, deal=True,
+             discount=0.4, images=None):
+    listing = Listing(
+        source="ebay", source_id=source_id, title=title or f"Lot {source_id}",
+        url=f"https://example.com/{source_id}", price=price, shipping=20.0,
+        shipping_offered=True,
+        image_urls=images if images is not None else [f"https://img.example.com/{source_id}.jpg"],
+        is_auction=end_in_h is not None,
+        end_time=now_utc() + timedelta(hours=end_in_h) if end_in_h is not None else None)
+    c = Classified(kind=kind, key=key, condition=None, quantity=quantity, category=category)
+    s = None
+    if kind != "scan_only":
+        s = Scored(total_cost=price + 20.0, shipping_estimated=False, profit=profit,
+                   discount_pct=discount, is_target_hit=False, is_deal=deal,
+                   rank_score=profit)
+    return db.upsert_listing(conn, listing, c, s, now_utc() - timedelta(hours=1))
+
+
+def add_scan(conn, listing_id, *, status="ok", items=(), photos=(), rare=False, lot=False,
+             error=None, at=None, estimate=None, identified=None):
+    conn.execute(
+        "INSERT INTO scans (listing_id, status, model, items, unit_count_estimate,"
+        " identified_value, is_rare_find, is_lot_find, cost_usd, scanned_at, error, photo_urls)"
+        " VALUES (?, ?, 'claude-opus-5-5', ?, ?, ?, ?, ?, 0.12, ?, ?, ?)",
+        (listing_id, status, json.dumps(list(items)), estimate, identified, int(rare),
+         int(lot), (at or now_utc()).isoformat(), error, json.dumps(list(photos))))
+    conn.commit()
+
+
+def item(title, *, platform="PS2", completeness="loose", confidence="high", photo_index=0,
+         value=None, low=None, edition=None):
+    return {"kind": "game", "platform": platform, "title": title, "edition": edition,
+            "completeness": completeness, "quantity": 1, "confidence": confidence,
+            "photo_index": photo_index, "value": value, "value_low_confidence": low}
+
+
+def save_value(conn, key, condition, value, comps=(), count=6, low=False):
+    mv = MarketValue(key=key, condition=condition, value=value, comp_count=count,
+                     method="sold", low_confidence=low, computed_at=now_utc())
+    db.save_market_value(conn, mv, list(comps))
+
+
+def test_nav_links_on_every_page(client):
+    for path in ("/", "/lots/hardware", "/lots/games", "/catalog"):
+        html = client.get(path).text
+        nav = re.search(r"<nav>.*?</nav>", html, re.DOTALL).group(0)
+        for href, label in (("/", "Deals"), ("/lots/hardware", "Bulk lots"),
+                            ("/lots/games", "Game lots"), ("/catalog", "Catalog")):
+            assert f'<a href="{href}"' in nav and label in nav
+
+
+def test_hardware_lots_page(client, conn):
+    plain = seed_lot(conn, "h1", title="4 PS2 consoles untested", quantity=4, price=80.0,
+                     profit=81.0)
+    find = seed_lot(conn, "h2", title="PS2 console lot", quantity=5, price=130.0, deal=False)
+    add_scan(conn, find, rare=True)
+    game = seed_lot(conn, "g1", kind="game_lot", key="ps2", category=None, quantity=20)
+
+    resp = client.get("/lots/hardware")
+    assert resp.status_code == 200
+    html = resp.text
+    row = row_html(html, plain)
+    assert row is not None and "4 PS2 consoles untested" in row
+    assert "PlayStation 2 console" in row  # bulk product name
+    assert re.search(r">\s*4\s*<", row)  # quantity
+    assert "$25.00" in row  # cost per unit: (80 + 20) / 4, also the console repair default
+    assert "$81.00" in row  # expected profit
+    assert "60%" in row  # console success rate default
+    assert f'href="/listing/{plain}"' in row
+    assert "💎" not in row
+    assert "💎" in row_html(html, find)  # a photo find shows even when not a text deal
+    assert row_html(html, game) is None
+
+    html = client.get("/lots/hardware", params={"photo_finds_only": "1"}).text
+    assert row_html(html, find) is not None
+    assert row_html(html, plain) is None
+
+    # The repair assumptions shown follow catalog overrides.
+    db.set_override(conn, "bulk_overrides", "ps2-console", repair_cost=12.5, success_rate=0.8)
+    row = row_html(client.get("/lots/hardware").text, plain)
+    assert "$12.50" in row and "80%" in row
+
+    partial = client.get("/lots/hardware", params={"photo_finds_only": "1"},
+                         headers={"HX-Request": "true"})
+    assert "<html" not in partial.text and row_html(partial.text, find) is not None
+
+
+def test_game_lots_page_per_game_columns(client, conn):
+    ps2 = seed_lot(conn, "g1", kind="game_lot", key="ps2", category=None, quantity=20,
+                   price=40.0, profit=55.0, end_in_h=30, title="20 PS2 games lot")
+    n64 = seed_lot(conn, "g2", kind="game_lot", key="n64", category=None, quantity=8,
+                   price=60.0, end_in_h=2)
+    find = seed_lot(conn, "g3", kind="game_lot", key="ps2", category=None, quantity=10,
+                    price=50.0, deal=False, end_in_h=50)
+    add_scan(conn, find, lot=True)
+    hw = seed_lot(conn, "h1")
+    save_value(conn, "ps2", "per_game", 5.5)
+
+    html = client.get("/lots/games").text
+    row = row_html(html, ps2)
+    assert "PlayStation 2" in row  # platform name
+    assert re.search(r">\s*20\s*<", row)  # game count
+    assert "$3.00" in row  # cost per game: (40 + 20) / 20
+    assert "$5.50" in row  # market per game
+    assert "$55.00" in row  # expected profit
+    assert "💎" in row_html(html, find) and "💎" not in row
+    assert row_html(html, hw) is None
+
+    def ids(params):
+        page = client.get("/lots/games", params=params).text
+        return {i for i in (ps2, n64, find) if row_html(page, i) is not None}
+
+    assert ids({}) == {ps2, n64, find}
+    assert ids({"platform": "ps2"}) == {ps2, find}
+    assert ids({"ending_within_h": "3"}) == {n64}
+    assert ids({"photo_finds_only": "1"}) == {find}
+    assert ids({"platform": "", "ending_within_h": ""}) == {ps2, n64, find}
+
+
+def test_listing_detail_shows_comps_and_scan_items(client, conn):
+    lid = seed_lot(conn, "g1", kind="game_lot", key="ps2", category=None, quantity=20,
+                   price=40.0, title="PS2 lot <b>bold</b>")
+    comps = [Comp(title="Lot of 10 PS2 games <script>x</script>", price=55.0,
+                  sold_date=None, url="https://www.ebay.com/itm/1", condition_label="Used"),
+             Comp(title="PS2 games bundle 12", price=60.0, sold_date=None,
+                  url="javascript:alert(1)", condition_label=None)]
+    save_value(conn, "ps2", "per_game", 5.5, comps)
+    photos = ["https://img.example.com/p0.jpg", "javascript:alert(2)",
+              "https://img.example.com/p2.jpg"]
+    add_scan(conn, lid, photos=photos, rare=True, identified=95.0, estimate=20, items=[
+        item("Silent Hill 2", completeness="cib", photo_index=2, value=80.0),
+        item("Madden 2004", confidence="low", photo_index=1, value=2.0, low=True),
+        item("<i>Ico</i>", confidence="medium", photo_index=-1),
+        item("Kingdom Hearts", photo_index=7, value=9.0),
+    ])
+
+    resp = client.get(f"/listing/{lid}")
+    assert resp.status_code == 200
+    html = resp.text
+    assert "PS2 lot &lt;b&gt;bold&lt;/b&gt;" in html
+    assert "price $40.00 + shipping $20.00" in html  # cost breakdown
+    assert "$5.50" in html  # the per-game value behind the score
+    assert "Lot of 10 PS2 games &lt;script&gt;x&lt;/script&gt;" in html
+    assert 'href="https://www.ebay.com/itm/1"' in html
+    assert "PS2 games bundle 12" in html
+    assert "javascript:" not in html  # unsafe URLs are never rendered
+    # Photos from the scan, beside the identified items.
+    assert 'src="https://img.example.com/p0.jpg"' in html
+    assert 'src="https://img.example.com/p2.jpg"' in html
+    items = re.search(r'<table class="deals items".*?</table>', html, re.DOTALL).group(0)
+    silent = re.search(r"<tr>(?:(?!</tr>).)*Silent Hill 2.*?</tr>", items, re.DOTALL).group(0)
+    assert 'href="#photo-2"' in silent and "Photo 3" in silent
+    assert "cib" in silent and "high" in silent and "$80.00" in silent
+    madden = re.search(r"<tr>(?:(?!</tr>).)*Madden 2004.*?</tr>", items, re.DOTALL).group(0)
+    assert "#photo-1" not in madden  # its photo URL failed the guard
+    assert "$2.00" in madden and "low" in madden
+    ico = re.search(r"<tr>(?:(?!</tr>).)*&lt;i&gt;Ico.*?</tr>", items, re.DOTALL).group(0)
+    assert "#photo" not in ico and "medium" in ico
+    kh = re.search(r"<tr>(?:(?!</tr>).)*Kingdom Hearts.*?</tr>", items, re.DOTALL).group(0)
+    assert "#photo" not in kh  # index out of range
+    assert "💎" in html
+    assert "Scan this lot" not in html  # already scanned
+
+    assert client.get("/listing/999999").status_code == 404
+
+
+def test_scan_button_only_for_unscanned_live_lots(cfg, fake, conn):
+    cfg.anthropic_api_key = "sk-ant-test"
+    unscanned = seed_lot(conn, "u1", end_in_h=5)
+    scan_only = seed_lot(conn, "u2", kind="scan_only", quantity=None)
+    ended = seed_lot(conn, "u3", end_in_h=-1)
+    single = seed(conn, "s1")
+    scanned = seed_lot(conn, "u4")
+    add_scan(conn, scanned, status="failed", error="no usable photos")
+    app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
+    with TestClient(app) as client:
+        for lid in (unscanned, scan_only):
+            html = client.get(f"/listing/{lid}").text
+            assert "Scan this lot" in html and f'hx-post="/listing/{lid}/scan"' in html
+        for lid in (ended, single, scanned):
+            assert "Scan this lot" not in client.get(f"/listing/{lid}").text
+        assert "no usable photos" in client.get(f"/listing/{scanned}").text
+
+    cfg.anthropic_api_key = None
+    app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
+    with TestClient(app) as client:
+        html = client.get(f"/listing/{unscanned}").text
+    assert "Scan this lot" not in html and "ANTHROPIC_API_KEY" in html
+
+
+def test_manual_scan_denied_shows_reason(client, cfg, conn, fake, monkeypatch):
+    lid = seed_lot(conn, "m1")
+    started: list[int] = []
+    monkeypatch.setattr(client.app.state.runner, "start_scan", started.append)
+    Budget(conn, cfg, local_now).set_caps(daily=0.0)
+    resp = client.post(f"/listing/{lid}/scan")
+    assert resp.status_code == 200
+    assert "daily cap reached" in resp.text
+    assert "Scanning" not in resp.text
+    assert started == [] and fake.scanned == []
+
+
+def test_manual_scan_runs_when_switch_off(client, cfg, conn, fake):
+    lid = seed_lot(conn, "m1")
+    assert Budget(conn, cfg, local_now).scan_enabled() is False
+    resp = client.post(f"/listing/{lid}/scan")
+    assert resp.status_code == 200
+    assert "Scanning…" in resp.text
+    assert fake.scan_done.wait(5)
+    assert fake.scanned == [(lid, True)]
+
+
+def test_manual_scan_error_shown_until_next_successful_scan(client, fake):
+    runner = client.app.state.runner
+    result = ScanResult(status="ok", items=[], unit_count_estimate=None, notes="",
+                        model="m", input_tokens=1, output_tokens=1, cost_usd=0.1)
+    fake.scan_error = SpendNotRecorded(7, result, False)
+    runner.start_scan(7).join(5)
+    status = client.get("/header/status").text
+    assert "spend not recorded — caps may be off by one scan" in status
+    assert 'href="/listing/7"' in status
+
+    fake.scan_error = RuntimeError("boom <x>")
+    runner.start_scan(8).join(5)
+    status = client.get("/header/status").text
+    assert "boom &lt;x&gt;" in status and "spend not recorded" not in status
+
+    fake.scan_error = None
+    fake.scan_result = None  # the scan did not run: the error stays
+    runner.start_scan(9).join(5)
+    assert "boom" in client.get("/header/status").text
+    fake.scan_result = result
+    runner.start_scan(9).join(5)
+    assert "boom" not in client.get("/header/status").text
+
+
+def test_scan_failure_banner(client, conn):
+    failed = seed_lot(conn, "f1")
+    refused = seed_lot(conn, "f2")
+    old = seed_lot(conn, "f3")
+    ok = seed_lot(conn, "f4")
+    add_scan(conn, failed, status="failed", error="api error")
+    add_scan(conn, refused, status="refused")
+    add_scan(conn, old, status="failed", at=now_utc() - timedelta(hours=25))
+    add_scan(conn, ok)
+    status = client.get("/header/status").text
+    banner = re.search(r'<div class="banner".*?</div>', status, re.DOTALL).group(0)
+    assert "2 photo scans failed in the last 24 h" in banner
+    assert f'href="/listing/{failed}"' in banner and f'href="/listing/{refused}"' in banner
+    assert f'href="/listing/{old}"' not in banner and f'href="/listing/{ok}"' not in banner
+
+
+def catalog_row(html, table, item_id):
+    m = re.search(rf'<tr id="catalog-{table}-{re.escape(item_id)}".*?</tr>', html, re.DOTALL)
+    return m.group(0) if m else None
+
+
+def test_catalog_page_sections(client, conn):
+    save_value(conn, "rtx-4090", "used", 1500.0)
+    save_value(conn, "ps2-console", "used", 45.0, count=3, low=True)
+    save_value(conn, "ps2", "per_game", 5.5)
+    html = client.get("/catalog").text
+    assert "$1,500.00" in catalog_row(html, "product", "rtx-4090")
+    assert "GeForce RTX 4090" in catalog_row(html, "bulk", "bulk-rtx-4090")
+    bulk = catalog_row(html, "bulk", "ps2-console")
+    assert "$45.00" in bulk and "low" in bulk
+    assert 'placeholder="25.00"' in bulk and 'placeholder="0.60"' in bulk  # defaults
+    assert "$5.50" in catalog_row(html, "platform", "ps2")
+    assert 'hx-post="/catalog/custom/product"' in html
+    assert 'hx-post="/catalog/custom/bulk"' in html
+
+
+def test_catalog_override_saved(client, cfg, conn):
+    resp = client.post("/catalog/product/rtx-4090", data={"enabled": "true", "max_price": "1200"})
+    assert resp.status_code == 200
+    assert 'id="catalog-product-rtx-4090"' in resp.text and 'value="1200.00"' in resp.text
+    product = load_catalog(cfg.catalog_dir, conn, cfg).product("rtx-4090")
+    assert product.max_price == 1200.0 and product.enabled
+
+    resp = client.post("/catalog/bulk/ps2-console",
+                       data={"enabled": "true", "repair_cost": "30", "success_rate": "0.5"})
+    assert resp.status_code == 200
+    bulk = load_catalog(cfg.catalog_dir, conn, cfg).bulk_product("ps2-console")
+    assert (bulk.repair_cost, bulk.success_rate) == (30.0, 0.5)
+
+    resp = client.post("/catalog/platform/ps2", data={})  # unchecked switch: disabled
+    assert resp.status_code == 200
+    assert not load_catalog(cfg.catalog_dir, conn, cfg).platform("ps2").enabled
+
+    # A blank field clears the override back to the default.
+    client.post("/catalog/bulk/ps2-console", data={"enabled": "true", "repair_cost": "",
+                                                    "success_rate": "0.5"})
+    assert load_catalog(cfg.catalog_dir, conn, cfg).bulk_product("ps2-console").repair_cost == 25
+
+    for path, data, message in (
+        ("/catalog/bulk/ps2-console", {"success_rate": "1.5"}, "success rate"),
+        ("/catalog/bulk/ps2-console", {"repair_cost": "-1"}, "repair cost"),
+        ("/catalog/bulk/ps2-console", {"repair_cost": "nan"}, "repair cost"),
+        ("/catalog/product/rtx-4090", {"max_price": "abc"}, "max price"),
+        ("/catalog/product/rtx-4090", {"max_price": "-5"}, "max price"),
+    ):
+        resp = client.post(path, data={"enabled": "true", **data})
+        assert resp.status_code == 400, data
+        assert message in resp.text and 'class="error"' in resp.text
+    catalog = load_catalog(cfg.catalog_dir, conn, cfg)
+    assert catalog.bulk_product("ps2-console").success_rate == 0.5  # nothing written
+    assert catalog.product("rtx-4090").max_price == 1200.0
+
+    assert client.post("/catalog/nope/rtx-4090", data={}).status_code == 404
+    assert client.post("/catalog/product/no-such-id", data={}).status_code == 404
+
+
+def test_custom_product_bad_regex_rejected(client, conn):
+    base = {"id": "my-card", "category": "gpu", "name": "My Card", "ebay_query": "my card",
+            "match": r"\bmy (card"}
+    resp = client.post("/catalog/custom/product", data=base)
+    assert resp.status_code == 400
+    assert "invalid regex" in resp.text and 'class="error"' in resp.text
+    assert 'value="My Card"' in resp.text  # the form keeps what was typed
+    assert db.list_custom(conn, "product") == []
+
+    for kind, data, message in (
+        ("product", {**base, "match": r"\bmy card\b", "exclude": "ok\n(bad"}, "invalid regex"),
+        ("product", {**base, "match": r"\bmy\b", "id": "rtx-4090"}, "already exists"),
+        ("product", {**base, "match": r"\bmy\b", "id": "My Card"}, "id"),
+        ("product", {**base, "match": r"\bmy\b", "max_price": "-1"}, "max price"),
+        ("bulk", {**base, "match": r"\bmy\b", "id": "bulk-rtx-4090"}, "already exists"),
+        ("bulk", {**base, "match": r"\bmy\b", "id": "ps2-console"}, "already exists"),
+        ("bulk", {**base, "match": r"\bmy\b", "success_rate": "2"}, "success rate"),
+        ("bulk", {**base, "match": r"\bmy\b", "category": "phone"}, "category"),
+    ):
+        resp = client.post(f"/catalog/custom/{kind}", data=data)
+        assert resp.status_code == 400, data
+        assert message in resp.text, data
+    assert db.list_custom(conn, "product") == [] and db.list_custom(conn, "bulk") == []
+    assert client.post("/catalog/custom/nope", data=base).status_code == 404
+
+
+def test_custom_product_added(client, cfg, conn):
+    resp = client.post("/catalog/custom/product", data={
+        "id": "my-card", "category": "gpu", "name": "My Card", "ebay_query": "my card",
+        "match": r"\bmy card\b", "exclude": "broken\n\n  parts  ", "max_price": "300"})
+    assert resp.status_code == 200
+    assert resp.headers.get("HX-Refresh") == "true"
+    [added] = db.list_custom(conn, "product")
+    assert added["match"] == r"\bmy card\b" and added["exclude"] == ["broken", "parts"]
+    assert added["max_price"] == 300.0
+    html = client.get("/catalog").text
+    assert "My Card" in catalog_row(html, "product", "my-card")
+    assert catalog_row(html, "bulk", "bulk-my-card") is not None  # gpu: auto bulk product
+
+    resp = client.post("/catalog/custom/bulk", data={
+        "id": "my-console", "category": "console", "name": "My Console",
+        "ebay_query": "my console", "match": r"\bmy console\b", "repair_cost": "",
+        "success_rate": ""})
+    assert resp.status_code == 200
+    bulk = load_catalog(cfg.catalog_dir, conn, cfg).bulk_product("my-console")
+    assert (bulk.repair_cost, bulk.success_rate) == (25.0, 0.6)  # category defaults
+    # A gpu product whose generated bulk id is already a custom bulk id is rejected.
+    resp = client.post("/catalog/custom/bulk", data={
+        "id": "bulk-other", "category": "gpu", "name": "Other", "ebay_query": "other",
+        "match": r"\bother\b", "repair_cost": "40", "success_rate": "0.4"})
+    assert resp.status_code == 200
+    resp = client.post("/catalog/custom/product", data={
+        "id": "other", "category": "gpu", "name": "Other", "ebay_query": "other",
+        "match": r"\bother\b"})
+    assert resp.status_code == 400 and "bulk-other" in resp.text
