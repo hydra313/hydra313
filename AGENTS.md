@@ -28,11 +28,15 @@ Deals are sent to Discord.
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 817 tests pass with no warnings.
-- **The app has never run against the live sites.** It was built in a
-  container that couldn't reach eBay, ShopGoodwill or HiBid. Every adapter is
-  tested only against hand-built fixtures. The first live run is the top
-  priority (see "First live run" below).
+- 840 tests pass with no warnings.
+- **The first live run is complete for ShopGoodwill search and detail photos.**
+  Explicit price bounds and normalized image paths fixed real adapter failures.
+  HiBid and eBay sold pages returned HTTP 403; their live integration remains
+  open. eBay Browse, Anthropic and Discord need credentials for live checks.
+  See `docs/live-validation-2026-10-23.md` for evidence and remaining limits.
+- The dashboard can show unpriced listings and unknown-quantity lots with
+  **Show all listings**. Refresh completion updates the current filtered rows.
+  Explicit Intel/AMD conflicts reject CPU matches, including hardware lots.
 
 ## Commands
 
@@ -163,7 +167,9 @@ Steps:
 
 ## Known gaps (prioritized)
 
-1. The live-site adapters are unverified (above).
+1. HiBid and eBay sold requests are blocked; authenticated eBay Browse, Anthropic
+   and Discord still need live credential checks. ShopGoodwill is verified
+   against captured search and photo responses; adapters fetch one page only.
 2. GPU/CPU hardware lots still take their quantity from the photo-wide unit
    estimate, which can include accessories.
 3. There is no "retry scan" for failed or refused scans in the UI.

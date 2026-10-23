@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, timezone
-from urllib.parse import quote
+from urllib.parse import quote, urljoin, urlsplit
 from zoneinfo import ZoneInfo
 
 from dealfinder.models import Listing
 from dealfinder.sources.base import HttpClient, SourceBlocked, SourceError
 
-# ShopGoodwill has no public API. Everything below is an ASSUMPTION about the
-# buyer API's shape; fix URLs, the request body and field names here.
+# Unofficial buyer API, checked against live search and detail responses on
+# 2026-10-23. Keep request fields and response names here for future site changes.
 SEARCH_URL = "https://buyerapi.shopgoodwill.com/api/Search/ItemListing"
 ITEM_URL = "https://buyerapi.shopgoodwill.com/api/ItemDetail/GetItemDetailModelByItemId/{item_id}"
 LISTING_URL = "https://shopgoodwill.com/item/{item_id}"
@@ -25,6 +25,9 @@ FIELD_END = "endTime"
 FIELD_IMAGE = "imageURL"
 FIELD_PICKUP_ONLY = "pickupOnly"
 FIELD_DETAIL_IMAGES = "imageUrlString"
+FIELD_IMAGE_SERVER = "imageServer"
+FIELD_LISTING_TYPE = "listingType"
+FIELD_BUY_NOW_PRICE = "buyNowPrice"
 
 
 def build_search_body(query: str, page: int = 1, page_size: int = 40) -> dict:
@@ -32,8 +35,11 @@ def build_search_body(query: str, page: int = 1, page_size: int = 40) -> dict:
         "searchText": query,
         "page": page,
         "pageSize": page_size,
-        "closedAuctions": False,
-        "sortColumn": "1",
+        "lowPrice": 0,
+        "highPrice": 999999,
+        "searchClosedAuctions": False,
+        "searchNoPickupOnly": True,
+        "sortColumn": 1,
         "sortDescending": False,
     }
 
@@ -47,15 +53,24 @@ def _end_time_utc(value: str | None) -> datetime | None:
     return dt.astimezone(timezone.utc)
 
 
+def _image_url(value: str | None, server: str = "") -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    url = urljoin(server, value.strip().replace("\\", "/"))
+    parsed = urlsplit(url)
+    return url if parsed.scheme in ("http", "https") and parsed.netloc else None
+
+
 def _parse_item(item: dict) -> Listing:
     item_id = item[FIELD_ID]
     title = item[FIELD_TITLE]
     if item_id in (None, "") or not isinstance(title, str) or not title.strip():
         raise ValueError("item without id or title")
-    price = float(item[FIELD_PRICE])
-    if not math.isfinite(price):
-        raise ValueError("non-finite price")
-    image = item.get(FIELD_IMAGE)
+    is_auction = item.get(FIELD_LISTING_TYPE) != 1
+    price = float(item[FIELD_PRICE] if is_auction else item[FIELD_BUY_NOW_PRICE])
+    if not math.isfinite(price) or price < 0:
+        raise ValueError("invalid price")
+    image = _image_url(item.get(FIELD_IMAGE))
     source_id = str(item_id)
     return Listing(
         source="shopgoodwill",
@@ -66,7 +81,7 @@ def _parse_item(item: dict) -> Listing:
         shipping=None,
         shipping_offered=not item.get(FIELD_PICKUP_ONLY) and "pickup only" not in title.lower(),
         image_urls=[image] if image else [],
-        is_auction=True,
+        is_auction=is_auction,
         end_time=_end_time_utc(item.get(FIELD_END)),
         bid_count=int(item.get(FIELD_BIDS) or 0),
     )
@@ -89,7 +104,8 @@ def parse_item_detail(data: dict) -> list[str]:
     raw = data.get(FIELD_DETAIL_IMAGES) if isinstance(data, dict) else None
     if not isinstance(raw, str):
         return []
-    urls = [part.strip() for part in raw.split(IMAGE_SEPARATOR)]
+    urls = [_image_url(part, data.get(FIELD_IMAGE_SERVER) or "")
+            for part in raw.split(IMAGE_SEPARATOR)]
     return [url for url in urls if url][:MAX_PHOTOS]
 
 

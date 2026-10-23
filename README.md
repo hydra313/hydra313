@@ -45,6 +45,12 @@ Then open http://127.0.0.1:8000. The first refresh starts immediately, and then
 one runs every 30 minutes (`refresh_minutes` in `config.yaml`). The header has
 a Pause button and a "Refresh now" button.
 
+Use **Show all listings** on Deals, Bulk lots or Game lots to inspect results that
+have no market value or do not meet the deal thresholds. It also exposes lots
+whose quantity is unknown, so you can open them for a manual photo scan. Missing
+market values are not evidence of a bargain. Completed refreshes update the rows
+automatically while keeping the current filters.
+
 The database, `dealfinder.db`, is created in the folder you run from. If you
 ran a pre-release build of this project, delete the old `dealfinder.db` first,
 because the schema changed during development.
@@ -140,14 +146,24 @@ up as an error instead of being silently ignored.
 
 Parts of this app depend on sites that give no stability guarantees.
 
-- **ShopGoodwill and HiBid** are read through unofficial endpoints. Their
-  response shapes were written from assumptions: the environment this was built
-  in could not reach either site. **The first live run may need fixes.**
+- **ShopGoodwill** uses an unofficial buyer API. Search and detail photos were
+  verified against live responses on October 23, 2026. Requests include explicit
+  price bounds and exclude pickup-only listings. Actual shipping still needs to
+  be checked on the seller's listing; the dashboard labels shipping estimates.
+- **HiBid** uses an unofficial endpoint. Live requests returned HTTP 403 on
+  October 23, 2026, so its response schema remains unverified. GraphQL errors are
+  reported as failures rather than being mistaken for an empty search.
 - **eBay sold prices** (the market values) are scraped from eBay's public
-  sold-listings page, whose markup changes from time to time.
+  sold-listings page, whose markup changes from time to time. The live check
+  returned HTTP 403. A block stops further sold-price requests for that refresh
+  and appears in the dashboard. Cached values and the existing eBay Browse
+  fallback remain available; the next refresh retries sold prices.
 
 When a site breaks, the dashboard header shows a "probable site change" or an
 error banner for that source. The other sources keep running.
+
+See [the live validation report](docs/live-validation-2026-10-23.md) for the
+tested fixes and remaining integration limits.
 
 ### Capturing a real response and fixing an adapter
 

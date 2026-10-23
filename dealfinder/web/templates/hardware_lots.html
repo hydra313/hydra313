@@ -2,9 +2,11 @@
 {% block title %}Bulk lots · dealfinder{% endblock %}
 {% block content %}
 <h1>Bulk hardware lots</h1>
-<form class="filters" hx-get="/lots/hardware" hx-target="#lot-rows" hx-trigger="change, submit" hx-push-url="true">
+<form class="filters" hx-get="/lots/hardware" hx-target="#lot-rows" hx-trigger="change, submit, listings-updated from:body" hx-push-url="true">
   <label class="check"><input type="checkbox" name="photo_finds_only" value="1"{% if filters.photo_finds_only %} checked{% endif %}> 💎 Photo finds only</label>
+  {% include "partials/show_all.html" %}
 </form>
+<p class="muted">Show all listings includes unpriced lots and lots with an unknown quantity, so you can open them for a photo scan.</p>
 <table class="deals">
   <thead>
     <tr>

@@ -52,6 +52,7 @@ _FORMS = tuple(
         rf"\blot of (\d+|{_WORD})\b",
         r"\bqty:? ?(\d+)\b",
         r"\((\d{1,3})\)",
+        r"\b(\d{1,3}) ?pcs?\b",
         _UNIT_FORM,
         rf"\b(\d{{1,3}}) ?x\b{_NOT_A_COUNT}",
         rf"\bx ?(\d{{1,3}})\b{_NOT_A_COUNT}",

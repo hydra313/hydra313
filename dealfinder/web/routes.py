@@ -17,6 +17,7 @@ from dealfinder.budget import Budget
 from dealfinder.catalog import Catalog, load_catalog
 from dealfinder.config import Config
 from dealfinder.models import BulkProduct, MarketValue
+from dealfinder.market import SOLD_ERROR_SETTING
 from dealfinder.pipeline import SCAN_KINDS, stale_before
 from dealfinder.web.app import local_now, utc_now
 
@@ -120,6 +121,11 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
              scan_error: tuple[int, str] | None) -> list[dict]:
     """Each banner has a level, a text and optionally the listing ids it concerns."""
     banners = []
+    sold_error = db.get_setting(conn, SOLD_ERROR_SETTING)
+    if sold_error:
+        banners.append({"level": "warn", "text": "eBay sold-price lookup failed: "
+                        + sold_error[:_ERROR_MAX] + ". Market values may be unavailable"
+                        " or cached. Use Show all listings to inspect unpriced items."})
     for run in db.latest_runs(conn):
         site = SITE_NAMES.get(run["source"], run["source"])
         if run["status"] == "error":
@@ -185,7 +191,10 @@ def _header_response(request: Request, conn: sqlite3.Connection,
 def _status_response(request: Request, conn: sqlite3.Connection,
                      refresh_status: str | None = None):
     ctx = _header(request, conn, refresh_status=refresh_status)
-    return _render(request, "partials/header_status.html", ctx)
+    response = _render(request, "partials/header_status.html", ctx)
+    if not ctx["refreshing"]:
+        response.headers["HX-Trigger"] = "listings-updated"
+    return response
 
 
 @router.get("/header/status", response_class=HTMLResponse)
@@ -311,7 +320,8 @@ def _hours(value: str | None) -> float | None:
 @router.get("/", response_class=HTMLResponse)
 def deals(request: Request, category: str | None = None, source: str | None = None,
           ending_within_h: str | None = None, new_only: bool = False,
-          target_only: bool = False, conn: sqlite3.Connection = Depends(get_conn)):
+          target_only: bool = False, show_all: bool = False,
+          conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()
     partial = _is_partial(request)
@@ -327,12 +337,14 @@ def deals(request: Request, category: str | None = None, source: str | None = No
         "ending_within_h": _hours(ending_within_h),
         "new_only": new_only,
         "target_only": target_only,
+        "show_all": show_all,
     }
     rows = db.query_listings(
         conn, ["single"], now,
         category=filters["category"], source=filters["source"],
         ending_within_h=filters["ending_within_h"],
         new_since=new_since if new_only else None, target_only=target_only,
+        deals_only=not show_all,
         stale_before=stale_before(cfg, now))
     names = _product_names(conn, cfg)
     ctx = {"deals": [_deal(conn, cfg, r, names, new_since, now) for r in rows]}
@@ -409,12 +421,13 @@ def _lot(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, catalog: Catal
 
 
 @router.get("/lots/hardware", response_class=HTMLResponse)
-def hardware_lots(request: Request, photo_finds_only: bool = False,
+def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bool = False,
                   conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()
     rows = db.query_listings(conn, ["hardware_lot", "scan_only"], now,
                              photo_finds_only=photo_finds_only,
+                             deals_only=not show_all,
                              stale_before=stale_before(cfg, now))
     catalog = _catalog(conn, cfg)
     ctx = {"lots": [_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
@@ -422,13 +435,14 @@ def hardware_lots(request: Request, photo_finds_only: bool = False,
     if _is_partial(request):
         return _render(request, "partials/hardware_rows.html", ctx)
     ctx.update(_header(request, conn))
-    ctx.update(filters={"photo_finds_only": photo_finds_only})
+    ctx.update(filters={"photo_finds_only": photo_finds_only, "show_all": show_all})
     return _render(request, "hardware_lots.html", ctx)
 
 
 @router.get("/lots/games", response_class=HTMLResponse)
 def game_lots(request: Request, platform: str | None = None,
               ending_within_h: str | None = None, photo_finds_only: bool = False,
+              show_all: bool = False,
               conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()
@@ -438,7 +452,9 @@ def game_lots(request: Request, platform: str | None = None,
         "photo_finds_only": photo_finds_only,
     }
     rows = db.query_listings(conn, ["game_lot", "scan_only"], now, **filters,
+                             deals_only=not show_all,
                              stale_before=stale_before(cfg, now))
+    filters["show_all"] = show_all
     catalog = _catalog(conn, cfg)
     ctx = {"lots": [_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
                     for r in rows if _is_game_row(r)]}
@@ -524,7 +540,8 @@ def listing_detail(request: Request, listing_id: int,
         "ended": ended,
         "dismissed": bool(row["dismissed"]),
         "scan": _scan_view(scan) if scan is not None else None,
-        "can_scan": (row["kind"] in SCAN_KINDS and not ended and scan is None
+        "can_scan": (row["kind"] in SCAN_KINDS and not row["dismissed"]
+                     and not ended and scan is None
                      and (end is not None
                           or _parse_time(row["last_seen"]) >= stale_before(cfg, now))),
         "scanner_available": bool(cfg.anthropic_api_key),
@@ -538,10 +555,25 @@ def scan_listing(request: Request, listing_id: int,
                  conn: sqlite3.Connection = Depends(get_conn)):
     """Scan on demand: ignores the on/off switch and the price filter, not the caps
     (§11.2). The pipeline re-checks everything under the scan lock."""
-    decision = Budget(conn, request.app.state.cfg, local_now).can_manual_scan()
+    cfg = request.app.state.cfg
+    row = db.get_listing(conn, listing_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="listing not found")
+    now = utc_now()
+    end = _parse_time(row["end_time"])
+    unavailable = (row["dismissed"] or row["kind"] not in SCAN_KINDS
+                   or (end is not None and end <= now)
+                   or (end is None and _parse_time(row["last_seen"]) < stale_before(cfg, now)))
+    if unavailable or db.get_scan(conn, listing_id) is not None:
+        return _render(request, "partials/scan_status.html", {"error": True,
+                       "message": "Not scanned: this listing is ineligible or already scanned."})
+    decision = Budget(conn, cfg, local_now).can_manual_scan()
     if not decision.allowed:
         return _render(request, "partials/scan_status.html",
                        {"error": True, "message": f"Not scanned: {decision.reason}"})
+    if not cfg.anthropic_api_key:
+        return _render(request, "partials/scan_status.html", {"error": True,
+                       "message": "Not scanned: ANTHROPIC_API_KEY is not set."})
     request.app.state.runner.start_scan(listing_id)
     return _render(request, "partials/scan_status.html",
                    {"error": False, "message": "Scanning… reload this page in a minute"

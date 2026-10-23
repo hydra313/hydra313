@@ -96,6 +96,10 @@ def test_single_collisions(title, expected):
     "RTX 3060",            # no VRAM size: neither 3060 variant
     "RTX 4060 Ti",         # no VRAM size: neither Ti variant, and not the plain 4060
     "Ryzen 7 5800XT",      # not in the catalog; "xt" must not turn it into a 5800X3D
+    "Intel Core i7-7700 SR338 3.60GHz Desktop Processor",  # live ShopGoodwill title
+    "Intel Core i9-7900X CPU",
+    "Intel Core i9-9900X Processor",
+    "Intel 7700 processor",
     # GPUs are NVIDIA RTX only; a Radeon title must never become a Ryzen CPU
     "Sapphire RX 7900 XT 20GB",
     "RX 7900XTX Nitro",
@@ -126,6 +130,31 @@ def test_single_collisions(title, expected):
 ])
 def test_single_no_match(title):
     assert match_single(title, SEED.products) is None
+
+
+@pytest.mark.parametrize("title", ["Lot of 5 Intel Core i7-7700 CPUs for parts",
+                                   "Lot of 3 Intel Core i9-7900X CPUs untested"])
+def test_intel_cpu_lots_do_not_become_ryzen(catalog, title):
+    assert _classify(title, catalog) is None
+
+
+@pytest.mark.parametrize("title, key", [("AMD Ryzen 7 7700 CPU", "ryzen-7700"),
+                                         ("7700 CPU", "ryzen-7700"),
+                                         ("AMD Ryzen 9 7900X 12 Core CPU", "ryzen-7900x")])
+def test_ryzen_brand_check_preserves_valid_titles(title, key):
+    result = match_single(title, SEED.products)
+    assert result is not None and result[0].id == key
+
+
+@pytest.mark.parametrize("title, key, quantity", [
+    ("Lot of 5 Original Microsoft Xbox Controller S Wired for Xbox Console Black",
+     "xbox-controller", 5),
+    ("3pc Sony PlayStation Console Lot for Parts or Repair", "ps1-console", 3),
+])
+def test_live_hardware_titles(catalog, title, key, quantity):
+    result = _classify(title, catalog)
+    assert result is not None
+    assert (result.kind, result.key, result.quantity) == ("hardware_lot", key, quantity)
 
 
 @pytest.mark.parametrize("title, kind, key", [

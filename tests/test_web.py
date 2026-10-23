@@ -654,6 +654,7 @@ def test_manual_scan_denied_shows_reason(client, cfg, conn, fake, monkeypatch):
 
 
 def test_manual_scan_runs_when_switch_off(client, cfg, conn, fake):
+    cfg.anthropic_api_key = "test-key"
     lid = seed_lot(conn, "m1")
     assert Budget(conn, cfg, local_now).scan_enabled() is False
     resp = client.post(f"/listing/{lid}/scan")
@@ -922,3 +923,81 @@ def test_unseen_auction_with_known_end_still_shown(client, conn):
     assert f"/listing/{lot}" in client.get("/lots/hardware").text
     client.app.state.cfg.anthropic_api_key = "sk-ant-test"
     assert "Scan this lot" in client.get(f"/listing/{lot}").text
+
+
+def test_show_all_exposes_unpriced_singles_but_keeps_other_filters(client, conn):
+    listing_id = seed(conn, "unpriced", deal=False)
+    conn.execute("UPDATE listings SET profit = NULL, discount_pct = NULL WHERE id = ?",
+                 (listing_id,))
+    conn.commit()
+    dismissed = seed(conn, "dismissed-unpriced", deal=False)
+    db.dismiss_listing(conn, dismissed)
+    assert row_html(client.get("/").text, listing_id) is None
+    html = client.get("/", params={"show_all": "true"}).text
+    assert row_html(html, listing_id) is not None
+    assert row_html(html, dismissed) is None
+    assert 'name="show_all" value="true" checked' in html
+    assert row_html(client.get("/", params={"show_all": "true", "category": "cpu"}).text,
+                    listing_id) is None
+    partial = client.get("/?show_all=true", headers=HTMX).text
+    assert "<html" not in partial and row_html(partial, listing_id) is not None
+
+
+def test_show_all_exposes_unknown_quantity_lots_for_manual_scan(client, conn):
+    hardware = seed_lot(conn, "unknown-hw", kind="scan_only", quantity=None)
+    games = seed_lot(conn, "unknown-games", kind="scan_only", key="ps2", category=None,
+                     quantity=None)
+    conn.execute("UPDATE listings SET is_deal = 0, total_cost = NULL WHERE id IN (?, ?)",
+                 (hardware, games))
+    conn.commit()
+    for path, included, excluded in (("/lots/hardware", hardware, games),
+                                      ("/lots/games", games, hardware)):
+        assert row_html(client.get(path).text, included) is None
+        html = client.get(path, params={"show_all": "true"}).text
+        assert row_html(html, included) is not None
+        assert row_html(html, excluded) is None
+        assert 'name="show_all" value="true" checked' in html
+
+
+def test_sold_lookup_failure_is_visible_and_escaped(client, conn):
+    from dealfinder.market import SOLD_ERROR_SETTING
+
+    db.set_setting(conn, SOLD_ERROR_SETTING, "HTTP 403 <blocked>")
+    html = client.get("/header/status").text
+    assert "eBay sold-price lookup failed" in html
+    assert "HTTP 403 &lt;blocked&gt;" in html
+    assert "Show all listings" in html
+    db.set_setting(conn, SOLD_ERROR_SETTING, "")
+    assert "eBay sold-price lookup failed" not in client.get("/header/status").text
+
+
+def test_refresh_completion_updates_rows_without_reloading(client, fake):
+    response = client.get("/header/status")
+    assert response.headers["HX-Trigger"] == "listings-updated"
+    for path in ("/", "/lots/hardware", "/lots/games"):
+        assert "listings-updated from:body" in client.get(path).text
+    fake.block = True
+    runner = client.app.state.runner
+    runner.start_refresh()
+    assert fake.started.wait(5)
+    try:
+        assert "HX-Trigger" not in client.get("/header/status").headers
+    finally:
+        fake.release.set()
+        runner.thread.join(5)
+    assert client.get("/header/status").headers["HX-Trigger"] == "listings-updated"
+
+
+def test_manual_scan_rejects_missing_key_and_ineligible_listings(client, cfg, conn, fake):
+    lid = seed_lot(conn, "no-key")
+    assert "ANTHROPIC_API_KEY is not set" in client.post(f"/listing/{lid}/scan").text
+    assert fake.scanned == []
+    cfg.anthropic_api_key = "test-key"
+    single = seed(conn, "single-no-scan")
+    ended = seed_lot(conn, "ended-no-scan", end_in_h=-1)
+    db.dismiss_listing(conn, lid)
+    for listing_id in (lid, single, ended):
+        assert "Not scanned" in client.post(f"/listing/{listing_id}/scan").text
+        assert "Scan this lot" not in client.get(f"/listing/{listing_id}").text
+    assert client.post("/listing/999999/scan").status_code == 404
+    assert fake.scanned == []

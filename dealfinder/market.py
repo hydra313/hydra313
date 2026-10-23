@@ -17,7 +17,7 @@ from dealfinder.matcher import GLOBAL_EXCLUDES, detect_condition, match_single
 from dealfinder.models import (
     BulkProduct, Comp, Completeness, Condition, Listing, MarketValue, Platform, Product,
 )
-from dealfinder.sources.base import SourceError
+from dealfinder.sources.base import SourceBlocked, SourceError
 from dealfinder.sources.ebay import EbaySource
 from dealfinder.sources.ebay_sold import SoldFetcher
 from dealfinder.text import normalize, parse_quantity
@@ -52,6 +52,7 @@ _GAME_EXCLUDES = re.compile(
 # Values from current fixed-price listings expire sooner than sold values, so
 # sold comps are retried soon after a block lifts.
 ACTIVE_BIN_TTL = timedelta(hours=2)
+SOLD_ERROR_SETTING = "sold_comps_error"
 
 # Turns one candidate (comp, eBay condition id for active listings) into the
 # number it contributes to the median, or None to drop it.
@@ -133,6 +134,7 @@ class MarketService:
         # Per-run memo of fetch results (or the SourceError raised), cleared by begin_run().
         self._sold_memo: dict[str, list[Comp] | SourceError] = {}
         self._bin_memo: dict[str, list[Listing] | SourceError] = {}
+        self._sold_blocked: SourceBlocked | None = None
         # (table, key, condition) -> when a successful fetch last yielded no value.
         self._misses: dict[tuple[str, str, str], datetime] = {}
 
@@ -140,6 +142,7 @@ class MarketService:
         """Start a refresh: forget memoized fetches (the negative cache stays)."""
         self._sold_memo.clear()
         self._bin_memo.clear()
+        self._sold_blocked = None
 
     # --- public values ------------------------------------------------------
 
@@ -314,13 +317,20 @@ class MarketService:
         return mv
 
     def _fetch_sold(self, query: str) -> list[Comp]:
+        if self._sold_blocked is not None:
+            raise self._sold_blocked
         if query not in self._sold_memo:
             try:
                 self._sold_memo[query] = self._sold.fetch(query)
+                db.set_setting(self._conn, SOLD_ERROR_SETTING, "")
             except SourceError as e:
                 self._sold_memo[query] = e
+                if isinstance(e, SourceBlocked):
+                    self._sold_blocked = e
+                db.set_setting(self._conn, SOLD_ERROR_SETTING, str(e)[:200])
             except Exception as e:  # noqa: BLE001 - a parse bug is a failed fetch
                 self._sold_memo[query] = _source_error(e)
+                db.set_setting(self._conn, SOLD_ERROR_SETTING, str(e)[:200])
         result = self._sold_memo[query]
         if isinstance(result, SourceError):
             raise result

@@ -2,7 +2,7 @@
 {% block title %}Deals · dealfinder{% endblock %}
 {% block content %}
 <h1>Deals</h1>
-<form class="filters" hx-get="/" hx-target="#deal-rows" hx-trigger="change, submit" hx-push-url="true">
+<form class="filters" hx-get="/" hx-target="#deal-rows" hx-trigger="change, submit, listings-updated from:body" hx-push-url="true">
   <label>Category
     <select name="category">
       <option value="">All</option>
@@ -25,7 +25,9 @@
   </label>
   <label class="check"><input type="checkbox" name="new_only" value="true"{% if filters.new_only %} checked{% endif %}> New only</label>
   <label class="check"><input type="checkbox" name="target_only" value="true"{% if filters.target_only %} checked{% endif %}> 🎯 Target hits only</label>
+  {% include "partials/show_all.html" %}
 </form>
+<p class="muted">Show all listings includes items without a deal estimate. A missing market value does not mean an item is a bargain.</p>
 <table class="deals">
   <thead>
     <tr>

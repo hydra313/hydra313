@@ -620,6 +620,18 @@ def test_scan_listing_rejects_non_lot_kinds(conn, cfg):
     assert scanner.calls == []
 
 
+def test_manual_scan_rechecks_dismissed_state_under_lock(conn, cfg):
+    scanner = FakeScanner()
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay", _three_game_lots())},
+                      scanner=scanner)
+    p.refresh()
+    lid = rows(conn)["cheap"]["id"]
+    db.dismiss_listing(conn, lid)
+    assert p.scan_listing(lid, manual=True) is None
+    assert scanner.calls == []
+    assert db.get_scan(conn, lid) is None
+
+
 def test_text_deals_notified_before_scans(conn, cfg, http, webhook):
     seen_at_scan = []
 

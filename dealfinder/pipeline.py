@@ -377,7 +377,8 @@ class Pipeline:
         with self.budget.lock:
             now = self.clock()
             row = db.get_listing(self.conn, listing_id)
-            if (row is None or row["kind"] not in SCAN_KINDS or _ended(row, now, self.cfg)
+            if (row is None or row["dismissed"] or row["kind"] not in SCAN_KINDS
+                    or _ended(row, now, self.cfg)
                     or db.get_scan(self.conn, listing_id) is not None):
                 return None
             cost = self._gate_cost(row)

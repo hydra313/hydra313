@@ -4,8 +4,9 @@ from pathlib import Path
 
 import httpx
 import respx
+import pytest
 
-from dealfinder.sources.base import HttpClient
+from dealfinder.sources.base import HttpClient, SourceError
 from dealfinder.sources.hibid import (
     GRAPHQL_URL,
     LOT_SEARCH_QUERY,
@@ -124,3 +125,11 @@ def test_hibid_search_posts_graphql():
 
 def test_hibid_photos_returns_known():
     assert make_source().photos("191000001", ["a", "b"]) == ["a", "b"]
+
+
+@respx.mock
+def test_graphql_errors_are_reported_instead_of_becoming_empty_results():
+    respx.post(GRAPHQL_URL).mock(return_value=httpx.Response(200, json={
+        "data": None, "errors": [{"message": "Unknown argument pageNumber"}]}))
+    with pytest.raises(SourceError, match="Unknown argument pageNumber"):
+        make_source().search("rtx")

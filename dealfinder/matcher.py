@@ -84,6 +84,19 @@ _NEW_IN_TITLE = re.compile(
 )
 _EBAY_NEW_IDS = {"1000", "1500"}
 _EBAY_FOR_PARTS_ID = "7000"
+_INTEL_CPU = re.compile(r"\b(intel|i[3579]|core ultra)\b")
+_AMD_CPU = re.compile(r"\b(amd|ryzen)\b")
+
+
+def cpu_brand_compatible(title_norm: str, query: str) -> bool:
+    """Shared model numbers (e.g. Intel i7-7700 and Ryzen 7700) need a brand check.
+
+    Keep unbranded model-only titles, but reject explicit conflicting manufacturers.
+    Use the catalog query so the same rule works for generated bulk products.
+    """
+    query = normalize(query)
+    return not ((_AMD_CPU.search(query) and _INTEL_CPU.search(title_norm))
+                or (_INTEL_CPU.search(query) and _AMD_CPU.search(title_norm)))
 
 
 def _any(patterns: Sequence[str], text: str) -> bool:
@@ -105,7 +118,9 @@ def match_single(
     if _any(GLOBAL_EXCLUDES, title_norm):
         return None
     matches = [
-        (p, m) for p in products if p.enabled and (m := re.search(p.match, title_norm))
+        (p, m) for p in products if p.enabled
+        and (p.category != "cpu" or cpu_brand_compatible(title_norm, p.ebay_query))
+        and (m := re.search(p.match, title_norm))
     ]
     product = pick_most_specific(matches)
     if product is None:

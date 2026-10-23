@@ -536,3 +536,21 @@ def test_unexpected_bin_fetch_error_is_source_error(conn):
     assert svc.product_value(PRODUCTS[0], "used") is None
     assert svc.product_value(PRODUCTS[0], "new") is None
     assert len(ebay.calls) == 1
+
+
+def test_sold_block_stops_other_queries_for_the_run_and_recovers(conn):
+    from dealfinder.market import SOLD_ERROR_SETTING
+
+    sold = FakeSold(error=SourceBlocked("HTTP 403"))
+    svc = make_service(conn, sold)
+    assert svc.product_value(PRODUCTS[0], "used") is None
+    assert svc.product_value(PRODUCTS[1], "used") is None
+    assert svc.per_game_value(PLATFORMS[0]) is None
+    assert sold.queries == ["rtx 4070 ti"]
+    assert db.get_setting(conn, SOLD_ERROR_SETTING) == "HTTP 403"
+
+    sold.error = None
+    sold.comps = [comp("RTX 4070 Ti Used", 400)]
+    svc.begin_run()
+    assert svc.product_value(PRODUCTS[0], "used").value == 400
+    assert db.get_setting(conn, SOLD_ERROR_SETTING) == ""

@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from typing import TypeVar
 
 from dealfinder.models import BulkProduct, Platform
+from dealfinder.matcher import cpu_brand_compatible
 from dealfinder.text import pick_most_specific
 
 GAME_WORDS = r"\b(games?|carts?|cartridges?|discs?)\b"
@@ -19,6 +20,12 @@ HARDWARE_WORDS = (
 _ACCESSORY_CLAUSE = re.compile(
     r"(?:\b(?:with|w|and|plus|includes?|including)\b|\+) ?(?:\d+ )?(?:\S+ ){0,2}?"
     r"(?:controllers?|consoles?|cables?|games?|accessories|adapters?|power supplies)\b"
+)
+# A controller described as "for Xbox console" is not a console being sold.
+_COMPATIBILITY_CLAUSE = re.compile(
+    r"\bfor (?:the )?(?:original )?(?:microsoft |sony |nintendo )?"
+    r"(?:xbox(?: 360| one| series [xs])?|ps[1-5]|playstation ?[1-5]?"
+    r"|switch(?: 2)?|wii(?: u)?|game ?cube|n64) (?:consoles?|systems?)\b"
 )
 
 # Spec section 6.5. "For parts", "broken", "untested" and "as is" are allowed:
@@ -86,7 +93,10 @@ def match_hardware_lot(
         return None
     if any(re.search(p, title_norm) for p in HARDWARE_LOT_EXCLUDES):
         return None
-    return _match_lot(_ACCESSORY_CLAUSE.sub(" ", title_norm), bulk, (), quantity, min_qty)
+    compatible = [b for b in bulk if b.category != "cpu"
+                  or cpu_brand_compatible(title_norm, b.ebay_query)]
+    main_item = _COMPATIBILITY_CLAUSE.sub(" ", title_norm)
+    return _match_lot(_ACCESSORY_CLAUSE.sub(" ", main_item), compatible, (), quantity, min_qty)
 
 
 def match_game_lot(

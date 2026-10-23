@@ -89,8 +89,11 @@ def test_sgw_build_search_body():
         "searchText": "rtx 3070",
         "page": 1,
         "pageSize": 40,
-        "closedAuctions": False,
-        "sortColumn": "1",
+        "lowPrice": 0,
+        "highPrice": 999999,
+        "searchClosedAuctions": False,
+        "searchNoPickupOnly": True,
+        "sortColumn": 1,
         "sortDescending": False,
     }
     assert build_search_body("x", page=3, page_size=10)["page"] == 3
@@ -140,3 +143,39 @@ def test_sgw_photos_block_is_raised():
     respx.get(ITEM_URL.format(item_id="240000001")).mock(return_value=httpx.Response(429))
     with pytest.raises(SourceBlocked):
         make_source().photos("240000001", ["thumb"])
+
+
+def test_live_search_response_and_image_paths():
+    data = json.loads((FIXTURES / "live_search.json").read_text(encoding="utf-8"))
+    listings = parse_search(data)
+    assert len(listings) == 2
+    assert listings[0].source_id == "280831591"
+    assert listings[0].price == 156.55
+    assert listings[0].end_time == datetime(2026, 10, 24, 1, 20, tzinfo=timezone.utc)
+    assert listings[0].image_urls[0].startswith("https://shopgoodwillimages.azureedge.net/production/339/Item/")
+    assert all("\\" not in u for listing in listings for u in listing.image_urls)
+
+
+def test_live_detail_resolves_relative_photos():
+    data = json.loads((FIXTURES / "live_item.json").read_text(encoding="utf-8"))
+    photos = parse_item_detail(data)
+    assert len(photos) == 4
+    assert photos[0] == ("https://shopgoodwillimages.azureedge.net/production/339/Item/"
+                         "2026-10-16/00c86d7c-d260-4d4f-a78b-07c9daca0478anta_10161.jpg")
+    assert all("\\" not in p for p in photos)
+
+
+def test_buy_now_uses_buy_now_price_and_is_not_an_auction():
+    good = SEARCH["searchResults"]["items"][0]
+    data = {"searchResults": {"items": [{**good, "listingType": 1,
+                                          "currentPrice": 0, "buyNowPrice": 175}]}}
+    (listing,) = parse_search(data)
+    assert listing.price == 175
+    assert listing.is_auction is False
+
+
+def test_detail_discards_unsafe_or_unresolvable_photo_paths():
+    assert parse_item_detail({"imageUrlString": "relative.jpg;javascript:alert(1)"}) == []
+    assert parse_item_detail({"imageServer": "https://images.example.com/",
+                              "imageUrlString": "relative.jpg;https://images.example.com/full.jpg"}) == [
+        "https://images.example.com/relative.jpg", "https://images.example.com/full.jpg"]

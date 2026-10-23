@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Callable
 
 from dealfinder.models import Listing
-from dealfinder.sources.base import HttpClient
+from dealfinder.sources.base import HttpClient, SourceError
 
 # HiBid has no public docs. Everything below is an ASSUMPTION about its GraphQL
 # schema; fix the URL, the query and the field names here.
@@ -105,7 +105,12 @@ class HiBidSource:
 
     def search(self, query: str) -> list[Listing]:
         resp = self._http.request("POST", GRAPHQL_URL, json=build_request(query))
-        return parse_search(resp.json(), self._clock())
+        data = resp.json()
+        if isinstance(data, dict) and data.get("errors"):
+            messages = [str(e.get("message", "unknown GraphQL error"))
+                        for e in data["errors"] if isinstance(e, dict)]
+            raise SourceError("HiBid search failed: " + "; ".join(messages)[:500])
+        return parse_search(data, self._clock())
 
     def photos(self, source_id: str, known: list[str]) -> list[str]:
         return known
