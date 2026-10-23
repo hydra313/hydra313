@@ -16,7 +16,7 @@ from dealfinder.classify import classify
 from dealfinder.config import Config
 from dealfinder.finds import FindEval, evaluate_finds
 from dealfinder.market import MarketService
-from dealfinder.models import Classified, Listing, ScanResult, Scored
+from dealfinder.models import Classified, Listing, MarketValue, ScanResult, Scored
 from dealfinder.notify import Notifier, Reason
 from dealfinder.scoring import score_game_lot, score_hardware_lot, score_single, total_cost
 from dealfinder.sources.base import Source
@@ -65,6 +65,19 @@ def rotation_slice(queries: list[str], index: int, slices: int) -> list[str]:
 
 def _money(value: float) -> str:
     return f"${value:,.0f}"
+
+
+def _value_caveat(value: MarketValue | None) -> str | None:
+    """An alert's warning that its market value is shaky, or None."""
+    if value is None or not (value.low_confidence or value.method == "active_bin"):
+        return None
+    parts = []
+    if value.low_confidence:
+        noun = "comp" if value.comp_count == 1 else "comps"
+        parts.append(f"low confidence ({value.comp_count} {noun})")
+    if value.method == "active_bin":
+        parts.append("method active_bin (current Buy It Now prices, not sales)")
+    return f"Market value {_money(value.value)}: " + ", ".join(parts)
 
 
 def _row_listing(row: sqlite3.Row) -> Listing:
@@ -214,28 +227,29 @@ class Pipeline:
             if scan is not None:
                 items = [(i["kind"], i["quantity"]) for i in json.loads(scan["items"] or "[]")]
                 c = self._lot_from_scan(c, items, scan["unit_count_estimate"], catalog) or c
-        scored = self._score(listing, c, catalog, now)
+        scored, value = self._score(listing, c, catalog, now)
         listing_id = db.upsert_listing(self.conn, listing, c, scored, now)
         if scored is not None:
-            reasons = self._deal_reasons(c, scored, catalog)
+            reasons = self._deal_reasons(c, scored, catalog, value)
             if reasons:
                 pending.setdefault(listing_id, {}).update(reasons)
 
     def _score(
         self, listing: Listing, c: Classified, catalog: Catalog, now: datetime
-    ) -> Scored | None:
+    ) -> tuple[Scored | None, MarketValue | None]:
+        """The score and the market value it used."""
         if c.kind == "single":
             product = catalog.product(c.key)
             value = self.market.product_value(product, c.condition)
-            return score_single(listing, product, value, self.cfg, now)
+            return score_single(listing, product, value, self.cfg, now), value
         if c.kind == "hardware_lot":
             bulk = catalog.bulk_product(c.key)
             value = self.market.bulk_value(bulk)
-            return score_hardware_lot(listing, bulk, c.quantity, value, self.cfg, now)
+            return score_hardware_lot(listing, bulk, c.quantity, value, self.cfg, now), value
         if c.kind == "game_lot":
             value = self.market.per_game_value(catalog.platform(c.key))
-            return score_game_lot(listing, c.quantity, value, self.cfg, now)
-        return None  # scan_only: no quantity to score until a scan estimates one
+            return score_game_lot(listing, c.quantity, value, self.cfg, now), value
+        return None, None  # scan_only: no quantity to score until a scan estimates one
 
     def _lot_from_scan(
         self, c: Classified, items: list[tuple[str, int]], estimate: int | None,
@@ -268,7 +282,7 @@ class Pipeline:
         return None
 
     def _deal_reasons(
-        self, c: Classified, s: Scored, catalog: Catalog
+        self, c: Classified, s: Scored, catalog: Catalog, value: MarketValue | None
     ) -> dict[Reason, list[str]]:
         reasons: dict[Reason, list[str]] = {}
         if c.kind == "single":
@@ -292,6 +306,10 @@ class Pipeline:
             reasons["game_lot_deal"] = [
                 f"{c.quantity} games at ${s.total_cost / c.quantity:,.2f} each:"
                 f" expected profit ${s.profit:,.2f}, {s.discount_pct:.0%} below market"]
+        caveat = _value_caveat(value)
+        if caveat:
+            for details in reasons.values():
+                details.append(caveat)
         return reasons
 
     def _notify(self, listing_id: int, reason: Reason, details: list[str]) -> bool:
@@ -455,7 +473,7 @@ class Pipeline:
         if c is None:
             return None
         listing = _row_listing(row)
-        scored = self._score(listing, c, catalog, now)
+        scored, _ = self._score(listing, c, catalog, now)
         db.upsert_listing(self.conn, listing, c, scored, now)
         return scored.total_cost if scored is not None else None
 

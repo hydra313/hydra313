@@ -2,6 +2,7 @@ import json
 import sqlite3
 import threading
 import time
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -870,3 +871,43 @@ def test_stale_buy_it_now_rows_not_scanned(conn, cfg):
     assert db.get_scan(conn, fresh) is not None and db.get_scan(conn, stale) is None
     assert p.scan_listing(stale, manual=True) is None
     assert len(scanner.calls) == 1
+
+
+class LowConfidenceMarket(FakeMarket):
+    def product_value(self, p, condition):
+        return replace(mv(p.id, 1000.0, low=True), comp_count=3)
+
+    def bulk_value(self, b):
+        return replace(mv(b.id, 200.0, low=True), comp_count=4, method="active_bin")
+
+    def per_game_value(self, platform):
+        return replace(mv(platform.id, 10.0, low=True), comp_count=2)
+
+
+def test_low_confidence_values_labelled_in_alerts(conn, cfg, http, webhook):
+    cfg.notify_reasons = {**cfg.notify_reasons, "resale_deal": True}
+    ebay = FakeSource("ebay", [
+        listing("hw", "Lot of 10 PS2 consoles", price=40),
+        listing("games", "Lot of 20 SNES games", price=50, shipping=10),
+        listing("single", "RTX 4090 Founders Edition 24GB", price=600),
+    ])
+    p = make_pipeline(conn, cfg, {"ebay": ebay}, market=LowConfidenceMarket(), http=http)
+    assert p.refresh().notified == 4
+    by_title: dict[str, list[str]] = {}
+    for payload in sent_payloads(webhook):
+        embed = payload["embeds"][0]
+        by_title.setdefault(embed["title"], []).append(embed["description"])
+    (hw,) = by_title["Lot of 10 PS2 consoles"]
+    assert "low confidence (4 comps)" in hw and "active_bin" in hw
+    (games,) = by_title["Lot of 20 SNES games"]
+    assert "low confidence (2 comps)" in games and "active_bin" not in games
+    single = by_title["RTX 4090 Founders Edition 24GB"]
+    assert len(single) == 2  # target_hit and resale_deal
+    assert all("low confidence (3 comps)" in d for d in single)
+
+
+def test_confident_values_not_labelled(conn, cfg, http, webhook):
+    ebay = FakeSource("ebay", [listing("games", "Lot of 20 SNES games", price=50, shipping=10)])
+    p = make_pipeline(conn, cfg, {"ebay": ebay}, http=http)
+    assert p.refresh().notified == 1
+    assert "confidence" not in sent_payloads(webhook)[0]["embeds"][0]["description"]
