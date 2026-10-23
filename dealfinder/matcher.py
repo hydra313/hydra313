@@ -24,6 +24,20 @@ GLOBAL_EXCLUDES: list[str] = [
     r"\bes\b",
     r"\bqs\b",
     r"\bread description\b",
+    # broken or unverified single items
+    r"\bnon working\b",
+    r"\bnot tested\b",
+    r"\bdoes not work\b",
+    r"\bdoesn\W?t work\b",
+    r"\bnot work(ing)?\b",
+    r"\bno (display|post|power)\b",
+    r"\bwon\W?t (turn on|power|post)\b",
+    r"\bdead\b",
+    r"\bdefective\b",
+    r"\bfaulty\b",
+    r"\bartifact(s|ing)?\b",
+    r"\bneeds repair\b",
+    r"\bfor repair\b",
 ]
 
 _GPU_EXCLUDES = [
@@ -55,6 +69,7 @@ _CONSOLE_EXCLUDES = [
     r"\bshell only\b",
     r"\bstand only\b",
     r"\bcharging station\b",
+    r"\b(hard drive|hdd|faceplate|shell|manual|box)( \w+)? only\b",
 ]
 
 CATEGORY_EXCLUDES: dict[Category, list[str]] = {

@@ -397,3 +397,39 @@ def test_collectible_console_lot_with_games_is_not_one_console(catalog):
     # A counted lot of edition consoles with games is still skipped, not valued as one.
     assert _classify("Lot of 3 Xbox 360 Halo 3 Special Edition consoles with 10 games",
                      catalog) is None
+
+
+# Final review: broken single items, and parts sold on their own
+@pytest.mark.parametrize("title", [
+    "EVGA RTX 3080 FTW3 10GB Non-Working",
+    "RTX 4070 Ti not tested",
+    "RTX 3090 Founders no display, artifacting",
+    "RTX 4080 Super does not work",
+    "i9-13900K CPU - Dead, no post",
+    "RTX 4090 Founders Edition doesn't work",
+    "RTX 3080 10GB no power",
+    "Ryzen 7 7800X3D won't post",
+    "RTX 4070 defective",
+    "RTX 3090 faulty, needs repair",
+    "RTX 4080 for repair",
+    "Xbox 360 Halo 3 Special Edition Console 20GB Hard Drive Only",
+    "Xbox 360 Halo 3 Special Edition Console HDD only",
+    "PS4 20th Anniversary Edition Console Shell Only",
+])
+def test_broken_or_part_only_singles_rejected(title):
+    assert match_single(title, SEED.products) is None
+
+
+@pytest.mark.parametrize("title, key", [
+    ("RTX 3080 10GB tested working", "rtx-3080-10gb"),
+    ("Xbox 360 Halo 3 Special Edition Console 20GB HDD", "xbox-360-halo-3-special-edition"),
+])
+def test_working_singles_still_match(title, key):
+    result = match_single(title, SEED.products)
+    assert result is not None and result[0].id == key
+
+
+def test_no_seed_product_name_hits_an_exclude():
+    for p in SEED.products:
+        result = match_single(p.name, SEED.products)
+        assert result is not None and result[0].id == p.id, p.id
