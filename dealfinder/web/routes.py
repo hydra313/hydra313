@@ -149,16 +149,21 @@ def _header(request: Request, conn: sqlite3.Connection, caps_error: str | None =
 
 
 def _header_response(request: Request, conn: sqlite3.Connection,
-                     caps_error: str | None = None, status_code: int = 200,
-                     refresh_status: str | None = None):
-    ctx = _header(request, conn, caps_error, refresh_status)
+                     caps_error: str | None = None, status_code: int = 200):
+    ctx = _header(request, conn, caps_error)
     return _render(request, "partials/header_controls.html", ctx, status_code)
 
 
-@router.get("/header", response_class=HTMLResponse)
-def header(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
-    """The header partial; it keeps polling this route while a refresh runs."""
-    return _header_response(request, conn)
+def _status_response(request: Request, conn: sqlite3.Connection,
+                     refresh_status: str | None = None):
+    ctx = _header(request, conn, refresh_status=refresh_status)
+    return _render(request, "partials/header_status.html", ctx)
+
+
+@router.get("/header/status", response_class=HTMLResponse)
+def header_status(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    """Refresh status, last runs and banners; polls itself while a refresh runs."""
+    return _status_response(request, conn)
 
 
 @router.post("/controls/scan", response_class=HTMLResponse)
@@ -190,7 +195,7 @@ def set_caps(request: Request, daily: str = Form(""), monthly: str = Form(""),
 def refresh(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
     started = request.app.state.runner.start_refresh()
     status = "Refreshing…" if started else "Refresh already running"
-    return _header_response(request, conn, refresh_status=status)
+    return _status_response(request, conn, refresh_status=status)
 
 
 @router.post("/listing/{listing_id}/dismiss")

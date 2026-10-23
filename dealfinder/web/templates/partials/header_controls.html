@@ -1,4 +1,4 @@
-<div id="header-controls" class="controls"{% if refreshing %} hx-get="/header" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+<div id="header-controls" class="controls">
   <div class="row">
     <form hx-post="/controls/scan" hx-target="#header-controls" hx-swap="outerHTML">
       <input type="hidden" name="on" value="{{ 'false' if scan_enabled else 'true' }}">
@@ -20,19 +20,7 @@
       <span>Scheduler: {{ 'paused' if paused else 'running' }}</span>
       <button type="submit">{{ 'Resume' if paused else 'Pause' }}</button>
     </form>
-    <button type="button" hx-post="/refresh" hx-target="#header-controls" hx-swap="outerHTML">Refresh now</button>
-    <span id="refresh-status" aria-live="polite">{{ refresh_status }}</span>
+    <button type="button" hx-post="/refresh" hx-target="#header-status" hx-swap="outerHTML">Refresh now</button>
   </div>
-  <ul class="runs" aria-label="Last successful run per site">
-    {% for r in last_success %}
-    <li><span class="src">{{ r.name }}</span> <span title="{{ r.at }}">{{ r.ago }}</span></li>
-    {% endfor %}
-  </ul>
-  {% if banners %}
-  <div class="banner" role="status">
-    <ul>
-      {% for b in banners %}<li class="{{ b.level }}">{{ b.text }}</li>{% endfor %}
-    </ul>
-  </div>
-  {% endif %}
+  {% include "partials/header_status.html" %}
 </div>

@@ -260,20 +260,33 @@ def test_scheduler_refreshes_at_startup_then_every_interval(cfg, fake):
     assert not app.state.scheduler.running
 
 
-def test_header_polls_only_while_refreshing(cfg, fake):
+def test_header_status_polls_only_while_refreshing(cfg, fake):
     fake.block = True
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
     with TestClient(app) as client:
-        assert 'hx-trigger="every 3s"' not in client.get("/header").text
+        assert 'hx-trigger="every 3s"' not in client.get("/header/status").text
         started = client.post("/refresh").text
-        assert 'hx-trigger="every 3s"' in started and 'id="header-controls"' in started
+        assert 'hx-trigger="every 3s"' in started and 'id="header-status"' in started
         assert fake.started.wait(5)
-        polled = client.get("/header").text
+        polled = client.get("/header/status").text
         assert 'hx-trigger="every 3s"' in polled and "Refreshing" in polled
         assert 'hx-trigger="every 3s"' in client.get("/").text
         fake.release.set()
         app.state.runner.thread.join(5)
-        assert 'hx-trigger="every 3s"' not in client.get("/header").text
+        assert 'hx-trigger="every 3s"' not in client.get("/header/status").text
+
+
+def test_polled_status_never_replaces_the_controls(client, conn):
+    run = db.start_run(conn, "hibid", now_utc())
+    db.finish_run(conn, run, "site_change", 0, None, now_utc())
+    polled = client.get("/header/status").text
+    assert "HiBid" in polled and "site change" in polled  # runs and banners refresh
+    for control in ("/controls/caps", 'name="daily"', "/controls/scan", "/controls/pause"):
+        assert control not in polled
+    # The status block sits inside the header, apart from the controls it never swaps.
+    page = client.get("/").text
+    status = re.search(r'<div id="header-status".*', page, re.DOTALL).group(0)
+    assert "/controls/caps" not in status
 
 
 def test_shutdown_closes_shared_clients(cfg):

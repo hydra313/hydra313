@@ -64,6 +64,9 @@ input[type="number"] { width: 6rem; }
 .switch.on { border-color: var(--on); color: var(--on); }
 .switch.on::before { content: "● "; }
 
+.status { display: flex; flex-direction: column; gap: 0.5rem; }
+#refresh-status:empty { display: none; }
+
 .spend { color: var(--muted); }
 
 .error { color: var(--error); margin: 0; flex-basis: 100%; }

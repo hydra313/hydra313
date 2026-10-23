@@ -1,0 +1,16 @@
+{# Polled while a refresh runs; holds no form, so polling never clobbers an input. #}
+<div id="header-status" class="status"{% if refreshing %} hx-get="/header/status" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  <span id="refresh-status" aria-live="polite">{{ refresh_status }}</span>
+  <ul class="runs" aria-label="Last successful run per site">
+    {% for r in last_success %}
+    <li><span class="src">{{ r.name }}</span> <span title="{{ r.at }}">{{ r.ago }}</span></li>
+    {% endfor %}
+  </ul>
+  {% if banners %}
+  <div class="banner" role="status">
+    <ul>
+      {% for b in banners %}<li class="{{ b.level }}">{{ b.text }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
