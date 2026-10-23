@@ -167,6 +167,8 @@ CREATE TABLE IF NOT EXISTS settings (
 # Timestamps are ISO-8601 UTC text whose fractional part may be absent, so
 # time comparisons go through julianday() rather than comparing strings.
 _PHOTO_FIND = "(COALESCE(s.is_rare_find, 0) = 1 OR COALESCE(s.is_lot_find, 0) = 1)"
+# Only rows with no end time can go stale; takes the stale_before cutoff.
+_NOT_STALE = "(l.end_time IS NOT NULL OR julianday(l.last_seen) >= julianday(?))"
 
 
 def _iso(dt: datetime) -> str:
@@ -296,8 +298,9 @@ def query_listings(
     deals_only: bool = True,
     stale_before: datetime | None = None,
 ) -> list[sqlite3.Row]:
-    """`stale_before` hides rows last seen before it: a listing no search returns
-    any more (a sold or withdrawn Buy It Now) has no end time to expire it."""
+    """`stale_before` hides rows with no end time last seen before it: a listing no
+    search returns any more (a sold or withdrawn Buy It Now) has no end time to expire
+    it. Rows with an end time keep their normal ended check."""
     if not kinds:
         return []
     where = [
@@ -328,7 +331,7 @@ def query_listings(
     if deals_only:
         where.append(f"(l.is_deal = 1 OR {_PHOTO_FIND})")
     if stale_before is not None:
-        where.append("julianday(l.last_seen) >= julianday(?)")
+        where.append(_NOT_STALE)
         params.append(_iso(stale_before))
     sql = (
         f"SELECT l.*, CASE WHEN {_PHOTO_FIND} THEN 1 ELSE 0 END AS photo_find,"
@@ -698,8 +701,8 @@ def scan_candidates(
     conn: sqlite3.Connection, now: datetime, stale_before: datetime | None = None
 ) -> list[sqlite3.Row]:
     """Spec 11.1: live, undismissed lots and unknown-quantity lots never scanned, best first.
-    Rows last seen before `stale_before` are not live."""
-    stale = "" if stale_before is None else " AND julianday(l.last_seen) >= julianday(?)"
+    Rows with no end time last seen before `stale_before` are not live."""
+    stale = "" if stale_before is None else f" AND {_NOT_STALE}"
     params = (_iso(now),) if stale_before is None else (_iso(now), _iso(stale_before))
     return conn.execute(
         "SELECT l.* FROM listings l"

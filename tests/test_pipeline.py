@@ -851,8 +851,8 @@ def test_source_errors_when_every_listing_fails(conn, cfg):
     assert run["status"] == "error" and "2 listings skipped" in run["error"]
 
 
-def _seed_bin_lot(conn, source_id, last_seen):
-    lot = listing(source_id, "Lot of 20 SNES games", price=40)
+def _seed_bin_lot(conn, source_id, last_seen, end_time=None):
+    lot = listing(source_id, "Lot of 20 SNES games", price=40, end_time=end_time)
     c = Classified(kind="game_lot", key="snes", condition=None, quantity=20, category=None)
     scored = Scored(total_cost=40, shipping_estimated=False, profit=100, discount_pct=0.5,
                     is_target_hit=False, is_deal=True, rank_score=100)
@@ -911,3 +911,12 @@ def test_confident_values_not_labelled(conn, cfg, http, webhook):
     p = make_pipeline(conn, cfg, {"ebay": ebay}, http=http)
     assert p.refresh().notified == 1
     assert "confidence" not in sent_payloads(webhook)[0]["embeds"][0]["description"]
+
+
+def test_unseen_auction_with_known_end_still_scanned(conn, cfg):
+    auction = _seed_bin_lot(conn, "auction", T0 - timedelta(hours=7),
+                            end_time=T0 + timedelta(hours=5))
+    scanner = FakeScanner()
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay")}, scanner=scanner)
+    assert p.scan_listing(auction, manual=True) is not None
+    assert len(scanner.calls) == 1

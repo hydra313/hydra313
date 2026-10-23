@@ -525,7 +525,8 @@ def listing_detail(request: Request, listing_id: int,
         "dismissed": bool(row["dismissed"]),
         "scan": _scan_view(scan) if scan is not None else None,
         "can_scan": (row["kind"] in SCAN_KINDS and not ended and scan is None
-                     and _parse_time(row["last_seen"]) >= stale_before(cfg, now)),
+                     and (end is not None
+                          or _parse_time(row["last_seen"]) >= stale_before(cfg, now))),
         "scanner_available": bool(cfg.anthropic_api_key),
     }
     ctx.update(_header(request, conn))

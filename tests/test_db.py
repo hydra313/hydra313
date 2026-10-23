@@ -223,8 +223,13 @@ def test_stale_rows_hidden_and_not_scan_candidates(tmp_path):
     lot = make_class(category="console", kind="hardware_lot", key="ps2-console")
     add(conn, make_listing("stale"), lot, now=T0 - timedelta(hours=7))
     add(conn, make_listing("fresh"), lot, now=T0 - timedelta(hours=1))
+    # An auction with a known end keeps its normal ended check, however long unseen.
+    add(conn, make_listing("auction", end_time=T0 + timedelta(hours=5)), lot,
+        now=T0 - timedelta(hours=7))
     cutoff = T0 - timedelta(hours=6)
-    assert sorted(keys(db.query_listings(conn, ["hardware_lot"], T0))) == ["fresh", "stale"]
-    assert keys(db.query_listings(conn, ["hardware_lot"], T0, stale_before=cutoff)) == ["fresh"]
-    assert sorted(keys(db.scan_candidates(conn, T0))) == ["fresh", "stale"]
-    assert keys(db.scan_candidates(conn, T0, stale_before=cutoff)) == ["fresh"]
+    everything = ["auction", "fresh", "stale"]
+    assert sorted(keys(db.query_listings(conn, ["hardware_lot"], T0))) == everything
+    assert sorted(keys(db.query_listings(conn, ["hardware_lot"], T0, stale_before=cutoff))) == [
+        "auction", "fresh"]
+    assert sorted(keys(db.scan_candidates(conn, T0))) == everything
+    assert sorted(keys(db.scan_candidates(conn, T0, stale_before=cutoff))) == ["auction", "fresh"]

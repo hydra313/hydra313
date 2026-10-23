@@ -103,15 +103,16 @@ def _row_classified(row: sqlite3.Row) -> Classified:
 
 
 def stale_before(cfg: Config, now: datetime) -> datetime:
-    """Rows last seen before this are stale: two full eBay passes went by without any
-    search returning them (a sold or withdrawn Buy It Now never gets an end time)."""
+    """Rows with no end time last seen before this are stale: two full eBay passes
+    went by without any search returning them (a sold or withdrawn Buy It Now never
+    gets an end time). Rows with an end time are never stale."""
     return now - timedelta(hours=2 * cfg.ebay_full_pass_hours)
 
 
 def _ended(row: sqlite3.Row, now: datetime, cfg: Config) -> bool:
-    """Ended, or stale, which counts as ended."""
-    if row["end_time"] and datetime.fromisoformat(row["end_time"]) < now:
-        return True
+    """Ended; a row with no end time also counts as ended once stale."""
+    if row["end_time"]:
+        return datetime.fromisoformat(row["end_time"]) < now
     return datetime.fromisoformat(row["last_seen"]) < stale_before(cfg, now)
 
 

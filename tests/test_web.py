@@ -909,3 +909,16 @@ def test_stale_listings_hidden(client, conn):
     client.app.state.cfg.anthropic_api_key = "sk-ant-test"
     assert "Scan this lot" in client.get(f"/listing/{new_lot}").text
     assert "Scan this lot" not in client.get(f"/listing/{old_lot}").text
+
+
+def test_unseen_auction_with_known_end_still_shown(client, conn):
+    auction = seed(conn, "auc", title="RTX 4090 auction", end_in_h=5,
+                   first_seen=now_utc() - timedelta(hours=7))
+    lot = seed_lot(conn, "auclot", end_in_h=5)
+    conn.execute("UPDATE listings SET last_seen = ? WHERE id = ?",
+                 ((now_utc() - timedelta(hours=7)).isoformat(), lot))
+    conn.commit()
+    assert row_html(client.get("/").text, auction) is not None
+    assert f"/listing/{lot}" in client.get("/lots/hardware").text
+    client.app.state.cfg.anthropic_api_key = "sk-ant-test"
+    assert "Scan this lot" in client.get(f"/listing/{lot}").text
