@@ -41,6 +41,13 @@ _ITEM_EXCLUDES = [
     r"\breproductions?\b",
     r"\bfor parts\b",
 ]
+# Short title tokens that still tell games apart ("Halo 3", "Final Fantasy X").
+_ROMAN_NUMERALS = {"ii", "iii", "iv", "v", "vi", "x"}
+# A game's comps must not be hardware or merchandise that shares its name.
+_GAME_EXCLUDES = re.compile(
+    r"\b(consoles?|systems?|controllers?|helmets?|legendary edition|limited edition"
+    r"|special edition|statues?|bundles?|\d+ ?gb|strategy guides?|steelbook only)\b"
+)
 
 # Values from current fixed-price listings expire sooner than sold values, so
 # sold comps are retried soon after a block lifts.
@@ -187,7 +194,7 @@ class MarketService:
                            fallback=False)
 
     def item_price(
-        self, platform: str, title: str, completeness: Completeness
+        self, platform: str, title: str, completeness: Completeness, *, kind: str = "game"
     ) -> MarketValue | None:
         condition = "loose" if completeness == "unknown" else completeness
         query = f"{platform} {title}"
@@ -196,11 +203,16 @@ class MarketService:
         elif condition == "sealed":
             query += " sealed"
         platform_re = re.compile(rf"\b{re.escape(normalize(platform))}\b")
-        words = [
-            w for w in re.findall(r"\w+", normalize(title))
-            if len(w) >= 3 and w not in _ITEM_STOP_WORDS
-        ]
-        word_res = [re.compile(rf"\b{re.escape(w)}") for w in words]
+        title_norm_item = normalize(title)
+        word_res = []
+        for w in re.findall(r"\w+", title_norm_item):
+            if w in _ITEM_STOP_WORDS:
+                continue
+            if len(w) >= 3:
+                word_res.append(re.compile(rf"\b{re.escape(w)}"))
+            elif w.isdigit() or w in _ROMAN_NUMERALS:
+                word_res.append(re.compile(rf"\b{re.escape(w)}\b"))
+        game = kind == "game"
 
         def value_of(comp: Comp, condition_id: str | None) -> float | None:
             if _is_parts(comp.condition_label):
@@ -212,10 +224,15 @@ class MarketService:
                 return None
             if any(re.search(p, title_norm) for p in _ITEM_EXCLUDES):
                 return None
+            # Words the game's own title uses ("System Shock") do not exclude a comp.
+            if game and any(m.group(0) not in title_norm_item
+                            for m in _GAME_EXCLUDES.finditer(title_norm)):
+                return None
             return comp.price
 
         return self._value(
-            f"{normalize(platform)}|{normalize(title)}", condition, query, value_of, fallback=False,
+            f"{normalize(platform)}|{title_norm_item}|{kind}", condition, query, value_of,
+            fallback=False,
             table="item_prices",
             ttl=timedelta(days=self._cfg.item_price_ttl_days),
             min_comps=self._cfg.min_item_comps,

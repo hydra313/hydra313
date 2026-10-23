@@ -340,8 +340,8 @@ class Pipeline:
                                              now) or cost
                     find_eval = evaluate_finds(
                         result,
-                        lambda item: self.market.item_price(item.platform, item.title,
-                                                            item.completeness),
+                        lambda item: self.market.item_price(
+                            item.platform, item.title, item.completeness, kind=item.kind),
                         cost, self.cfg)
                 db.save_scan(self.conn, listing_id, result, find_eval, now, photo_urls=photos)
             except Exception as e:  # noqa: BLE001 - record the paid scan as failed instead

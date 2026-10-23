@@ -280,10 +280,11 @@ def test_item_price_title_filter_and_30_day_ttl(conn):
     svc = make_service(conn, sold, clock=clock)
     mv = svc.item_price("SNES", "Chrono Trigger", "loose")
     assert sold.queries == ["SNES Chrono Trigger"]
-    assert (mv.key, mv.condition, mv.method) == ("snes|chrono trigger", "loose", "sold")
+    assert (mv.key, mv.condition, mv.method) == ("snes|chrono trigger|game", "loose", "sold")
     assert (mv.value, mv.comp_count) == (310, 3)
     assert not mv.low_confidence  # min 3 comps for photo items
-    assert db.get_market_value(conn, "snes|chrono trigger", "loose", table="item_prices") == mv
+    assert db.get_market_value(conn, "snes|chrono trigger|game", "loose",
+                               table="item_prices") == mv
     assert db.get_market_value(conn, "snes|chrono trigger", "loose") is None
 
     clock.now = T0 + timedelta(days=29)
@@ -457,6 +458,56 @@ def test_item_price_key_normalized(conn):
     sold = FakeSold([comp("Chrono Trigger SNES cart", 300)])
     svc = make_service(conn, sold)
     mv = svc.item_price("SNES", "Chrono Trigger\u00ae", "loose")
-    assert mv.key == "snes|chrono trigger"
+    assert mv.key == "snes|chrono trigger|game"
     assert svc.item_price("snes", "Chrono  Trigger", "loose") == mv
     assert len(sold.queries) == 1
+
+
+# --- final review: games priced against same-name hardware ---------------------
+
+HALO_COMPS = [
+    comp("Xbox 360 Halo 3 Special Edition Console 20GB", 180),
+    comp("Microsoft Xbox 360 Halo 3 Special Edition System", 185),
+    comp("Halo 3 Xbox 360 Special Edition console bundle", 175),
+    comp("Halo 3 Legendary Edition Spartan Helmet Xbox 360", 120),
+    comp("Halo 4 Xbox 360 game", 15),  # another game: "3" is a title word
+    comp("Halo 3 Xbox 360", 6),
+    comp("Halo 3 Xbox 360 game disc tested", 7),
+    comp("Xbox 360 Halo 3 loose disc", 5),
+]
+
+
+def test_game_item_not_priced_against_hardware(conn):
+    sold = FakeSold(HALO_COMPS)
+    mv = make_service(conn, sold).item_price("Xbox 360", "Halo 3", "loose", kind="game")
+    assert mv.value == pytest.approx(6)
+    assert mv.comp_count == 3
+    assert [c.price for c in db.get_comps(conn, mv.key, "loose")] == [6, 7, 5]
+
+
+def test_item_price_cache_key_includes_kind(conn):
+    sold = FakeSold(HALO_COMPS)
+    svc = make_service(conn, sold)
+    game = svc.item_price("Xbox 360", "Halo 3", "loose", kind="game")
+    console = svc.item_price("Xbox 360", "Halo 3", "loose", kind="console")
+    assert (game.key, console.key) == ("xbox 360|halo 3|game", "xbox 360|halo 3|console")
+    assert console.value > 100 and game.value < 10
+    assert svc.item_price("Xbox 360", "Halo 3", "loose", kind="game") == game
+    assert conn.execute("SELECT COUNT(*) FROM item_prices").fetchone()[0] == 2
+
+
+@pytest.mark.parametrize("title, other", [
+    ("Final Fantasy X", "Final Fantasy XII PS2"),
+    ("Final Fantasy IV", "Final Fantasy VI PS2"),
+    ("Grand Theft Auto V", "Grand Theft Auto IV PS2"),
+])
+def test_item_price_keeps_short_roman_and_digit_tokens(conn, title, other):
+    sold = FakeSold([comp(f"{title} PS2", 20), comp(other, 90)])
+    mv = make_service(conn, sold).item_price("PS2", title, "loose")
+    assert (mv.value, mv.comp_count) == (20, 1)
+
+
+def test_game_title_words_do_not_exclude_its_own_comps(conn):
+    sold = FakeSold([comp("System Shock 2 PC big box", 60), comp("System Shock 2 PC bundle", 300)])
+    mv = make_service(conn, sold).item_price("PC", "System Shock 2", "loose")
+    assert (mv.value, mv.comp_count) == (60, 1)

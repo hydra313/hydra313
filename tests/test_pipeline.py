@@ -104,6 +104,7 @@ class FakeMarket:
     def __init__(self, item_values=None):
         self.begin_runs = 0
         self.item_values = item_values or {}
+        self.item_kinds: list[tuple[str, str]] = []
 
     def begin_run(self):
         self.begin_runs += 1
@@ -117,7 +118,8 @@ class FakeMarket:
     def per_game_value(self, platform):
         return mv(platform.id, 10.0)
 
-    def item_price(self, platform, title, completeness):
+    def item_price(self, platform, title, completeness, *, kind):
+        self.item_kinds.append((title, kind))
         value = self.item_values.get(title)
         return None if value is None else mv(f"{platform}|{title}", value)
 
@@ -551,7 +553,7 @@ def test_scan_candidates(conn, cfg):
 
 
 class BoomMarket(FakeMarket):
-    def item_price(self, platform, title, completeness):
+    def item_price(self, platform, title, completeness, *, kind):
         raise RuntimeError("pricing exploded")
 
 
@@ -744,3 +746,23 @@ def test_manual_scan_with_record_failing_raises_after_saving(conn, cfg, monkeypa
     assert info.value.result.status == "ok"
     assert db.get_scan(conn, lid)["cost_usd"] == pytest.approx(0.20)
     assert not p.budget.lock.locked()
+
+
+# --- final review --------------------------------------------------------------
+
+
+def _item(kind, title, quantity=1, confidence="high", platform="PS2"):
+    return ScanItem(kind=kind, platform=platform, title=title, edition=None,
+                    completeness="loose", quantity=quantity, confidence=confidence,
+                    photo_index=0)
+
+
+def test_scan_items_priced_with_their_kind(conn, cfg):
+    market = FakeMarket()
+    items = [_item("game", "Halo 3", platform="Xbox 360"),
+             _item("console", "Halo 3", platform="Xbox 360")]
+    p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay", _three_game_lots())},
+                      scanner=FakeScanner(scan_result(items)), market=market)
+    p.refresh()
+    p.scan_listing(rows(conn)["cheap"]["id"], manual=True)
+    assert market.item_kinds == [("Halo 3", "game"), ("Halo 3", "console")]
