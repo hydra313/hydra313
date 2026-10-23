@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Deals · dealfinder{% endblock %}
+{% block content %}
+<h1>Deals</h1>
+<form class="filters" hx-get="/" hx-target="#deal-rows" hx-trigger="change, submit">
+  <label>Category
+    <select name="category">
+      <option value="">All</option>
+      {% for c in categories %}
+      <option value="{{ c }}"{% if filters.category == c %} selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Site
+    <select name="source">
+      <option value="">All</option>
+      {% for id, name in sites.items() %}
+      <option value="{{ id }}"{% if filters.source == id %} selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Ending within
+    <input type="number" name="ending_within_h" min="0" step="1" inputmode="numeric"
+           value="{{ '%g'|format(filters.ending_within_h) if filters.ending_within_h is not none else '' }}"> h
+  </label>
+  <label class="check"><input type="checkbox" name="new_only" value="true"{% if filters.new_only %} checked{% endif %}> New only</label>
+  <label class="check"><input type="checkbox" name="target_only" value="true"{% if filters.target_only %} checked{% endif %}> 🎯 Target hits only</label>
+</form>
+<table class="deals">
+  <thead>
+    <tr>
+      <th><span class="sr-only">Image</span></th><th>Title</th><th>Product</th><th>Condition</th>
+      <th>Site</th><th>Total cost</th><th>Market value</th><th>Profit</th><th>Discount</th>
+      <th>Time left</th><th><span class="sr-only">Actions</span></th>
+    </tr>
+  </thead>
+  <tbody id="deal-rows">
+    {% include "partials/listing_rows.html" %}
+  </tbody>
+</table>
+{% endblock %}

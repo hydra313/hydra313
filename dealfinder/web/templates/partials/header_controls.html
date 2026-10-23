@@ -1,0 +1,38 @@
+<div id="header-controls" class="controls">
+  <div class="row">
+    <form hx-post="/controls/scan" hx-target="#header-controls" hx-swap="outerHTML">
+      <input type="hidden" name="on" value="{{ 'false' if scan_enabled else 'true' }}">
+      <button type="submit" class="switch{% if scan_enabled %} on{% endif %}" role="switch"
+              aria-checked="{{ 'true' if scan_enabled else 'false' }}">Photo scanning: {{ 'on' if scan_enabled else 'off' }}</button>
+    </form>
+    <span class="spend">spent today {{ spent_today|money }} / this month {{ spent_month|money }}</span>
+  </div>
+  <form class="row caps" hx-post="/controls/caps" hx-target="#header-controls" hx-swap="outerHTML">
+    <label>Daily cap $<input type="number" name="daily" min="0" step="0.01" value="{{ '%.2f'|format(caps.daily) }}"></label>
+    <label>Monthly cap $<input type="number" name="monthly" min="0" step="0.01" value="{{ '%.2f'|format(caps.monthly) }}"></label>
+    <label>Max scan price $<input type="number" name="max_scan_price" min="0" step="0.01" value="{{ '%.2f'|format(caps.max_scan_price) }}"></label>
+    <button type="submit">Save caps</button>
+    {% if caps_error %}<p class="error" role="alert">{{ caps_error }}</p>{% endif %}
+  </form>
+  <div class="row">
+    <form hx-post="/controls/pause" hx-target="#header-controls" hx-swap="outerHTML">
+      <input type="hidden" name="on" value="{{ 'false' if paused else 'true' }}">
+      <span>Scheduler: {{ 'paused' if paused else 'running' }}</span>
+      <button type="submit">{{ 'Resume' if paused else 'Pause' }}</button>
+    </form>
+    <button type="button" hx-post="/refresh" hx-target="#refresh-status">Refresh now</button>
+    <span id="refresh-status" aria-live="polite"></span>
+  </div>
+  <ul class="runs" aria-label="Last successful run per site">
+    {% for r in last_success %}
+    <li><span class="src">{{ r.name }}</span> <span title="{{ r.at }}">{{ r.ago }}</span></li>
+    {% endfor %}
+  </ul>
+  {% if banners %}
+  <div class="banner" role="status">
+    <ul>
+      {% for b in banners %}<li class="{{ b.level }}">{{ b.text }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
