@@ -11,6 +11,7 @@ import yaml
 
 from dealfinder import db
 from dealfinder.config import Config
+from dealfinder.console_editions import REFERENCE_FILE, load_console_editions
 from dealfinder.models import BulkProduct, Category, Platform, Product
 
 log = logging.getLogger(__name__)
@@ -97,7 +98,7 @@ def _load_products(path: Path, seen: set[str]) -> list[Product]:
         out.append(Product(
             id=item_id, category=category, name=_field(e, "name", path.name),
             ebay_query=_field(e, "ebay_query", path.name), match=match, exclude=exclude,
-            max_price=e.get("max_price")))
+            max_price=e.get("max_price"), source_url=e.get('source_url')))
     return out
 
 
@@ -143,6 +144,11 @@ def load_seed(catalog_dir: Path) -> Catalog:
     products: list[Product] = []
     for name in _PRODUCT_FILES:
         products += _load_products(catalog_dir / name, seen)
+    for product in load_console_editions(catalog_dir / REFERENCE_FILE, products):
+        if product.id in seen:
+            raise ValueError(f'{REFERENCE_FILE}: duplicate id {product.id!r}')
+        seen.add(product.id)
+        products.append(product)
     return Catalog(
         products=products,
         bulk=_load_bulk(catalog_dir / _BULK_FILE),

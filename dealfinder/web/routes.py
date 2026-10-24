@@ -8,8 +8,9 @@ import re
 import sqlite3
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Query
 from fastapi.responses import HTMLResponse, Response
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
@@ -18,6 +19,7 @@ from dealfinder import db
 from dealfinder.budget import Budget
 from dealfinder.catalog import Catalog, load_catalog
 from dealfinder.config import Config
+from dealfinder.console_editions import edition_text
 from dealfinder.models import BulkProduct, MarketValue
 from dealfinder.market import SOLD_ERROR_SETTING
 from dealfinder.pipeline import SCAN_KINDS, stale_before, hibid_snapshot_before
@@ -716,7 +718,8 @@ def _catalog_row(conn: sqlite3.Connection, table: str, item, override: sqlite3.R
     its placeholder shows the value in effect without one."""
     row = {"table": table, "id": item.id, "name": item.name, "enabled": item.enabled,
            "category": getattr(item, "category", None), "custom": custom,
-           "fields": {}, "markets": [], "error": None}
+           "fields": {}, "markets": [], "error": None,
+           "reference": _http_url(getattr(item, 'source_url', None))}
     for field in _FIELDS[table]:
         set_value = override[field] if override is not None else None
         in_effect = _fmt(getattr(item, field)) or "none"
@@ -737,12 +740,13 @@ def _catalog_row(conn: sqlite3.Connection, table: str, item, override: sqlite3.R
 
 
 def _catalog_rows(conn: sqlite3.Connection, catalog: Catalog, table: str,
-                  only: str | None = None) -> list[dict]:
+                  only: str | None = None, *, visible: set[str] | None = None) -> list[dict]:
     overrides = db.get_overrides(conn, CATALOG_TABLES[table])
     custom = ({d["id"] for d in db.list_custom(conn, table)}
               if table in ("product", "bulk") else set())
     return [_catalog_row(conn, table, item, overrides.get(item.id), item.id in custom)
-            for item in _catalog_items(catalog, table) if only is None or item.id == only]
+            for item in _catalog_items(catalog, table)
+            if (only is None or item.id == only) and (visible is None or item.id in visible)]
 
 
 def _custom_form(kind: str, values: dict | None = None, error: str | None = None,
@@ -752,16 +756,35 @@ def _custom_form(kind: str, values: dict | None = None, error: str | None = None
 
 
 @router.get("/catalog", response_class=HTMLResponse)
-def catalog_page(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+def catalog_page(request: Request, q: str = '', page: int = Query(1, ge=1),
+                 conn: sqlite3.Connection = Depends(get_conn)):
     catalog = _catalog(conn, request.app.state.cfg)
-    ctx = {"catalog_error": catalog is None, "sections": [], "forms": [
+    q = q.strip()[:120]
+    terms = edition_text(q).split()
+    ctx = {"catalog_error": catalog is None, 'query': q, "sections": [], "forms": [
         _custom_form("product"), _custom_form("bulk")]}
     if catalog is not None:
-        ctx["sections"] = [
-            {"table": table, "title": title, "rows": _catalog_rows(conn, catalog, table)}
-            for table, title in (("product", "Products"), ("bulk", "Bulk products"),
-                                 ("platform", "Game platforms"))
-        ]
+        for table, title in (("product", "Products"), ("bulk", "Bulk products"),
+                             ("platform", "Game platforms")):
+            items = [item for item in _catalog_items(catalog, table)
+                     if all(term in edition_text(item.name + ' ' + item.id + ' ' + item.match)
+                            for term in terms)]
+            if table == 'product':
+                custom_ids = {row['id'] for row in db.list_custom(conn, 'product')}
+                items.sort(key=lambda item: item.id not in custom_ids)
+            total = len(items)
+            pages = max(1, math.ceil(total / 200)) if table == 'product' else 1
+            current = min(page, pages) if table == 'product' else 1
+            if table == 'product':
+                items = items[(current - 1) * 200:current * 200]
+            ctx['sections'].append({
+                'table': table, 'title': title, 'total': total, 'page': current, 'pages': pages,
+                'previous': '/catalog?' + urlencode({'q': q, 'page': current - 1})
+                            if current > 1 else None,
+                'next': '/catalog?' + urlencode({'q': q, 'page': current + 1})
+                        if current < pages else None,
+                'rows': _catalog_rows(conn, catalog, table, visible={item.id for item in items}),
+            })
     ctx.update(_header(request, conn))
     return _render(request, "catalog.html", ctx)
 

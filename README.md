@@ -22,6 +22,14 @@ products on or off, set a target max price per product, tune repair cost and
 success rate for bulk lots, and add your own entries. Those changes are stored
 in the database, not in the YAML, so updating the seed files never loses them.
 
+The console catalog contains 1,774 identities, including home consoles,
+handhelds, regional variations and promotional editions. The wider factual
+reference snapshot is in `catalog/console_editions.json`; curated releases and
+aliases are in `catalog/consoles.yaml`. Use **Search catalog** to find an edition;
+reference links identify its source. Products appear 200 per page. See the
+[coverage audit](docs/console-catalog-audit.md) for sources, exclusions, announced
+releases and the limits of the completeness claim.
+
 ## Install
 
 You need Python 3.11 or newer, and SQLite 3.35 or newer (bundled with Python 3.11+

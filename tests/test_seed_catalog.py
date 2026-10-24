@@ -371,7 +371,6 @@ def test_collectible_console(catalog, title, key):
     "Majora's Mask 3D game",
     "Zelda Majora's Mask 3D Nintendo 3DS XL",
     "New 3DS XL console with Majora's Mask 3D",
-    "Nintendo 3DS XL Pikachu Yellow Edition",
     "Game Boy Advance SP Pikachu charger",
     "Pokemon Ruby Groudon GBA SP cartridge",
     "GBA SP Groudon custom shell",

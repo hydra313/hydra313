@@ -21,6 +21,10 @@ class Product:
     exclude: tuple[str, ...] = ()
     max_price: float | None = None
     enabled: bool = True
+    required_tokens: tuple[str, ...] = ()  # sourced console edition identifiers
+    source_url: str | None = None
+    discovery_query: str | None = None  # share searches across a console family
+    promotional: bool = False
 
 
 @dataclass(frozen=True)

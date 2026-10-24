@@ -18,6 +18,12 @@ _GAME_COUNT = re.compile(r"\b(\d+)\b(?=(?: \S+){0,3} games\b)")
 # entertainment system" not hardware.
 _NOT_WORDS = (r"\bdisc (edition|version|drive)\b", r"\bdigital edition\b", r"\bslim disc\b",
               r"\bdisc(?= (consoles?|systems?)\b)")
+# These are edition/game names, not claims about the number of consoles.
+# Mask only the complete phrase; an outer "collection of" or "lot of 3" remains.
+_EDITION_QUANTITY_MASKS = (
+    r'\b(?:tomodachi|eternal|(?:the )?master ?chief) collection\b',
+    r'\bfinal fantasy (?:x|10) (?:x ?2|10 ?2)\b',
+)
 
 
 def _has_game_count(title_norm: str, mask_patterns: list[str]) -> bool:
@@ -31,7 +37,7 @@ def classify(listing: Listing, catalog: Catalog, cfg: Config) -> Classified | No
         return None
     title_norm = normalize(listing.title)
     mask_patterns = catalog.mask_patterns()
-    quantity = parse_quantity(title_norm, mask_patterns)
+    quantity = parse_quantity(mask(title_norm, _EDITION_QUANTITY_MASKS), mask_patterns)
     names_platform = any(re.search(p.match, title_norm) for p in catalog.platforms)
     words = mask(title_norm, (*mask_patterns, *_NOT_WORDS))
     has_games = re.search(GAME_WORDS, words) is not None
@@ -67,7 +73,7 @@ def classify(listing: Listing, catalog: Catalog, cfg: Config) -> Classified | No
 
 
 def _classify_single(listing: Listing, catalog: Catalog) -> Classified | None:
-    single = match_single(listing.title, catalog.enabled_products(), listing.condition_id)
+    single = match_single(listing.title, catalog.products, listing.condition_id)
     if single is None:
         return None
     product, condition = single

@@ -49,7 +49,7 @@ class RefreshReport:
 
 
 def ebay_queries(catalog: Catalog) -> list[str]:
-    queries = [p.ebay_query for p in catalog.enabled_products()]
+    queries = [p.discovery_query or p.ebay_query for p in catalog.enabled_products()]
     queries += [f"{b.ebay_query} lot" for b in catalog.enabled_bulk()
                 if b.source_product_id is None]
     queries += [p.ebay_lot_query for p in catalog.enabled_platforms()]

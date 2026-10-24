@@ -739,6 +739,20 @@ def test_catalog_page_sections(client, conn):
     assert 'hx-post="/catalog/custom/bulk"' in html
 
 
+def test_large_catalog_can_be_searched_and_paged(client):
+    page = LexborHTMLParser(client.get('/catalog').text)
+    first = {n.attributes['id'] for n in page.css('tr[id^="catalog-product-"]')}
+    assert 0 < len(first) <= 200
+    second = LexborHTMLParser(client.get('/catalog?page=2').text)
+    following = {n.attributes['id'] for n in second.css('tr[id^="catalog-product-"]')}
+    assert following and not first.intersection(following)
+    results = LexborHTMLParser(client.get('/catalog?q=samus').text)
+    names = [n.text() for n in results.css('tr[id^="catalog-product-"] td.title')]
+    assert names and all('samus' in name.casefold() for name in names)
+    assert results.css_first('a[href^="https://consolevariations.com/collectibles/"]') is not None
+    assert client.get('/catalog?q=%3Cscript%3E').status_code == 200
+
+
 def test_catalog_override_saved(client, cfg, conn):
     resp = client.post("/catalog/product/rtx-4090", data={"enabled": "true", "max_price": "1200"})
     assert resp.status_code == 200
@@ -901,7 +915,7 @@ def test_htmx_served_locally(client):
 def test_every_post_in_templates_uses_htmx():
     templates = Path(__file__).resolve().parent.parent / "dealfinder" / "web" / "templates"
     for path in templates.rglob("*.html"):
-        html = path.read_text()
+        html = path.read_text(encoding='utf-8')
         assert not re.search(r"method=[\"']?post", html, re.IGNORECASE), path
         assert not re.search(r"<form(?![^>]*\bhx-(get|post)=)", html), path
 

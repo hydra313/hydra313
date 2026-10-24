@@ -157,6 +157,10 @@ table.deals { width: 100%; border-collapse: collapse; background: var(--panel); 
 .scan .table-wrap { flex: 3 1 420px; }
 #scan-action { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
 .catalog h2 { margin-top: 30px; }
+.catalog-search label { flex: 1 1 420px; min-width: 0; white-space: nowrap; }
+.catalog-search input[type='search'] { flex: 1; width: min(420px, 100%); min-width: 100px; }
+.catalog-pagination { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin: 12px 0; font-size: 12px; color: var(--muted); }
+.deals td.title > a.catalog-reference { color: var(--accent); font-size: 10px; font-weight: 400; }
 .catalog-table input[type='number'] { width: 6.5rem; }
 .catalog-table form { margin: 0; }
 .custom-forms { display: flex; flex-wrap: wrap; gap: 16px; }

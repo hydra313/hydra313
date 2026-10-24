@@ -71,6 +71,25 @@ broad_queries:                  # automatic source queries; HiBid browser mode u
     - limited edition console
     - special edition console
     - halo xbox 360
+    - playstation
+    - xbox
+    - nintendo
+    - game boy
+    - psp
+    - vita
+    - dreamcast
+    - sega
+    - gamecube
+    - n64
+    - snes
+    - wii
+    - 3ds
+    - 2ds
+    - ds lite
+    - neo geo
+    - pc engine
+    - wonderswan
+    - atari
   hibid:
     - rtx
     - geforce
@@ -88,6 +107,25 @@ broad_queries:                  # automatic source queries; HiBid browser mode u
     - limited edition console
     - special edition console
     - halo xbox 360
+    - playstation
+    - xbox
+    - nintendo
+    - game boy
+    - psp
+    - vita
+    - dreamcast
+    - sega
+    - gamecube
+    - n64
+    - snes
+    - wii
+    - 3ds
+    - 2ds
+    - ds lite
+    - neo geo
+    - pc engine
+    - wonderswan
+    - atari
 
 # --- photo scanning (off until you switch it on in the dashboard header) ---
 vision_model: claude-opus-5-5   # model used to read lot photos

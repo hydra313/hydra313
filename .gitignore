@@ -5,3 +5,4 @@ dealfinder.db*
 .pytest_cache/
 config.yaml
 logs/
+.audit/

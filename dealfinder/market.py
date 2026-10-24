@@ -147,9 +147,10 @@ class MarketService:
     # --- public values ------------------------------------------------------
 
     def product_value(self, p: Product, condition: Condition) -> MarketValue | None:
-        products = self._catalog.enabled_products()
+        products = self._catalog.products
         if not p.enabled:  # a bulk product can outlive its disabled source product
-            products = [*products, replace(p, enabled=True)]
+            products = [replace(item, enabled=True) if item.id == p.id else item
+                        for item in products]
 
         def value_of(comp: Comp, condition_id: str | None) -> float | None:
             if _is_parts(comp.condition_label):

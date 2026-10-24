@@ -14,6 +14,9 @@ _BROAD_QUERIES = [
     "switch oled", "dualsense", "limited edition controller", "console lot",
     "controller lot", "video game lot", "games lot", "limited edition console",
     "special edition console", "halo xbox 360",
+    "playstation", "xbox", "nintendo", "game boy", "psp", "vita", "dreamcast",
+    "sega", "gamecube", "n64", "snes", "wii", "3ds", "2ds", "ds lite",
+    "neo geo", "pc engine", "wonderswan", "atari",
 ]
 
 _SECRET_ENV = {

@@ -1,12 +1,24 @@
 {% extends "base.html" %}
 {% block title %}Catalog · Dealfinder{% endblock %}
 {% block content %}
+<div id="catalog-content">
 <div class="page-heading"><div><span class="eyebrow">MAKE IT YOURS</span><h1>Catalog</h1><p>Your products, price targets, and collecting priorities.</p></div><span class="heading-icon" aria-hidden="true">≡</span></div>
 <p class="muted">A blank number field uses the value shown greyed out (the catalog's own value or the category default).</p>
+<form class="filters catalog-search" hx-get="/catalog" hx-target="#catalog-content" hx-select="#catalog-content" hx-swap="outerHTML" hx-push-url="true">
+  <label>Search catalog <input type="search" name="q" value="{{ query }}" maxlength="120" placeholder="Try Samus, Xbox, PS4, or Zelda"></label>
+  <button class="primary" type="submit">Search</button>{% if query %}<a href="/catalog">Clear search</a>{% endif %}
+</form>
+<p class="muted">Console records include retail, regional, and promotional editions. Reference links identify the source; buyer prices and targets are set separately.</p>
 {% if catalog_error %}<p class="error" role="alert">The catalog failed to load; see the log.</p>{% endif %}
 {% for section in sections %}
+{% if section.total or not query or section.table == 'product' %}
 <section class="catalog">
-  <h2>{{ section.title }} <span class="muted">({{ section.rows|length }})</span></h2>
+  <h2>{{ section.title }} <span class="muted">({{ '{:,}'.format(section.total) }})</span></h2>
+  {% if section.pages > 1 %}<nav class="catalog-pagination" aria-label="Product catalog pages">
+    <span>Page {{ section.page }} of {{ section.pages }} · {{ section.rows|length }} products shown</span>
+    {% if section.previous %}<a href="{{ section.previous }}">← Previous</a>{% endif %}
+    {% if section.next %}<a href="{{ section.next }}">Next →</a>{% endif %}
+  </nav>{% endif %}
   <div class="table-wrap"><table class="deals catalog-table">
     <thead>
       <tr>
@@ -16,10 +28,11 @@
       </tr>
     </thead>
     <tbody>
-      {% for r in section.rows %}{% include "partials/catalog_row.html" %}{% endfor %}
+      {% for r in section.rows %}{% include "partials/catalog_row.html" %}{% else %}<tr class="empty"><td colspan="7">No catalog entries match this search.</td></tr>{% endfor %}
     </tbody>
   </table></div>
 </section>
+{% endif %}
 {% endfor %}
 <section class="catalog">
   <h2>Add a custom entry</h2>
@@ -28,4 +41,5 @@
     {% for f in forms %}{% with kind=f.kind, v=f.v, error=f.error, message=f.message, categories=f.categories %}{% include "partials/custom_form.html" %}{% endwith %}{% endfor %}
   </div>
 </section>
+</div>
 {% endblock %}

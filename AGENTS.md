@@ -28,7 +28,7 @@ Deals are sent to Discord.
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 866 tests pass with no warnings.
+- 916 tests pass with no warnings.
 - **The first live run is complete for ShopGoodwill search and detail photos.**
   Explicit price bounds and normalized image paths fixed real adapter failures.
   HiBid browser import is verified: 68 real cards, 3 usable USD lots, 1 catalog
@@ -46,8 +46,25 @@ Deals are sent to Discord.
   Explicit Intel/AMD conflicts reject CPU matches, including hardware lots.
 - The UI uses dark surfaces throughout with mint accents. Scan budgets
   and source notices expand from the header. Desktop tables scroll within their
-  panels with sticky headers/actions; phone layouts use listing cards. All 69 web
+  panels with sticky headers/actions; phone layouts use listing cards. All 70 web
   tests pass, with desktop and 390px-wide browser checks across the main pages.
+- Console coverage is 1,774 identities: 39 curated and 1,735 sourced from the
+  dated `catalog/console_editions.json` snapshot. The audit accounts for all 3,734
+  candidate reference records; ambiguous bundles, grouped designs and bad platform
+  metadata are retained for review. See `docs/console-catalog-audit.md`.
+- Description-derived review flags quarantine source records under authenticity
+  investigation, unofficial modifications and unreleased/prototype hardware even
+  if the source's release label says official. Full descriptions are not stored.
+- `console_editions.py` keeps hardware-family patterns separate from edition
+  tokens. Promotional entries require stronger title evidence. Do not bypass
+  these guards or turn every reference bundle into a distinct premium console.
+  `Product.required_tokens`, `promotional`, `source_url` and `discovery_query`
+  support this path; legacy/custom regex products retain their old behavior.
+- Catalog search and 200-product pagination keep the larger catalog usable.
+  New reference editions share eBay discovery queries per hardware family.
+  Run `scripts/audit-console-catalog.py` to export dispositions/watchlist to
+  ignored `.audit/`; `scripts/update-console-reference.py` rebuilds the factual
+  snapshot from a downloaded public index. No runtime metadata download occurs.
 
 ## Commands
 

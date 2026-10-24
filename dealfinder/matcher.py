@@ -5,6 +5,7 @@ from collections.abc import Sequence
 
 from dealfinder.models import Category, Condition, Product
 from dealfinder.text import normalize, pick_most_specific
+from dealfinder.console_editions import edition_text, match_edition, primary_title
 
 # Spec section 6.4. All patterns run against normalize()d (lowercase) titles,
 # where "as-is" is already "as is" and "w/" is "with".
@@ -115,15 +116,27 @@ def match_single(
     title: str, products: Sequence[Product], condition_id: str | None = None
 ) -> tuple[Product, Condition] | None:
     title_norm = normalize(title)
-    if _any(GLOBAL_EXCLUDES, title_norm):
+    condition_text = re.sub(r'\b(dead rising|red dead redemption|dead by daylight|dead space)\b',
+                            '', title_norm)
+    if _any(GLOBAL_EXCLUDES, condition_text):
         return None
     matches = [
-        (p, m) for p in products if p.enabled
+        (p, m) for p in products if p.enabled and not p.required_tokens
         and (p.category != "cpu" or cpu_brand_compatible(title_norm, p.ebay_query))
         and (m := re.search(p.match, title_norm))
     ]
+    # Curated patterns retain their stable IDs and overrides. Reference editions
+    # are a fallback, with a separate hardware identity and accessory check.
+    if not matches:
+        head = primary_title(edition_text(title))
+        tokens = set(re.findall(r'\w+', head))
+        matches = [(p, m) for p in products if p.required_tokens
+                   and (m := match_edition(p, head, tokens))]
+        matches = [(p, m) for p, m in matches if not any(
+            p.match == q.match and set(p.required_tokens) < set(q.required_tokens)
+            for q, _ in matches)]
     product = pick_most_specific(matches)
-    if product is None:
+    if product is None or not product.enabled:
         return None
     if _any(CATEGORY_EXCLUDES[product.category], title_norm) or _any(product.exclude, title_norm):
         return None
