@@ -733,7 +733,7 @@ def discord_test(request: Request):
     if not cfg.discord_webhook_url:
         return HTMLResponse('Connect a Discord channel first.',status_code=400)
     with httpx.Client(timeout=15,follow_redirects=False) as http:
-        sent=Notifier(None,cfg,http)._deliver({'content':'Dealfinder is connected. Deal alerts will arrive in this channel.',
+        sent=Notifier(None,cfg,http)._deliver({'content':'ConsoleHawk is connected. Deal alerts will arrive in this channel.',
                                               'allowed_mentions':{'parse':[]}})
     return HTMLResponse('Test message sent.' if sent else 'Discord could not receive the test. Check the webhook and channel permissions.',
                         status_code=200 if sent else 400)

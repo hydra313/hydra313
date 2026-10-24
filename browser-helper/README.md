@@ -1,4 +1,4 @@
-# Dealfinder browser helper 1.2
+# ConsoleHawk browser helper 1.2
 
 1. Extract this folder somewhere permanent.
 2. In Chrome or Edge, open Extensions, enable Developer mode and Load unpacked
@@ -10,7 +10,7 @@
 The helper checks one query every 30 seconds in one background tab, alternating
 across enabled sites. eBay jobs alternate Buy It Now discovery and needed sold
 comparisons. HiBid rotates configured catalog search words. No copying or manual
-imports are needed. Keep this PC, browser and Dealfinder running. App Pause stops
+imports are needed. Keep this PC, browser and ConsoleHawk running. App Pause stops
 new searches; browser sleep or throttling can delay checks.
 
 Verification, unreadable cards or import failures stop only the affected site.

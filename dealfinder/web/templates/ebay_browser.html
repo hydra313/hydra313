@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}eBay browser · Dealfinder{% endblock %}
+{% block title %}eBay browser · ConsoleHawk{% endblock %}
 {% block content %}
 <div class="page-heading"><div><span class="eyebrow">NO API KEY NEEDED</span><h1>eBay browser helper</h1><p>Keep finding listings while your browser is open.</p></div><span class="heading-icon" aria-hidden="true">↻</span></div>
 <section class="import-status">
   <h2>{{ 'API search configured' if api_mode else 'Keyless Buy It Now listings' }}</h2>
-  <p>The helper reads visible USD search cards in one background eBay tab, then sends matching listings and sold comparisons to this local app. It checks one search every 30 seconds, alternating listing discovery and missing sold evidence. Your PC, browser, and Dealfinder must stay running.</p>
+  <p>The helper reads visible USD search cards in one background eBay tab, then sends matching listings and sold comparisons to this local app. It checks one search every 30 seconds, alternating listing discovery and missing sold evidence. Your PC, browser, and ConsoleHawk must stay running.</p>
   {% if helper.captured_at %}<p>Last capture: {{ helper.captured_at }} · {{ helper.usable }} usable listings · {{ helper.matched }} catalog matches.</p>{% endif %}
   {% if helper.error %}<p class="error">{{ helper.error }}</p>{% endif %}
   <p>Live auctions need an API connection. Keyless listing collection uses Buy It Now prices. Sold searches may require you to sign in to eBay. Only dated sales from the last 90 days with a known price count; undisclosed accepted offers are excluded.</p>
@@ -16,7 +16,7 @@
   <li>Open <code>chrome://extensions</code> or <code>edge://extensions</code>. Turn on <strong>Developer mode</strong>, choose <strong>Load unpacked</strong>, and select the extracted folder containing <code>manifest.json</code>.</li>
   <li>Open this page in that same browser, reload it, then click <strong>Connect and start</strong> below.</li>
 </ol>
-<p>The helper can read eBay search pages and connect to Dealfinder at <code>127.0.0.1:8000</code>. It does not read cookies or passwords, place bids, buy items, or send data to other servers.</p>
+<p>The helper can read eBay search pages and connect to ConsoleHawk at <code>127.0.0.1:8000</code>. It does not read cookies or passwords, place bids, buy items, or send data to other servers.</p>
 <div class="row">
   <button id="connect-ebay-helper" class="primary" data-helper-token="{{ helper_token }}">Connect and start</button>
   <button id="stop-ebay-helper">Stop browser helper</button>

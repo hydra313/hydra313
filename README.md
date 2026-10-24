@@ -1,6 +1,6 @@
-# dealfinder
+# ConsoleHawk
 
-A local web app that watches eBay, ShopGoodwill and HiBid for deals worth
+ConsoleHawk is a local web app that watches eBay, ShopGoodwill and HiBid for deals worth
 reselling, scores them against recent sold prices, and (optionally) alerts you
 on Discord. It runs on your own machine and serves a dashboard at
 http://127.0.0.1:8000.
@@ -60,7 +60,7 @@ spending controls; **Source status** expands connection notices and errors.
 Wide tables keep their headers and listing actions visible while scrolling.
 On a phone, listings appear as individual cards.
 
-On Windows, after installation, double-click **Start-Dealfinder.cmd** in the
+On Windows, after installation, double-click **Start-ConsoleHawk.cmd** in the
 project folder. It starts the app in the background, waits for the dashboard,
 and opens your browser. Double-clicking again opens the running app. Keep the
 launcher with the project and its `.venv` folder; a Windows shortcut can point
@@ -90,7 +90,7 @@ The helper rotates through enabled catalog queries, one search every 30 seconds,
 using a single background tab. Searches alternate across GPUs, CPUs, consoles,
 controllers and both lot categories, giving each category an early turn.
 It alternates visible USD **Buy It Now** cards with
-sold-price searches for products actually on your dashboard. Keep the browser and app open. Sleep and
+sold-price searches for products actually on your dashboard. Keep the browser and ConsoleHawk open. Sleep and
 browser throttling can delay checks. The header reports when the helper is not
 connected. A verification or parser failure stops the helper and leaves its tab
 open for you; complete verification and reconnect. **Stop browser helper** stops

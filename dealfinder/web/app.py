@@ -281,7 +281,7 @@ def create_app(
             if callable(close):
                 close()
 
-    app = FastAPI(title="dealfinder", lifespan=lifespan)
+    app = FastAPI(title="ConsoleHawk", lifespan=lifespan)
     # Local capability token: only the narrowly scoped helper endpoints accept it.
     # Keep it out of SQLite, source archives, logs, and external requests.
     token_path = Path(cfg.db_path).with_suffix(".browser-token")

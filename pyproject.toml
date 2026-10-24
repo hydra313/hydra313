@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dealfinder"
+name = "consolehawk"
 version = "0.1.0"
-description = "Finds deals on auction sites"
+description = "ConsoleHawk hunts collectible consoles and hardware deals across auction sites"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi",

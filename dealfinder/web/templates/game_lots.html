@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Game lots · Dealfinder{% endblock %}
+{% block title %}Game lots · ConsoleHawk{% endblock %}
 {% block content %}
 <div class="page-heading"><div><span class="eyebrow">BUILD YOUR COLLECTION</span><h1>Game lots</h1><p>Collections worth exploring, priced one game at a time.</p></div><span class="heading-icon" aria-hidden="true">◫</span></div>
 <form class="filters browse-filters" hx-get="/lots/games" hx-target="#lot-rows" hx-trigger="change, submit, keyup changed delay:400ms from:input[name='q'], listings-updated from:body" hx-sync="this:replace" hx-push-url="true">

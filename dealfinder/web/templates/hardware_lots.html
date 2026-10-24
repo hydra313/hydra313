@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Bulk lots · Dealfinder{% endblock %}
+{% block title %}Bulk lots · ConsoleHawk{% endblock %}
 {% block content %}
 <div class="page-heading"><div><span class="eyebrow">REPAIR &amp; RESELL</span><h1>Bulk hardware lots</h1><p>Find value in the parts. See the potential in the lot.</p></div><span class="heading-icon" aria-hidden="true">▦</span></div>
 <form class="filters browse-filters" hx-get="/lots/hardware" hx-target="#lot-rows" hx-trigger="change, submit, keyup changed delay:400ms from:input[name='q'], listings-updated from:body" hx-sync="this:replace" hx-push-url="true">

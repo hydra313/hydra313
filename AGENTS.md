@@ -5,7 +5,7 @@ anything.
 
 ## What this is
 
-**dealfinder** is a local web app that searches eBay, ShopGoodwill and HiBid
+**ConsoleHawk** (Python module `dealfinder`) is a local web app that searches eBay, ShopGoodwill and HiBid
 for underpriced items and shows them on a dashboard at http://127.0.0.1:8000.
 
 It looks for:
@@ -29,6 +29,16 @@ Deals are sent to Discord.
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
 - 1005 Python tests and 12 browser-helper workflow tests pass.
+- Public app name is ConsoleHawk. The UI uses olive armor green and warm visor
+  orange, with an original SVG hawk mark and favicon. Keep deal-rating semantic
+  colors distinct. Internal module, DB filenames, pairing headers and alarm IDs
+  retain their existing names for compatibility with installed connections.
+- `Start-ConsoleHawk.cmd` / `scripts/Start-ConsoleHawk.ps1` are the named launchers;
+  the previous filenames forward to them. Readiness accepts both API titles.
+- Installed Chrome helper 1.2 was verified collecting eBay and HiBid automatically.
+  Its actual folder is `C:\Downloads\dealfinder-browser-helper`; user-facing output
+  copies alone do not update that installed folder. Discord protected connection
+  was verified with a read-only HTTP 200; never include the credential in handoffs.
 - Category controls submit lowercase database values and normalize old capitalized
   links. eBay discovery queries alternate between GPUs, CPUs, consoles, controllers
   and both lot categories so the larger GPU catalog cannot delay all other searches.
@@ -68,7 +78,7 @@ Deals are sent to Discord.
 - eBay without keys uses `sources/ebay_browser.py` and the optional Chrome/Edge
   helper in `browser-helper/`. Real rendered search validation imported catalog
   matches without API credentials. The helper needs one-time Load unpacked setup;
-  an installed-browser end-to-end run has not been verified by the agent.
+  the installed Chrome helper has been verified collecting both sites.
 - The helper rotates one enabled catalog query every 30 seconds in one owned tab,
   reads only rendered USD fixed-price cards (Buy It Now / or Best Offer), and stops
   on verification or parsing/import failures. It never solves verification.
@@ -95,14 +105,14 @@ Deals are sent to Discord.
   reloading the extension and approving the new HiBid host permission. Live card
   selectors were checked against 69 rendered results on October 24, 2026.
   See `docs/hibid-browser-import.md`; no database reset is needed.
-- Windows users can double-click `Start-Dealfinder.cmd` after installation.
+- Windows users can double-click `Start-ConsoleHawk.cmd` after installation.
   It starts a hidden server, waits for readiness and opens the dashboard; repeated
   launches reuse the server. Logs go in the ignored `logs/` folder.
 - **Show all listings** is on by default on Deals and both lot pages, including
   unpriced listings and unknown-quantity lots. Unchecking it submits an explicit
   false value. Refresh completion updates the current filtered rows.
   Explicit Intel/AMD conflicts reject CPU matches, including hardware lots.
-- The UI uses dark surfaces throughout with mint accents. Scan budgets
+- The UI uses dark olive surfaces with armor-green structure and visor-orange accents. Scan budgets
   and source notices expand from the header. Desktop tables scroll within their
   panels with sticky headers/actions; phone layouts use listing cards. The web regression
   tests pass, with desktop and 390px-wide browser checks across the main pages.

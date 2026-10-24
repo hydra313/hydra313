@@ -8,7 +8,7 @@ async function api(path, token, body = {}) {
     method:"POST", headers:{"Content-Type":"application/json", "X-Dealfinder-Token":token},
     body:JSON.stringify(body), signal:AbortSignal.timeout(45000),
   });
-  if (!response.ok) throw new Error(response.status === 403 ? "Reconnect the helper from Connections." : `Dealfinder returned HTTP ${response.status}`);
+  if (!response.ok) throw new Error(response.status === 403 ? "Reconnect the helper from Connections." : `ConsoleHawk returned HTTP ${response.status}`);
   return response.json();
 }
 function validJob(job) {
@@ -51,7 +51,7 @@ async function tick() {
     }
     const job = await api("next",state.token,{sites:state.sites || ["ebay"]});
     if (job.paused) return;
-    if (!validJob(job)) { await stop("Unexpected search URL from Dealfinder."); return; }
+    if (!validJob(job)) { await stop("Unexpected search URL from ConsoleHawk."); return; }
     const latest = await chrome.storage.local.get(["enabled","sites","token"]);
     if (!latest.enabled || latest.token !== state.token || !(latest.sites || ["ebay"]).includes(job.source || "ebay")) return;
     const tab = await chrome.tabs.create({url:"about:blank",active:false});
@@ -70,7 +70,7 @@ async function handle(message,sender) {
     if (url.origin !== APP || !["/sources/ebay","/sources/hibid","/connections"].includes(url.pathname)) return {error:"Untrusted setup page"};
     if (message.type === "status") {
       const state = await chrome.storage.local.get(["enabled","sites","lastError"]);
-      return {ok:true,version:chrome.runtime.getManifest?.().version || "1.2.0",...state};
+      return {ok:true,version:chrome.runtime.getManifest?.().version || "1.2.1",...state};
     }
     if (message.type === "stop") { await stop("",false,message.site || null); return {ok:true}; }
     if (!/^[A-Za-z0-9_-]{40,100}$/.test(message.token || "")) return {error:"Invalid connection token"};

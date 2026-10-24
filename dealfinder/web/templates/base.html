@@ -4,14 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"400","swap":true},{"code":"[45]..","swap":false,"error":true}]}'>
-  <title>{% block title %}Dealfinder{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v=7">
+  <title>{% block title %}ConsoleHawk{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v=8">
+  <link rel="icon" href="/static/consolehawk-mark.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#192018">
   <script src="/static/htmx.min.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <aside class="sidebar">
-    <a class="brand" href="/" aria-label="Dealfinder home"><span class="brand-mark" aria-hidden="true">d<span></span></span>Dealfinder<span class="brand-period">.</span></a>
+    <a class="brand" href="/" aria-label="ConsoleHawk home"><img class="brand-mark" src="/static/consolehawk-mark.svg" width="34" height="34" alt=""><span class="brand-wordmark">Console<span class="brand-hawk">Hawk</span></span></a>
     <p class="nav-label">WORKSPACE</p>
     <nav aria-label="Main navigation">
       {% set current = request.url.path %}
@@ -23,12 +25,12 @@
   </aside>
   <div class="workspace">
     <header class="top">
-      <div class="workspace-label"><span class="eyebrow">AUCTION INTELLIGENCE</span><span class="workspace-private">Personal workspace</span></div>
+      <div class="workspace-label"><span class="eyebrow">CLASSIC CONSOLES. SHARP DEALS.</span><span class="workspace-private">Personal workspace</span></div>
       {% include "partials/header_controls.html" %}
     </header>
     <main id="main-content">
       {% block content %}{% endblock %}
-      <footer class="page-footer">Find the opportunity. Check the details.<span>Dealfinder · Local edition</span></footer>
+      <footer class="page-footer">Spot the classics. Hunt the deals.<span>ConsoleHawk · Local edition</span></footer>
     </main>
   </div>
 </body>
