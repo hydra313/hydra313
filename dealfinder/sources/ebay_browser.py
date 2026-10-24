@@ -143,6 +143,7 @@ class EbayBrowserSource:
         cutoff = self.clock() - timedelta(hours=2 * self.cfg.ebay_full_pass_hours)
         rows = self.conn.execute(
             "SELECT * FROM listings WHERE source = 'ebay' AND dismissed = 0"
+            " AND NOT (kind = 'game_lot' OR (kind = 'scan_only' AND category IS NULL))"
             " AND julianday(last_seen) >= julianday(?)", (cutoff.isoformat(),)).fetchall()
         if not rows:
             raise SourceNeedsAttention("Connect the eBay browser helper to collect keyless listings.")

@@ -13,7 +13,7 @@ import httpx
 
 from dealfinder import db
 from dealfinder.subscriptions import accepts
-from dealfinder.matcher import unrelated_accessory
+from dealfinder.matcher import unrelated_accessory, category_compatible
 from dealfinder.config import Config
 
 log = logging.getLogger(__name__)
@@ -135,10 +135,12 @@ class Notifier:
         return bool(self.cfg.discord_webhook_url)
 
     def notify(self, listing_id: int, reason: Reason, details: list[str]) -> bool:
+        if reason == "game_lot_deal":
+            return False
         if not self.cfg.notify_reasons.get(reason, False) or not self.enabled():
             return False
         row = db.get_listing(self.conn, listing_id)
-        if row is None or row["dismissed"] or unrelated_accessory(row["title"]) or not accepts(self.conn,row):
+        if row is None or row["dismissed"] or unrelated_accessory(row["title"]) or not category_compatible(row["title"],row["category"],row["kind"]) or not accepts(self.conn,row):
             return False
         now = self.clock()
         from dealfinder.pipeline import _ended

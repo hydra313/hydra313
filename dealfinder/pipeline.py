@@ -60,7 +60,6 @@ def ebay_queries(catalog: Catalog) -> list[str]:
         groups[product.category].append(product.discovery_query or product.ebay_query)
     groups["hardware_lot"] = [f"{b.ebay_query} lot" for b in catalog.enabled_bulk()
                               if b.source_product_id is None]
-    groups["game_lot"] = [p.ebay_lot_query for p in catalog.enabled_platforms()]
     unique_groups = [list(dict.fromkeys(queries)) for queries in groups.values()]
     interleaved = (query for row in zip_longest(*unique_groups) for query in row if query is not None)
     return list(dict.fromkeys(interleaved))

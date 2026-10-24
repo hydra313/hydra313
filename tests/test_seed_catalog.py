@@ -205,7 +205,10 @@ def test_live_hardware_titles(catalog, title, key, quantity):
 ])
 def test_lot_collisions(catalog, title, kind, key):
     result = _classify(title, catalog)
-    assert result is not None and (result.kind, result.key) == (kind, key)
+    if kind == 'game_lot':
+        assert result is None  # retired from the production catalog
+    else:
+        assert result is not None and (result.kind, result.key) == (kind, key)
 
 
 @pytest.mark.parametrize("title, key", [
@@ -494,4 +497,43 @@ def test_collectible_hardware_remains_eligible(title, catalog):
  'Microsoft Original Limited Green Edition Xbox Console Tested Rare non Halo',
 ])
 def test_ordinary_consoles_with_franchise_games_are_not_premium_edition_hardware(title,catalog):
+    assert _classify(title,catalog) is None
+
+@pytest.mark.parametrize('title', [
+ 'ASUS ROG XG Mobile eGPU Dock RTX 4090 16GB GDDR6 (GC33Y-059)',
+ 'Vintage Vivitar PZ 3090 35mm Point-and-Shoot Film Camera',
+ 'Nikon Coolpix 4070 Digital Camera',
+ 'RTX 4090 External GPU Enclosure Dock',
+ 'Lot of 3 ASUS XG Mobile RTX 4090 eGPU Docks',
+])
+def test_cameras_and_external_mobile_gpu_systems_are_not_desktop_cards(title,catalog):
+    assert _classify(title,catalog) is None
+    assert match_single(title,catalog.products) is None
+
+
+def test_production_catalog_cannot_enable_retired_game_lots(catalog):
+    assert catalog.platforms  # retained for console-name/quantity masks
+    assert not catalog.enabled_platforms()
+    assert _classify('Lot of 20 PS2 games',catalog) is None
+
+@pytest.mark.parametrize('title', [
+ 'HP Omen 17t-ck200 17 inch RTX 4090 i7-13700HX 240Hz 16GB DDR5 RAM 2.5TB SSD',
+ 'Razer Blade 16 RTX 4090 24GB Gaming Computer',
+ 'Dell XPS 17 9730 RTX 4070 i9 13900H',
+])
+def test_mobile_computers_without_the_word_laptop_are_not_desktop_gpu_cards(title,catalog):
+    assert _classify(title,catalog) is None
+
+
+def test_gamepad_cannot_inherit_a_complete_anniversary_console_valuation(catalog):
+    title='Killscreen 1080-R Gray PS5 Pro Controller Retro PlayStation 5 30th Anniversary'
+    result=_classify(title,catalog)
+    assert result is None or result.category=='controller'
+
+@pytest.mark.parametrize('title', [
+ 'BOX & MANUALS! SPIDER-MAN 2 LIMITED EDITION PLAYSTATION 5 PS5 CONSOLE BOX & MAN!',
+ 'Nintendo Switch OLED Display Zelda Tears Of The Kingdom Cracked Display',
+ "Spider-Man 2 Collector's Limited Edition For Sony Playstation 5 PS5 Spiderman",
+])
+def test_packaging_broken_singles_and_games_for_a_console_are_not_complete_hardware(title,catalog):
     assert _classify(title,catalog) is None

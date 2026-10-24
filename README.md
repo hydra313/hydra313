@@ -15,7 +15,6 @@ http://127.0.0.1:8000.
 - **Bulk for-parts hardware lots:** broken consoles, controllers, GPUs and CPUs
   sold in bulk, to repair and resell. The expected profit accounts for repair
   cost and success rate.
-- **Working video game lots:** priced per game against market value per game.
 
 The YAML files in `catalog/` are the seed lists. The Catalog page lets you turn
 products on or off, set a target max price per product, tune repair cost and
@@ -178,7 +177,7 @@ requires a registered application and an authorization-code exchange.
 
 ## Search and sorting
 
-Deals, Bulk lots and Game lots share title/model/edition search, brand, console /
+Deals and Bulk lots share title/model/edition search, brand, console /
 platform, condition, minimum/maximum current price and deal-rating filters. Site,
 category and existing lot-platform filters still work together with these controls.
 Console matching uses catalog identities first so a bundled game's name does not
@@ -235,7 +234,6 @@ When a Discord channel is connected or `DISCORD_WEBHOOK_URL` is set, alerts are 
 
 - target hits (a listing at or below the max price you set for a product on the Catalog page),
 - hardware-lot deals,
-- game-lot deals.
 
 Plain resale deals (a single item priced below market) are **off by default**.
 Enable **Single-item deals** under Connections → Discord. To alert only for
@@ -320,3 +318,16 @@ and from saved results. A console sold with its ordinary controller or box can
 still match. PS2 model/edition aliases cover seller wording such as Hyakushiki,
 Sakura Pink and SCPH-77000PK. Explicitly used items cannot inherit a brand-new
 valuation. Contaminated old comparison caches are recomputed from retained evidence.
+
+## Hardware-focused scope
+
+Game lots have been retired: no game-lot discovery queries, page, catalog controls
+or Discord alert option remain. Existing game records stay in SQLite for history,
+but the app does not collect or price new game lots. Platform names remain internal
+for recognizing console generations and masking model numbers when counting hardware.
+Console bundles that include games can still match their console hardware.
+
+Cameras, camcorders, external GPU enclosures and docks, eGPUs and ASUS XG Mobile
+systems and mobile/laptop computers are not desktop GPU listings. Controllers
+are also prevented from inheriting complete-console valuations. These exclusions apply to new ingestion,
+historical search results, sold comparison caches and Discord alerts.

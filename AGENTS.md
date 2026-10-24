@@ -13,7 +13,6 @@ It looks for:
   and collectible consoles and controllers of any generation (e.g. the Xbox 360
   Halo 3 Special Edition);
 - **broken hardware lots**, valued as repair-and-resell;
-- **working video game lots.**
 
 Prices come from eBay sold listings. Paid photo analysis has been removed at the
 user’s request. Listing photos remain visible. Selected deals are sent to Discord.
@@ -24,6 +23,19 @@ user’s request. Listing photos remain visible. Selected deals are sent to Disc
 - **User-facing setup:** `README.md`
 
 ## Current state (as of 2026-10-24)
+
+Latest user scope: game lots are removed from the product. `load_catalog()` retains
+platform records for masking/console-family boundaries but forces them disabled,
+even over old DB overrides. Raw `load_seed()` and legacy pure valuation/scan helpers
+remain for archival tests; never expose their game-lot paths in the shipped app.
+Discovery excludes game-lot queries (including old custom configuration); game-lot
+alert reasons cannot send. Old page bookmarks redirect to Deals; platform override
+endpoints return 410. Preserve historical DB rows. Camera/camcorder titles, named laptop families/mobile HX CPUs, and
+eGPU/external GPU/XG Mobile docks are rejected by the shared title guard, including
+saved listings and contaminated sold caches. `category_compatible` also prevents
+gamepads from inheriting console identities; apply it to cached rows and alerts,
+not just new matches.
+
 
 The October 24 refinement in `docs/consolehawk-refinement-2026-10-24.md` supersedes
 older photo-scan UI, all-results defaults, fixed-price-only capture and single-page
@@ -51,7 +63,7 @@ pending because Windows UI automation could not verify its current tab URL.
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 1049 Python tests and 12 browser-helper workflow tests pass.
+- 1066 Python tests and 12 browser-helper workflow tests pass.
 - Public app name is ConsoleHawk. The UI uses olive armor green and warm visor
   orange, with an original SVG hawk mark and favicon. Keep deal-rating semantic
   colors distinct. Internal module, DB filenames, pairing headers and alarm IDs

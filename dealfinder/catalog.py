@@ -235,5 +235,5 @@ def load_catalog(catalog_dir: Path, conn: sqlite3.Connection, cfg: Config) -> Ca
     return Catalog(
         products=products,
         bulk=[apply_bulk(b) for b in bulk],
-        platforms=[apply_platform(p) for p in seed.platforms],
+        platforms=[replace(p, enabled=False) for p in seed.platforms],  # names still mask console quantities
     )

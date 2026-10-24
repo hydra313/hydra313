@@ -87,7 +87,6 @@ def needed_queries(conn, catalog, cfg, now) -> list[str]:
     """Request sold evidence only for live catalog matches actually on the dashboard."""
     products = {p.id: p for p in catalog.enabled_products()}
     bulk = {b.id: b for b in catalog.enabled_bulk()}
-    platforms = {p.id: p for p in catalog.enabled_platforms()}
     captured = snapshots(conn)
     queries = []
     cutoff = (now - timedelta(hours=2 * cfg.ebay_full_pass_hours)).isoformat()
@@ -99,8 +98,6 @@ def needed_queries(conn, catalog, cfg, now) -> list[str]:
     for row in rows:
         if row["kind"] == "single" and row["key"] in products:
             query = products[row["key"]].ebay_query
-        elif row["category"] is None and row["key"] in platforms:
-            query = platforms[row["key"]].ebay_lot_query
         elif row["key"] in bulk:
             query = bulk[row["key"]].ebay_query
         else:

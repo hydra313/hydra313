@@ -520,11 +520,11 @@ def save_value(conn, key, condition, value, comps=(), count=6, low=False):
 
 
 def test_nav_links_on_every_page(client):
-    for path in ("/", "/lots/hardware", "/lots/games", "/catalog", "/connections"):
+    for path in ("/", "/lots/hardware", "/catalog", "/connections"):
         html = client.get(path).text
         nav = LexborHTMLParser(html).css_first('nav[aria-label="Main navigation"]')
         for href, label in (("/", "Deals"), ("/lots/hardware", "Bulk lots"),
-                            ("/lots/games", "Game lots"), ("/catalog", "Catalog"),
+                            ("/catalog", "Catalog"),
                             ("/connections", "Connections")):
             link = nav.css_first(f'a[href="{href}"]')
             assert link is not None and label in link.text()
@@ -569,37 +569,12 @@ def test_hardware_lots_page(client, conn):
     assert "<html" not in partial.text and row_html(partial.text, find) is not None
 
 
-def test_game_lots_page_per_game_columns(client, conn):
-    client = AllListingsClient(client)
-    ps2 = seed_lot(conn, "g1", kind="game_lot", key="ps2", category=None, quantity=20,
-                   price=40.0, profit=55.0, end_in_h=30, title="20 PS2 games lot")
-    n64 = seed_lot(conn, "g2", kind="game_lot", key="n64", category=None, quantity=8,
-                   price=60.0, end_in_h=2)
-    find = seed_lot(conn, "g3", kind="game_lot", key="ps2", category=None, quantity=10,
-                    price=50.0, deal=False, end_in_h=50)
-    add_scan(conn, find, lot=True)
-    hw = seed_lot(conn, "h1")
-    save_value(conn, "ps2", "per_game", 5.5)
-
-    html = client.get("/lots/games").text
-    row = row_html(html, ps2)
-    assert "PlayStation 2" in row  # platform name
-    assert re.search(r">\s*20\s*<", row)  # game count
-    assert "$3.00" in row  # cost per game: (40 + 20) / 20
-    assert "$5.50" in row  # market per game
-    assert "$55.00" in row  # expected profit
-    assert "💎" in row_html(html, find) and "💎" not in row
-    assert row_html(html, hw) is None
-
-    def ids(params):
-        page = client.get("/lots/games", params=params).text
-        return {i for i in (ps2, n64, find) if row_html(page, i) is not None}
-
-    assert ids({}) == {ps2, n64, find}
-    assert ids({"platform": "ps2"}) == {ps2, find}
-    assert ids({"ending_within_h": "3"}) == {n64}
-    assert ids({"photo_finds_only": "1"}) == {find}
-    assert ids({"platform": "", "ending_within_h": ""}) == {ps2, n64, find}
+def test_retired_game_lot_page_redirects_without_rendering_old_results(client,conn):
+    lid=seed_lot(conn,'old-game',kind='game_lot',key='ps2',category=None,quantity=20)
+    response=client.get('/lots/games?show_all=true',follow_redirects=False)
+    assert response.status_code==303 and response.headers['location']=='/'
+    assert row_html(client.get('/?show_all=true').text,lid) is None
+    assert db.get_listing(conn,lid) is not None  # history is preserved
 
 
 def test_listing_detail_shows_comps_and_scan_items(client, conn):
@@ -712,7 +687,7 @@ def test_catalog_page_sections(client, conn):
     bulk = catalog_row(html, "bulk", "ps2-console")
     assert "$45.00" in bulk and "low" in bulk
     assert 'placeholder="25.00"' in bulk and 'placeholder="0.60"' in bulk  # defaults
-    assert "$5.50" in catalog_row(html, "platform", "ps2")
+    assert catalog_row(html, "platform", "ps2") is None
     assert 'hx-post="/catalog/custom/product"' in html
     assert 'hx-post="/catalog/custom/bulk"' in html
 
@@ -745,7 +720,7 @@ def test_catalog_override_saved(client, cfg, conn):
     assert (bulk.repair_cost, bulk.success_rate) == (30.0, 0.5)
 
     resp = client.post("/catalog/platform/ps2", data={})  # unchecked switch: disabled
-    assert resp.status_code == 200
+    assert resp.status_code == 410
     assert not load_catalog(cfg.catalog_dir, conn, cfg).platform("ps2").enabled
 
     # A blank field clears the override back to the default.
@@ -959,8 +934,7 @@ def test_show_all_exposes_unknown_quantity_lots_for_manual_scan(client, conn):
     conn.execute("UPDATE listings SET is_deal = 0, total_cost = NULL WHERE id IN (?, ?)",
                  (hardware, games))
     conn.commit()
-    for path, included, excluded in (("/lots/hardware", hardware, games),
-                                      ("/lots/games", games, hardware)):
+    for path, included, excluded in (("/lots/hardware", hardware, games),):
         assert row_html(client.get(path, params={"show_all": "false"}).text, included) is None
         html = client.get(path, params={"show_all": "true"}).text
         assert row_html(html, included) is not None
@@ -971,7 +945,6 @@ def test_show_all_exposes_unknown_quantity_lots_for_manual_scan(client, conn):
 @pytest.mark.parametrize("path,kind,key,category", [
     ("/", "single", "rtx-4090", "gpu"),
     ("/lots/hardware", "hardware_lot", "ps2-console", "console"),
-    ("/lots/games", "game_lot", "ps2", None),
 ])
 def test_show_all_defaults_and_explicit_checkbox_values(client, conn, path, kind, key, category):
     lid = (seed(conn, "default-all", deal=False) if kind == "single" else
@@ -1167,7 +1140,6 @@ def test_browser_site_rotation_and_saved_alert_preferences(client,cfg,conn):
 
 @pytest.mark.parametrize('path,kind,key,condition', [
     ('/lots/hardware','hardware_lot','ps2-console','for_parts'),
-    ('/lots/games','game_lot','ps2','unknown'),  # no per-game condition evidence in this lot
 ])
 def test_shared_filters_apply_to_lot_pages_and_partial_refreshes(client,conn,path,kind,key,condition):
     client = AllListingsClient(client)
@@ -1379,3 +1351,52 @@ def test_large_result_sets_are_paginated_without_losing_matches(client,conn):
     second=client.get('/?show_all=true&page=2').text
     assert row_html(second,ids[-1]) and row_html(second,ids[0]) is None
     assert 'Page 2 of 2' in second and '101 matching active listings' in second
+
+@pytest.mark.parametrize('title,key', [
+ ('ASUS ROG XG Mobile eGPU Dock RTX 4090 16GB GDDR6 (GC33Y-059)','rtx-4090'),
+ ('Vintage Vivitar PZ 3090 35mm Point-and-Shoot Film Camera','rtx-3090'),
+ ('HP Omen 17t-ck200 RTX 4090 i7-13700HX 17 inch','rtx-4090'),
+])
+def test_wrong_product_types_are_hidden_from_saved_results_and_invalidate_values(client,conn,title,key):
+    lid=seed(conn,'wrong-'+key,key=key,title=title,profit=9999)
+    db.save_market_value(conn,MarketValue(key,'used',3000,9,'sold_average',False,now_utc()),
+                         [Comp(title,3000,None,'https://www.ebay.com/itm/123456789012',None)])
+    assert row_html(client.get('/?show_all=true').text,lid) is None
+    assert db.get_market_value(conn,key,'used') is None
+
+
+def test_game_lot_feature_is_retired_from_navigation_catalog_alerts_and_ingestion(client,cfg,conn):
+    from dataclasses import replace
+    from dealfinder.catalog import load_catalog
+    for path in ('/','/connections','/catalog'):
+        html=client.get(path).text
+        assert 'href="/lots/games"' not in html and 'Game lot deals' not in html
+        assert 'Game platforms' not in html
+    response=client.get('/lots/games',follow_redirects=False)
+    assert response.status_code==303 and response.headers['location']=='/'
+    assert client.post('/catalog/platform/ps2',data={'enabled':'true'}).status_code==410
+    db.set_override(conn,'platform_overrides','ps2',enabled=True)
+    assert not load_catalog(cfg.catalog_dir,conn,cfg).enabled_platforms()
+    factory=default_pipeline_factory(cfg)
+    try:
+        pipeline=factory(conn)
+        listing=Listing('ebay','retired-games','Lot of 20 PS2 games','https://www.ebay.com/itm/123456789012',10,0,True,[],False,None,observed_at=now_utc())
+        assert pipeline.import_listings([listing])==0
+        assert conn.execute("SELECT COUNT(*) FROM listings WHERE source_id='retired-games'").fetchone()[0]==0
+    finally:
+        factory.close()
+
+
+@pytest.mark.parametrize('title',[
+    'Killscreen 1080-R Gray PS5 Pro Controller Retro PlayStation 5 30th Anniversary',
+    'BOX & MANUALS! SPIDER-MAN 2 LIMITED EDITION PLAYSTATION 5 PS5 CONSOLE BOX & MAN!',
+    'Nintendo Switch OLED Display Zelda Tears Of The Kingdom Cracked Display',
+    "Spider-Man 2 Collector's Limited Edition For Sony Playstation 5 PS5 Spiderman",
+])
+def test_cached_non_console_items_cannot_use_console_comparisons(client,conn,title):
+    key='ps5-30th-anniversary'
+    lid=seed(conn,'wrong-console',key=key,category='console',title=title,price=100,profit=999)
+    db.save_market_value(conn,MarketValue(key,'used',1200,8,'sold_average',False,now_utc()),
+                         [Comp(title,1200,None,'https://www.ebay.com/itm/123456789012',None)])
+    assert row_html(client.get('/?show_all=true').text,lid) is None
+    assert db.get_market_value(conn,key,'used') is None

@@ -17,7 +17,7 @@
     <p class="nav-label">WORKSPACE</p>
     <nav aria-label="Main navigation">
       {% set current = request.url.path %}
-      {% for href, label, symbol in [('/', 'Deals', '◈'), ('/lots/hardware', 'Bulk lots', '▦'), ('/lots/games', 'Game lots', '◫'), ('/catalog', 'Catalog', '≡'), ('/connections', 'Connections', '↻')] %}
+      {% for href, label, symbol in [('/', 'Deals', '◈'), ('/lots/hardware', 'Bulk lots', '▦'), ('/catalog', 'Catalog', '≡'), ('/connections', 'Connections', '↻')] %}
       <a href="{{ href }}"{% if current == href %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ symbol }}</span>{{ label }}</a>
       {% endfor %}
     </nav>

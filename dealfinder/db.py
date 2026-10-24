@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Collection, Literal, get_args
 
-from dealfinder.matcher import unrelated_accessory
+from dealfinder.matcher import unrelated_accessory, category_compatible
 
 from dealfinder.models import (
     Category, Classified, Comp, Listing, MarketValue, ScanResult, Scored,
@@ -351,7 +351,7 @@ def query_listings(
         f" WHERE {' AND '.join(where)}"
         " ORDER BY l.is_target_hit DESC, photo_find DESC, l.rank_score DESC, l.id"
     )
-    return [r for r in conn.execute(sql, params).fetchall() if not unrelated_accessory(r["title"])]
+    return [r for r in conn.execute(sql, params).fetchall() if not unrelated_accessory(r["title"]) and category_compatible(r["title"],r["category"],r["kind"])]
 
 
 def dismiss_listing(conn: sqlite3.Connection, listing_id: int) -> None:
@@ -465,9 +465,12 @@ def get_market_value(
         ).fetchone()
     if row is None:
         return None
-    if table == 'market_values' and any(unrelated_accessory(c['title']) for c in conn.execute(
-            'SELECT title FROM comps WHERE key = ? AND condition = ?', (key,condition))):
-        return None  # recompute contaminated historical comparisons, keep the audit rows
+    if table == 'market_values':
+        category_row=conn.execute("SELECT category FROM listings WHERE key=? AND kind='single' LIMIT 1",(key,)).fetchone()
+        category=category_row['category'] if category_row else None
+        if any(unrelated_accessory(c['title']) or not category_compatible(c['title'],category)
+               for c in conn.execute('SELECT title FROM comps WHERE key=? AND condition=?',(key,condition))):
+            return None  # recompute contaminated comparisons while retaining the audit rows
     return MarketValue(
         key=key,
         condition=condition,

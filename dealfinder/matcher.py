@@ -36,6 +36,7 @@ GLOBAL_EXCLUDES: list[str] = [
     r"\bwon\W?t (turn on|power|post)\b",
     r"\bdead\b",
     r"\bdefective\b",
+    r"\bcracked (?:display|screen)\b",
     r"\bfaulty\b",
     r"\bartifact(s|ing)?\b",
     r"\bneeds repair\b",
@@ -96,6 +97,13 @@ _NON_HARDWARE = re.compile(
 @lru_cache(maxsize=32768)
 def unrelated_accessory(title: str) -> bool:
     text = normalize(title)
+    if re.search(r'\b(?:hp omen (?:15|16|17|18)[a-z]?|razer blade|dell xps|rog zephyrus|predator helios|msi (?:raider|stealth|titan)|thinkpad|elitebook)\b|\b\d{4,5}hx\b',text):
+        return True
+    if re.search(r'\b(?:e ?gpu|xg mobile|external (?:gpu|graphics)|(?:gpu|graphics card) (?:enclosure|dock)|mobile gpu)\b',text):
+        return True
+    if (re.search(r'\b(?:cameras?|camcorders?|dslr|vivitar|coolpix|powershot)\b',text)
+            and not re.search(r'\b(?:console|playstation|xbox|nintendo)\b',text)):
+        return True
     if _NON_HARDWARE.search(text) or re.search(r'\b(?:non|not|no) halo\b', text):
         return True
     console = re.search(r'\bconsoles?\b',text)
@@ -108,6 +116,29 @@ def unrelated_accessory(title: str) -> bool:
     return bool(re.search(r'\bbuttons?\b', text) and not re.search(
         r'\b(?:wireless|wired|programmable|remappable|back)\b.*\b(?:controller|gamepad)\b|'
         r'\b(?:controller|gamepad)\b.*\b(?:programmable|remappable|back) buttons?\b', text))
+
+
+@lru_cache(maxsize=32768)
+def category_compatible(title: str, category: str | None, kind: str = 'single') -> bool:
+    text=normalize(title)
+    condition_text=re.sub(r'\b(dead rising|red dead redemption|dead by daylight|dead space)\b','',text)
+    if kind == 'single' and any(re.search(pattern,condition_text) for pattern in GLOBAL_EXCLUDES):
+        return False
+    if category in ('gpu','cpu') and kind == 'single':
+        return not any(re.search(pattern,text) for pattern in CATEGORY_EXCLUDES[category])
+    if category == 'console':
+        if re.match(r'^(?:box|manuals?|packaging)\b',text):
+            return False
+        for_platform=re.search(r'\bfor (?:the )?(?:sony )?(?:playstation ?[1-5]|ps[1-5])\b',text)
+        if for_platform and not re.search(r'\b(?:console|system|unit)\b',text[:for_platform.start()]):
+            return False
+        controller=re.search(r'\b(?:controllers?|gamepads?|dualsense|dualshock|joy ?cons?)\b',text)
+        hardware=re.search(r'\b(?:consoles?|systems?|units?)\b',text)
+        storage=re.search(r'\b\d+ ?(?:gb|tb)\b',text)
+        if controller and not (storage or hardware and hardware.start() < controller.start()):
+            return False
+    return True
+
 
 _NEW_IN_TITLE = re.compile(
     r"\bsealed\b|\bnew in box\b|\bnib\b|\bbnib\b|\bbrand new\b|\bfactory sealed\b"
@@ -155,6 +186,7 @@ def match_single(
         return None
     matches = [
         (p, m) for p in products if p.enabled and not p.required_tokens
+        and category_compatible(title,p.category)
         and (p.category != "cpu" or cpu_brand_compatible(title_norm, p.ebay_query))
         and (m := re.search(p.match, title_norm))
     ]
@@ -163,7 +195,7 @@ def match_single(
     if not matches:
         head = primary_title(edition_text(title))
         tokens = set(re.findall(r'\w+', head))
-        matches = [(p, m) for p in products if p.required_tokens
+        matches = [(p, m) for p in products if p.required_tokens and category_compatible(title,p.category)
                    and (m := match_edition(p, head, tokens))]
         matches = [(p, m) for p, m in matches if not any(
             p.match == q.match and set(p.required_tokens) < set(q.required_tokens)

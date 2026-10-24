@@ -352,3 +352,23 @@ def test_item_subscriptions_filter_before_claim_and_can_be_changed(conn,http):
     assert notifier.notify(listing_id,'target_hit',[])
     assert route.call_count == 1
     assert not notifier.notify(listing_id,'target_hit',[])
+
+
+def test_retired_game_lot_alerts_cannot_be_reenabled_by_saved_preferences(conn,http):
+    cfg=Config(discord_webhook_url=WEBHOOK)
+    cfg.notify_reasons['game_lot_deal']=True
+    lid=add(conn,make_listing())
+    notifier=Notifier(conn,cfg,http,clock=lambda:T0)
+    assert not notifier.notify(lid,'game_lot_deal',[])
+    assert conn.execute('SELECT COUNT(*) FROM notifications').fetchone()[0]==0
+
+
+@pytest.mark.parametrize('title', [
+ 'Vintage Vivitar PZ 3090 35mm Point-and-Shoot Film Camera',
+ 'ASUS ROG XG Mobile eGPU Dock RTX 4090 16GB',
+])
+def test_saved_false_gpu_matches_cannot_claim_or_send_alerts(conn,http,title):
+    lid=add(conn,make_listing(title=title))
+    notifier=Notifier(conn,Config(discord_webhook_url=WEBHOOK),http,clock=lambda:T0)
+    assert not notifier.notify(lid,'target_hit',[])
+    assert conn.execute('SELECT COUNT(*) FROM notifications').fetchone()[0]==0

@@ -85,7 +85,7 @@ def test_overrides_applied(catalog_dir, conn):
     ps2 = cat.bulk_product("ps2-console")
     assert ps2.repair_cost == 12.0
     assert ps2.success_rate == 0.60  # untouched field falls back to category default
-    assert [p.id for p in cat.enabled_platforms()] == ["ps2"]
+    assert cat.enabled_platforms() == []  # game lots retired; masks remain
     assert cat.platform("snes").enabled is False
 
 

@@ -577,30 +577,8 @@ def game_lots(request: Request, platform: str | None = None,
               show_all: bool = False,
               source: str = "", search: BrowseFilters = Depends(),
               conn: sqlite3.Connection = Depends(get_conn)):
-    cfg = request.app.state.cfg
-    now = utc_now()
-    filters = {
-        "platform": platform or None,
-        "ending_within_h": _hours(ending_within_h),
-        "photo_finds_only": photo_finds_only,
-    }
-    rows = db.query_listings(conn, ["game_lot", "scan_only"], now, **filters,
-                             source=source or None,
-                             deals_only=False,
-                             stale_before=stale_before(cfg, now),
-                             hibid_before=hibid_snapshot_before(cfg, now))
-    filters["show_all"] = show_all
-    catalog = _catalog(conn, cfg)
-    items, options = browse([_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
-                             for r in rows if _is_game_row(r)], search)
-    items = visible_deals(items, show_all)
-    ctx = {"lots": items}
-    if _is_partial(request):
-        return _render(request, "partials/game_rows.html", ctx)
-    ctx.update(_header(request, conn))
-    ctx.update(filters={**filters, "source":source, **search.values()},
-               platforms=_platform_names(catalog), sites=SITE_NAMES, **available_options(options))
-    return _render(request, "game_lots.html", ctx)
+    return Response(status_code=303, headers={"Location":"/"})
+
 
 
 # --- listing detail and manual scans -------------------------------------------
@@ -759,7 +737,7 @@ async def discord_preferences(request: Request, conn: sqlite3.Connection = Depen
     if scope not in ("all", "selected"):
         raise HTTPException(400, "Unknown alert scope")
     db.set_setting(conn,"discord_item_scope",scope)
-    reasons={reason:form.get(reason)=='on' for reason in request.app.state.cfg.notify_reasons}
+    reasons={reason:reason != "game_lot_deal" and form.get(reason)=='on' for reason in request.app.state.cfg.notify_reasons}
     request.app.state.cfg.notify_reasons=reasons
     db.set_setting(conn,'discord_notify_reasons',json.dumps(reasons))
     return HTMLResponse('Alert preferences saved.')
@@ -1176,8 +1154,7 @@ def catalog_page(request: Request, q: str = '', page: int = Query(1, ge=1),
     ctx = {"catalog_error": catalog is None, 'query': q, "sections": [], "forms": [
         _custom_form("product"), _custom_form("bulk")]}
     if catalog is not None:
-        for table, title in (("product", "Products"), ("bulk", "Bulk products"),
-                             ("platform", "Game platforms")):
+        for table, title in (("product", "Products"), ("bulk", "Bulk products")):
             items = [item for item in _catalog_items(catalog, table)
                      if all(term in edition_text(item.name + ' ' + item.id + ' ' + item.match)
                             for term in terms)]
@@ -1260,6 +1237,8 @@ def update_catalog(request: Request, table: str, item_id: str, enabled: bool = F
                    max_price: str = Form(""), repair_cost: str = Form(""),
                    success_rate: str = Form(""), notify_item: bool = Form(False),
                    conn: sqlite3.Connection = Depends(get_conn)):
+    if table == "platform":
+        raise HTTPException(410, "Game lots have been removed")
     if table not in CATALOG_TABLES:
         raise HTTPException(status_code=404, detail="unknown catalog table")
     cfg = request.app.state.cfg

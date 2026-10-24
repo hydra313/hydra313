@@ -11,8 +11,16 @@ def test_console_searches_include_halo_ps2_and_all_catalog_families():
     assert len(queries)==len(set(queries))
 
 
-def test_console_priority_keeps_existing_hardware_and_game_lot_searches():
+def test_console_priority_keeps_hardware_lots_but_removes_game_lots():
     catalog=load_seed(Path('catalog'))
     queries=browser_queries(catalog)
-    assert all(p.ebay_lot_query in queries for p in catalog.enabled_platforms())
+    assert not any(p.ebay_lot_query in queries for p in catalog.enabled_platforms())
     assert all(f'{b.ebay_query} lot' in queries for b in catalog.enabled_bulk() if b.source_product_id is None)
+
+
+def test_legacy_game_queries_are_filtered_from_custom_source_configuration():
+    from dealfinder.discovery import broad_queries
+    catalog=load_seed(Path('catalog'))
+    queries=broad_queries(catalog,['ps2 game lot','video game lot','games lot','console lot'])
+    assert 'console lot' in queries
+    assert not any('game lot' in q or 'games lot' in q for q in queries)

@@ -13,7 +13,7 @@ _BROAD_QUERIES = [
     "halo 3 xbox 360", "playstation 2", "ps2", "limited edition console",
     "special edition console", "rtx", "geforce", "ryzen", "intel core", "ps5", "xbox series",
     "switch oled", "dualsense", "limited edition controller", "console lot",
-    "controller lot", "video game lot", "games lot", "limited edition console",
+    "controller lot", "limited edition console",
     "special edition console", "halo xbox 360",
     "playstation", "xbox", "nintendo", "game boy", "psp", "vita", "dreamcast",
     "sega", "gamecube", "n64", "snes", "wii", "3ds", "2ds", "ds lite",
@@ -98,7 +98,7 @@ class Config:
             "photo_find": True,
             "target_hit": True,
             "hardware_lot_deal": True,
-            "game_lot_deal": True,
+            "game_lot_deal": False,
             "resale_deal": False,
         })
 

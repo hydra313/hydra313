@@ -71,8 +71,6 @@ broad_queries:                  # automatic source queries; HiBid browser mode u
     - limited edition controller
     - console lot
     - controller lot
-    - video game lot
-    - games lot
     - limited edition console
     - special edition console
     - halo xbox 360
@@ -112,8 +110,6 @@ broad_queries:                  # automatic source queries; HiBid browser mode u
     - limited edition controller
     - console lot
     - controller lot
-    - video game lot
-    - games lot
     - limited edition console
     - special edition console
     - halo xbox 360
@@ -153,5 +149,5 @@ notify_reasons:                 # which kinds of finds send an alert
   photo_find: true
   target_hit: true
   hardware_lot_deal: true
-  game_lot_deal: true
+  game_lot_deal: false
   resale_deal: false

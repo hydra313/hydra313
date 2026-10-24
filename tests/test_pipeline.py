@@ -103,7 +103,8 @@ class FakeSource:
 
 
 class FakeMarket:
-    def __init__(self, item_values=None):
+    def __init__(self, item_values=None, bulk_value_amount=60):
+        self.bulk_value_amount = bulk_value_amount
         self.begin_runs = 0
         self.item_values = item_values or {}
         self.item_kinds: list[tuple[str, str]] = []
@@ -115,7 +116,7 @@ class FakeMarket:
         return mv(p.id, 1000.0)
 
     def bulk_value(self, b):
-        return mv(b.id, 60.0)
+        return mv(b.id, self.bulk_value_amount)
 
     def per_game_value(self, platform):
         return mv(platform.id, 10.0)
@@ -216,9 +217,8 @@ def sent_payloads(route):
 
 def test_ebay_queries():
     assert ebay_queries(CATALOG) == [
-        "rtx 4090", "ps2-console q lot", "snes game lot",
-        "rtx 4070", "xbox-360-console q lot", "ps2 game lot",
-        "nes game lot", "xbox-360 game lot",
+        "rtx 4090", "ps2-console q lot",
+        "rtx 4070", "xbox-360-console q lot",
     ]
 
 
@@ -228,10 +228,10 @@ def test_search_rotation_starts_with_every_category_before_second_gpu():
     catalog = Catalog(products=products, bulk=[_bulk("console-lot", "console", "console")],
                       platforms=[_plat("ps2", "ps2")])
     queries = ebay_queries(catalog)
-    assert queries[:6] == ["gpu 0", "cpu query", "console query", "controller query",
-                           "console-lot q lot", "ps2 game lot"]
-    assert queries[6] == "gpu 1"
-    assert len(queries) == len(set(queries)) == 45
+    assert queries[:5] == ["gpu 0", "cpu query", "console query", "controller query",
+                           "console-lot q lot"]
+    assert queries[5] == "gpu 1"
+    assert len(queries) == len(set(queries)) == 44
 
 
 def test_rotation_slice_near_equal_chunks():
@@ -246,11 +246,11 @@ def test_ebay_rotation_covers_all_queries(conn, cfg):
     cfg.refresh_minutes = 30  # exercise six equal slices over a three-hour pass
     ebay = FakeSource("ebay")
     p = make_pipeline(conn, cfg, {"ebay": ebay})
-    for _ in range(6):  # ceil(3 h * 60 / 30 min) = 6 slices
+    for _ in range(min(6,len(ebay_queries(CATALOG)))):  # ceil(3 h * 60 / 30 min) = 6 slices
         p.refresh()
     assert sorted(ebay.queries) == sorted(ebay_queries(CATALOG))
     assert len(ebay.queries) == len(ebay_queries(CATALOG))
-    assert db.get_setting(conn, "ebay_rotation_index") == "6"
+    assert db.get_setting(conn, "ebay_rotation_index") == str(min(6,len(ebay_queries(CATALOG))))
 
 
 def test_short_refresh_interval_never_produces_empty_api_search_slices(conn, cfg):
@@ -312,16 +312,16 @@ def test_refresh_stores_and_scores(conn, cfg, http, webhook):
     assert games["profit"] == pytest.approx(200 * 0.8675 - (8 + 0.4 * 20) - 60)
     assert games["is_deal"] == 1
 
-    # target_hit and game_lot_deal are on by default; resale_deal is off.
-    assert report.notified == 2
+    # Game lot alerts have been retired; this archival fixture only sends the target hit.
+    assert report.notified == 1
     titles = sorted(pl["embeds"][0]["title"] for pl in sent_payloads(webhook))
-    assert titles == ["Lot of 20 SNES games", "RTX 4090 Founders Edition 24GB"]
+    assert titles == ["RTX 4090 Founders Edition 24GB"]
     reasons = {r["reason"] for r in conn.execute("SELECT reason FROM notifications")}
-    assert reasons == {"target_hit", "game_lot_deal"}
+    assert reasons == {"target_hit"}
 
     p.refresh()
     assert market.begin_runs == 2
-    assert webhook.call_count == 2  # each listing notifies at most once per reason
+    assert webhook.call_count == 1  # each listing notifies at most once per reason
 
 
 def test_source_error_isolated(conn, cfg):
@@ -702,11 +702,11 @@ def test_text_deals_notified_before_scans(conn, cfg, http, webhook):
             return super().scan(image_urls, title)
 
     p = make_pipeline(conn, cfg, {"ebay": FakeSource("ebay", [
-        listing("games", "Lot of 20 SNES games", price=50, shipping=10)])},
-        scanner=OrderScanner(), http=http)
+        listing("hardware", "Lot of 10 PS2 consoles", price=20, shipping=10)])},
+        scanner=OrderScanner(), market=FakeMarket(bulk_value_amount=200), http=http)
     p.budget.set_scan_enabled(True)
     report = p.refresh()
-    assert seen_at_scan == [1]  # game_lot_deal was already sent when the scan ran
+    assert seen_at_scan == [1]  # hardware_lot_deal was already sent when the scan ran
     assert (report.scanned, report.notified) == (1, 1)
 
 
@@ -746,8 +746,8 @@ def test_restart_does_not_realert(conn, cfg, http, webhook, tmp_path):
     p = make_pipeline(conn, cfg, {"ebay": ebay}, scanner=FakeScanner(scan_result([CHRONO])),
                       market=market, http=http)
     p.budget.set_scan_enabled(True)
-    assert p.refresh().notified == 3  # target_hit, game_lot_deal, photo_find
-    assert webhook.call_count == 3
+    assert p.refresh().notified == 2  # target_hit and archived photo_find; game alerts removed
+    assert webhook.call_count == 2
 
     restarted = db.connect(tmp_path / "p.db")
     try:
@@ -759,17 +759,17 @@ def test_restart_does_not_realert(conn, cfg, http, webhook, tmp_path):
     finally:
         restarted.close()
     assert scanner.calls == []
-    assert webhook.call_count == 3
+    assert webhook.call_count == 2
 
 
 def test_price_change_does_not_realert(conn, cfg, http, webhook):
     ebay = FakeSource("ebay", _deal_and_find_listings(price=50))
     p = make_pipeline(conn, cfg, {"ebay": ebay}, http=http)
-    assert p.refresh().notified == 2
+    assert p.refresh().notified == 1
     ebay.listings = _deal_and_find_listings(price=30)
     assert p.refresh().notified == 0
     assert rows(conn)["games"]["total_cost"] == pytest.approx(40)
-    assert webhook.call_count == 2
+    assert webhook.call_count == 1
 
 
 # --- fix round 2: spend that cannot be recorded ------------------------------
@@ -965,23 +965,22 @@ def test_low_confidence_values_labelled_in_alerts(conn, cfg, http, webhook):
         listing("single", "RTX 4090 Founders Edition 24GB", price=600),
     ])
     p = make_pipeline(conn, cfg, {"ebay": ebay}, market=LowConfidenceMarket(), http=http)
-    assert p.refresh().notified == 4
+    assert p.refresh().notified == 3
     by_title: dict[str, list[str]] = {}
     for payload in sent_payloads(webhook):
         embed = payload["embeds"][0]
         by_title.setdefault(embed["title"], []).append(embed["description"])
     (hw,) = by_title["Lot of 10 PS2 consoles"]
     assert "low confidence (4 comps)" in hw and "active_bin" in hw
-    (games,) = by_title["Lot of 20 SNES games"]
-    assert "low confidence (2 comps)" in games and "active_bin" not in games
+    assert "Lot of 20 SNES games" not in by_title
     single = by_title["RTX 4090 Founders Edition 24GB"]
     assert len(single) == 2  # target_hit and resale_deal
     assert all("low confidence (3 comps)" in d for d in single)
 
 
 def test_confident_values_not_labelled(conn, cfg, http, webhook):
-    ebay = FakeSource("ebay", [listing("games", "Lot of 20 SNES games", price=50, shipping=10)])
-    p = make_pipeline(conn, cfg, {"ebay": ebay}, http=http)
+    ebay = FakeSource("ebay", [listing("hardware", "Lot of 10 PS2 consoles", price=20, shipping=10)])
+    p = make_pipeline(conn, cfg, {"ebay": ebay}, market=FakeMarket(bulk_value_amount=200), http=http)
     assert p.refresh().notified == 1
     assert "confidence" not in sent_payloads(webhook)[0]["embeds"][0]["description"]
 

@@ -27,7 +27,7 @@
   </section>
   <section class="connection-card">
     <span class="eyebrow">AUTOMATIC AUCTION SEARCH</span><h2>HiBid</h2>
-    <p>Searches GPUs, CPUs, consoles, controllers and game lots automatically. Only USD lots with shipping and a closing countdown are eligible.</p>
+    <p>Searches GPUs, CPUs, consoles and controllers automatically. Only USD lots with shipping and a closing countdown are eligible.</p>
     <p class="connection-state">{{ 'Needs attention' if hibid_helper.error else 'Last capture: ' + hibid_helper.captured_at if hibid_helper.captured_at else 'No automatic capture yet' }}</p>
     {% if hibid_helper.error %}<p class="error">{{ hibid_helper.error }}</p>{% endif %}
     <div class="row"><button data-connect-site="hibid" data-helper-token="{{ helper_token }}"{% if hibid_mode != 'browser' %} disabled{% endif %}>Connect HiBid</button><button data-stop-site="hibid">Stop HiBid</button><a href="https://hibid.com/login" target="_blank" rel="noopener noreferrer">Sign in to HiBid ↗</a></div>
@@ -58,7 +58,7 @@
       <label>Item selection<select name="item_scope"><option value="all"{% if item_scope == 'all' %} selected{% endif %}>All enabled catalog items</option><option value="selected"{% if item_scope == 'selected' %} selected{% endif %}>Selected catalog items only</option></select></label>
       <p><a href="/catalog">Choose individual items in the catalog</a> · {{ subscription_count }} selected. Also enable the matching alert type below.</p>
       <h3>Alert types</h3>
-      {% for id,label in [('resale_deal','Single-item deals'),('hardware_lot_deal','Hardware lot deals'),('game_lot_deal','Game lot deals'),('target_hit','Target price hits')] %}
+      {% for id,label in [('resale_deal','Single-item deals'),('hardware_lot_deal','Hardware lot deals'),('target_hit','Target price hits')] %}
       <label class="check"><input type="checkbox" name="{{ id }}"{% if notify_reasons.get(id) %} checked{% endif %}>{{ label }}</label>{% endfor %}
       <button type="submit">Save alert preferences</button><div id="alert-result" role="status"></div>
     </form>

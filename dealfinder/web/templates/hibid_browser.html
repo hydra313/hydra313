@@ -16,7 +16,7 @@
   <p>Prices expire at {{ snapshot.expires.astimezone().strftime('%Y-%m-%d %H:%M') }}.
     Expired prices are hidden from results and excluded from alerts and scans.</p>
   {% if snapshot.skipped %}<ul>{% for reason, count in snapshot.skipped.items() %}<li>{{ count }} skipped: {{ reason }}</li>{% endfor %}</ul>{% endif %}
-  <p><a href="/?source=hibid&amp;show_all=true">View imported HiBid listings</a> · <a href="/lots/hardware?show_all=true">Bulk lots</a> · <a href="/lots/games?show_all=true">Game lots</a></p>
+  <p><a href="/?source=hibid&amp;show_all=true">View imported HiBid listings</a> · <a href="/lots/hardware?show_all=true">Bulk lots</a></p>
   {% endif %}
 </section>
 <details><summary>Manual import fallback</summary>
