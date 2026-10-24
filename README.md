@@ -45,6 +45,11 @@ Then open http://127.0.0.1:8000. The first refresh starts immediately, and then
 one runs every 30 minutes (`refresh_minutes` in `config.yaml`). The header has
 a Pause button and a "Refresh now" button.
 
+The sidebar opens each workspace. **Scan budgets** in the header expands the
+spending controls; **Source status** expands connection notices and errors.
+Wide tables keep their headers and listing actions visible while scrolling.
+On a phone, listings appear as individual cards.
+
 On Windows, after installation, double-click **Start-Dealfinder.cmd** in the
 project folder. It starts the app in the background, waits for the dashboard,
 and opens your browser. Double-clicking again opens the running app. Keep the

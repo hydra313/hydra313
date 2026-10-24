@@ -43,6 +43,10 @@ Deals are sent to Discord.
 - The dashboard can show unpriced listings and unknown-quantity lots with
   **Show all listings**. Refresh completion updates the current filtered rows.
   Explicit Intel/AMD conflicts reject CPU matches, including hardware lots.
+- The UI uses a dark sidebar, light workspace and teal accents. Scan budgets
+  and source notices expand from the header. Desktop tables scroll within their
+  panels with sticky headers/actions; phone layouts use listing cards. All 66 web
+  tests pass, with desktop and 390px-wide browser checks across the main pages.
 
 ## Commands
 

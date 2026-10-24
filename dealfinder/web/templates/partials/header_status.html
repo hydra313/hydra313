@@ -7,10 +7,13 @@
     {% endfor %}
   </ul>
   {% if banners %}
+  <details class="source-notices">
+    <summary><span class="notice-dot" aria-hidden="true"></span>Source status <span class="notice-count">{{ banners|length }} {{ 'notice' if banners|length == 1 else 'notices' }}</span><span class="notice-toggle">View details <span aria-hidden="true">⌄</span></span></summary>
   <div class="banner" role="status">
     <ul>
       {% for b in banners %}<li class="{{ b.level }}">{{ b.text }}{% if b.link %} <a href="{{ b.link }}">{{ b.link_text }}</a>{% endif %}{% if b.listings %} (see {{ 'listing' if b.listings|length == 1 else 'listings' }} {% for id in b.listings %}<a href="/listing/{{ id }}">#{{ id }}</a>{% if not loop.last %}, {% endif %}{% endfor %}){% endif %}</li>{% endfor %}
     </ul>
   </div>
+  </details>
   {% endif %}
 </div>

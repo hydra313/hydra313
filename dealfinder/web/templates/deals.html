@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Deals · dealfinder{% endblock %}
 {% block content %}
-<h1>Deals</h1>
+<div class="page-heading"><div><span class="eyebrow">YOUR WATCHLIST</span><h1>Deals</h1><p>A closer look at your next opportunity.</p></div><span class="heading-icon" aria-hidden="true">◈</span></div>
 <form class="filters" hx-get="/" hx-target="#deal-rows" hx-trigger="change, submit, listings-updated from:body" hx-push-url="true">
   <label>Category
     <select name="category">
@@ -28,7 +28,7 @@
   {% include "partials/show_all.html" %}
 </form>
 <p class="muted">Show all listings includes items without a deal estimate. A missing market value does not mean an item is a bargain.</p>
-<table class="deals">
+<div class="table-wrap"><table class="deals">
   <thead>
     <tr>
       <th><span class="sr-only">Image</span></th><th>Title</th><th>Product</th><th>Condition</th>
@@ -39,5 +39,5 @@
   <tbody id="deal-rows">
     {% include "partials/listing_rows.html" %}
   </tbody>
-</table>
+</table></div>
 {% endblock %}

@@ -41,7 +41,7 @@
     <p class="muted">No market value yet.</p>
     {% endif %}
     {% if comps %}
-    <table class="deals comps">
+    <div class="table-wrap"><table class="deals comps">
       <thead><tr><th>Comp</th><th>Price</th><th>Sold</th><th>Condition</th></tr></thead>
       <tbody>
         {% for c in comps %}
@@ -53,7 +53,7 @@
         </tr>
         {% endfor %}
       </tbody>
-    </table>
+    </table></div>
     {% endif %}
   </section>
 
@@ -79,7 +79,7 @@
       </div>
       {% endif %}
       {% if scan.found %}
-      <table class="deals items">
+      <div class="table-wrap"><table class="deals items">
         <thead><tr><th>Item</th><th>Platform</th><th>Completeness</th><th>Qty</th><th>Confidence</th><th>Value</th><th>Photo</th></tr></thead>
         <tbody>
           {% for it in scan.found %}
@@ -94,7 +94,7 @@
           </tr>
           {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% elif scan.status == 'ok' %}
       <p class="muted">No items identified.</p>
       {% endif %}

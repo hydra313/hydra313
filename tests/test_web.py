@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from selectolax.lexbor import LexborHTMLParser
 
 from dealfinder import db
 from dealfinder.budget import Budget
@@ -230,7 +231,8 @@ def test_spend_shown_in_header(client, cfg, conn):
     lid = seed(conn, "s1")
     Budget(conn, cfg, local_now).record(lid, 1000, 500, 0.126)
     html = client.get("/").text
-    assert "spent today $0.13 / this month $0.13" in html
+    spend = LexborHTMLParser(html).css_first("#header-controls .spend")
+    assert " ".join(spend.text(separator=" ").split()) == "Today $0.13 / Month $0.13"
 
 
 def test_pause_toggle(client, cfg, conn):
@@ -502,12 +504,16 @@ def save_value(conn, key, condition, value, comps=(), count=6, low=False):
 
 
 def test_nav_links_on_every_page(client):
-    for path in ("/", "/lots/hardware", "/lots/games", "/catalog"):
+    for path in ("/", "/lots/hardware", "/lots/games", "/catalog", "/sources/hibid"):
         html = client.get(path).text
-        nav = re.search(r"<nav>.*?</nav>", html, re.DOTALL).group(0)
+        nav = LexborHTMLParser(html).css_first('nav[aria-label="Main navigation"]')
         for href, label in (("/", "Deals"), ("/lots/hardware", "Bulk lots"),
-                            ("/lots/games", "Game lots"), ("/catalog", "Catalog")):
-            assert f'<a href="{href}"' in nav and label in nav
+                            ("/lots/games", "Game lots"), ("/catalog", "Catalog"),
+                            ("/sources/hibid", "HiBid import")):
+            link = nav.css_first(f'a[href="{href}"]')
+            assert link is not None and label in link.text()
+        active = nav.css('a[aria-current="page"]')
+        assert len(active) == 1 and active[0].attributes["href"] == path
 
 
 def test_hardware_lots_page(client, conn):
