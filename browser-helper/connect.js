@@ -22,6 +22,6 @@ if (status && buttons.length) {
     status.textContent=site === "all" ? "All browser searches stopped." : `${site === "ebay" ? "eBay" : "HiBid"} searches stopped.`;
   });
   chrome.runtime.sendMessage({type:"status"}).then(state=>{
-    status.textContent=state?.enabled ? `Helper ${state.version} installed. Automatic search enabled for ${(state.sites || ["ebay"]).join(" and ")}.` : "Browser helper 1.2 installed. Ready to connect.";
+    status.textContent=state?.enabled ? `Helper ${state.version} installed. Automatic search enabled for ${(state.sites || ["ebay"]).join(" and ")}.` : "Browser helper 1.3 installed. Ready to connect.";
   }).catch(()=>{ status.textContent="Reload this page after updating the helper."; });
 }

@@ -3,11 +3,11 @@
 {% block content %}
 <div class="page-heading"><div><span class="eyebrow">NO API KEY NEEDED</span><h1>eBay browser helper</h1><p>Keep finding listings while your browser is open.</p></div><span class="heading-icon" aria-hidden="true">↻</span></div>
 <section class="import-status">
-  <h2>{{ 'API search configured' if api_mode else 'Keyless Buy It Now listings' }}</h2>
+  <h2>{{ 'API search configured' if api_mode else 'Keyless auction and Buy It Now listings' }}</h2>
   <p>The helper reads visible USD search cards in one background eBay tab, then sends matching listings and sold comparisons to this local app. It checks one search every 30 seconds, alternating listing discovery and missing sold evidence. Your PC, browser, and ConsoleHawk must stay running.</p>
   {% if helper.captured_at %}<p>Last capture: {{ helper.captured_at }} · {{ helper.usable }} usable listings · {{ helper.matched }} catalog matches.</p>{% endif %}
   {% if helper.error %}<p class="error">{{ helper.error }}</p>{% endif %}
-  <p>Live auctions need an API connection. Keyless listing collection uses Buy It Now prices. Sold searches may require you to sign in to eBay. Only dated sales from the last 90 days with a known price count; undisclosed accepted offers are excluded.</p>
+  <p>Auctions and Buy It Now listings work through the browser helper without an API key. Auction cards need a visible closing countdown. Sold searches may require you to sign in to eBay. Only dated sales from the last 90 days with a known price count; undisclosed accepted offers are excluded.</p>
   <a href="/?source=ebay&amp;show_all=true">View eBay listings</a>
 </section>
 <h2>One-time setup in Chrome or Edge</h2>
@@ -24,9 +24,9 @@
 </div>
 <p>If eBay asks you to sign in or complete verification, the helper stops and keeps its tab open. Finish that yourself there, then click Connect and start again. Pause in the header pauses automatic collection too.</p>
 <details><summary>Import a page manually</summary>
-  <p>Reload an eBay Buy It Now or sold search, copy its rendered results, and paste them below. Sold imports update pricing through the normal refresh and budget controls.</p>
+  <p>Reload an eBay auction, Buy It Now or sold search, copy its rendered results, and paste them below. Sold imports update pricing through the normal refresh process.</p>
   <form class="import-form" hx-post="/sources/ebay/import" hx-target="#ebay-import-result">
-    <label>Import type<select name="capture_kind"><option value="active">Buy It Now listings</option><option value="sold">Sold comparisons</option></select></label>
+    <label>Import type<select name="capture_kind"><option value="active">Auction and Buy It Now listings</option><option value="sold">Sold comparisons</option></select></label>
     <label>Exact search words (required for sold comparisons)<input name="query" maxlength="200" placeholder="For example: rtx 4090"></label>
     <label>Copied eBay results or HTML<textarea id="ebay-page" name="page_html" rows="7"></textarea></label>
     <button type="submit">Import eBay results</button><div id="ebay-import-result" role="status"></div>

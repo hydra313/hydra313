@@ -1,4 +1,4 @@
-# ConsoleHawk browser helper 1.2
+# ConsoleHawk browser helper 1.3
 
 1. Extract this folder somewhere permanent.
 2. In Chrome or Edge, open Extensions, enable Developer mode and Load unpacked
@@ -24,6 +24,6 @@ only visible listing facts and go only to 127.0.0.1:8000. No bids or orders are
 placed and no remote code or telemetry is loaded.
 
 HiBid accepts only USD lots with shipping and a closing countdown. Captures expire
-after 30 minutes. eBay accepts fixed-price USD cards and dated sold prices from
+after 30 minutes. eBay accepts USD auctions with visible countdowns, Buy It Now cards and dated sold prices from
 the last 90 days; undisclosed accepted offers are excluded. Sold searches can
 require user sign-in. Costs and premiums may be estimated; confirm before bidding.
