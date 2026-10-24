@@ -101,7 +101,7 @@ class Config:
             "resale_deal": False,
         })
 
-    # secrets (environment only)
+    # API secrets from the environment; Discord also supports Windows protected setup.
     ebay_client_id: str | None = None
     ebay_client_secret: str | None = None
     anthropic_api_key: str | None = None

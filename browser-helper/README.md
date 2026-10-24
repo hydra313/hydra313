@@ -1,26 +1,29 @@
-# Dealfinder eBay browser helper
+# Dealfinder browser helper 1.2
 
 1. Extract this folder somewhere permanent.
-2. In Chrome or Edge, open the Extensions page, enable Developer mode, and use
-   Load unpacked to select this folder (the folder containing manifest.json).
-3. Open http://127.0.0.1:8000/sources/ebay in that browser, reload, and click
-   Connect and start. Keep the browser and Dealfinder running.
+2. In Chrome or Edge, open Extensions, enable Developer mode and Load unpacked
+   this folder. Existing users: replace the files, click Reload on the extension,
+   and allow its new HiBid permission.
+3. Open http://127.0.0.1:8000/connections in that browser, reload, and click
+   Connect both sites. Individual Connect and Stop buttons are available too.
 
-The helper checks one catalog query every 30 seconds, with one background tab
-at a time. Chrome may delay alarms during sleep or heavy throttling. It stops
-on verification, unreadable search cards, or an import failure. Complete any
-verification yourself in the tab it leaves open, then reconnect. App Pause
-pauses new searches. Stop browser helper disables the helper's own loop.
+The helper checks one query every 30 seconds in one background tab, alternating
+across enabled sites. eBay jobs alternate Buy It Now discovery and needed sold
+comparisons. HiBid rotates configured catalog search words. No copying or manual
+imports are needed. Keep this PC, browser and Dealfinder running. App Pause stops
+new searches; browser sleep or throttling can delay checks.
 
-Visible USD Buy It Now cards and dated sold-search cards are collected. Missing
-sold evidence for live catalog matches alternates with new listing searches.
-Sold searches may require signing in to eBay yourself in this browser. Only sales
-from the last 90 days with disclosed prices are accepted. Auction closing times
-are not supplied. A missing resale estimate is not evidence of a bargain.
-Confirm current listing prices before buying.
+Verification, unreadable cards or import failures stop only the affected site.
+Its tab stays open for the user to finish verification; reconnect that site when
+ready. The helper never solves verification or replays authentication tokens.
 
-Permissions are limited to eBay and your local app, plus local storage and
-alarms. It reads no cookies, account pages, payment data or passwords; it places
-no orders or bids and sends captures only to 127.0.0.1:8000. Captures contain
-listing title, price, purchasing/shipping/condition text, item URL and image URL.
-Your other eBay tabs are not imported. No remote code or telemetry is loaded.
+Permissions cover eBay, HiBid and the local app, plus storage and alarms. Only
+helper-owned search tabs can send captures. Account pages, cookies, passwords,
+payment details and ordinary browsing tabs are not captured. Captures contain
+only visible listing facts and go only to 127.0.0.1:8000. No bids or orders are
+placed and no remote code or telemetry is loaded.
+
+HiBid accepts only USD lots with shipping and a closing countdown. Captures expire
+after 30 minutes. eBay accepts fixed-price USD cards and dated sold prices from
+the last 90 days; undisclosed accepted offers are excluded. Sold searches can
+require user sign-in. Costs and premiums may be estimated; confirm before bidding.

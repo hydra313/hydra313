@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 
-from dealfinder import db
+from dealfinder import db, connections
 from dealfinder.budget import Budget
 from dealfinder.catalog import Catalog, load_catalog
 from dealfinder.config import Config
@@ -30,11 +30,13 @@ from dealfinder.pipeline import SCAN_KINDS, stale_before, hibid_snapshot_before
 from dealfinder.pipeline import ebay_queries
 from dealfinder.sources import ebay_browser
 from dealfinder.sources import ebay_sold_browser
+from dealfinder.sources import hibid_browser
 from dealfinder.sources.ebay_sold import sold_url
 from dealfinder.sources.hibid_browser import (
     IMPORT_LOCK, MAX_PAGE_BYTES, parse_browser_page, save_snapshot, search_link, snapshot_status,
 )
 from dealfinder.web.app import local_now, utc_now
+from dealfinder.web.browse import BrowseFilters, browse, available_options
 
 log = logging.getLogger(__name__)
 
@@ -159,13 +161,15 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
     if cfg.hibid_mode == "browser":
         snapshot = snapshot_status(conn, cfg, now)
         state = snapshot["state"]
-        text = (f"HiBid browser snapshot: {snapshot['count']} usable lots. Prices expire after "
-                f"{cfg.hibid_snapshot_minutes} minutes; refresh the browser page and import again."
+        helper = _hibid_helper_status(conn)
+        text = (f"HiBid: {snapshot['count']} usable lots in the latest search. Automatic browser "
+                f"captures expire after {cfg.hibid_snapshot_minutes} minutes."
                 if state == "ready" else "HiBid needs your attention: "
-                + ("browser snapshot expired. Import fresh results."
-                   if state == "expired" else "browser import needed. Open a HiBid search first."))
-        banners.append({"level": "info" if state == "ready" else "warn", "text": text,
-                        "link": "/sources/hibid", "link_text": "HiBid browser import"})
+                + (helper.get('error') or "connect the browser helper for automatic searches; browser import is an optional fallback."))
+        if helper.get('error'):
+            text = 'HiBid automatic search needs attention: ' + str(helper['error'])[:200]
+        banners.append({"level": "info" if state == "ready" and not helper.get('error') else "warn", "text": text,
+                        "link": "/connections", "link_text": "HiBid connection"})
     failures = db.notification_failures_since(conn, now - timedelta(hours=24))
     if failures:
         noun = "notification" if failures == 1 else "notifications"
@@ -193,7 +197,8 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
                         "text": "ANTHROPIC_API_KEY not set: photo scanning is unavailable."})
     if not cfg.discord_webhook_url:
         banners.append({"level": "info",
-                        "text": "DISCORD_WEBHOOK_URL not set: Discord notifications are off."})
+                        "text": "Discord alerts are off. Connect a channel to receive deal alerts.",
+                        "link": "/connections", "link_text": "Connect Discord"})
     return banners
 
 
@@ -363,6 +368,7 @@ def _deal(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, names: dict[s
         "image": _http_url(images[0]) if images else None,
         "product": names.get(row["key"], row["key"]),
         "condition": row["condition"] or "—",
+        "end_at": _parse_time(row["end_time"]),
         "site": SITE_NAMES.get(row["source"], row["source"]),
         "total_cost": row["total_cost"],
         "price": row["price"],
@@ -391,6 +397,7 @@ def _hours(value: str | None) -> float | None:
 def deals(request: Request, category: str | None = None, source: str | None = None,
           ending_within_h: str | None = None, new_only: bool = False,
           target_only: bool = False, show_all: bool = True,
+          search: BrowseFilters = Depends(),
           conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()
@@ -417,12 +424,13 @@ def deals(request: Request, category: str | None = None, source: str | None = No
         deals_only=not show_all,
         stale_before=stale_before(cfg, now), hibid_before=hibid_snapshot_before(cfg, now))
     names = _product_names(conn, cfg)
-    ctx = {"deals": [_deal(conn, cfg, r, names, new_since, now) for r in rows]}
+    items, options = browse([_deal(conn, cfg, r, names, new_since, now) for r in rows], search)
+    ctx = {"deals": items}
     if partial:
         return _render(request, "partials/listing_rows.html", ctx)
     db.set_setting(conn, LAST_VISIT, now.isoformat())
     ctx.update(_header(request, conn))
-    ctx.update(filters=filters, categories=CATEGORIES, sites=SITE_NAMES)
+    ctx.update(filters={**filters, **search.values()}, categories=CATEGORIES, sites=SITE_NAMES, **available_options(options))
     return _render(request, "deals.html", ctx)
 
 
@@ -481,6 +489,8 @@ def _lot(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, catalog: Catal
         "profit": row["profit"],
         "discount": row["discount_pct"],
         "time_left": _time_left(row["end_time"], now),
+        "end_at": _parse_time(row["end_time"]),
+        "condition": row["condition"] or ("for_parts" if row["kind"] == "hardware_lot" else "unknown"),
         "find": find,
         "snapshot_at": (_parse_time(row["last_seen"]).astimezone().strftime("%Y-%m-%d %H:%M")
                         if row["source"] == "hibid" else None),
@@ -497,21 +507,29 @@ def _lot(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, catalog: Catal
 
 @router.get("/lots/hardware", response_class=HTMLResponse)
 def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bool = True,
+                  category: str = "", source: str = "", ending_within_h: str = "",
+                  search: BrowseFilters = Depends(),
                   conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()
     rows = db.query_listings(conn, ["hardware_lot", "scan_only"], now,
+                             category=category.strip().casefold() or None, source=source or None,
+                             ending_within_h=_hours(ending_within_h),
                              photo_finds_only=photo_finds_only,
                              deals_only=not show_all,
                              stale_before=stale_before(cfg, now),
                              hibid_before=hibid_snapshot_before(cfg, now))
     catalog = _catalog(conn, cfg)
-    ctx = {"lots": [_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
-                    for r in rows if not _is_game_row(r)]}
+    items, options = browse([_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
+                             for r in rows if not _is_game_row(r)], search)
+    ctx = {"lots": items}
     if _is_partial(request):
         return _render(request, "partials/hardware_rows.html", ctx)
     ctx.update(_header(request, conn))
-    ctx.update(filters={"photo_finds_only": photo_finds_only, "show_all": show_all})
+    ctx.update(filters={"photo_finds_only": photo_finds_only, "show_all": show_all,
+                        "category":category.casefold(), "source":source,
+                        "ending_within_h":_hours(ending_within_h), **search.values()},
+               categories=CATEGORIES, sites=SITE_NAMES, **available_options(options))
     return _render(request, "hardware_lots.html", ctx)
 
 
@@ -519,6 +537,7 @@ def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bo
 def game_lots(request: Request, platform: str | None = None,
               ending_within_h: str | None = None, photo_finds_only: bool = False,
               show_all: bool = True,
+              source: str = "", search: BrowseFilters = Depends(),
               conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()
@@ -528,17 +547,20 @@ def game_lots(request: Request, platform: str | None = None,
         "photo_finds_only": photo_finds_only,
     }
     rows = db.query_listings(conn, ["game_lot", "scan_only"], now, **filters,
+                             source=source or None,
                              deals_only=not show_all,
                              stale_before=stale_before(cfg, now),
                              hibid_before=hibid_snapshot_before(cfg, now))
     filters["show_all"] = show_all
     catalog = _catalog(conn, cfg)
-    ctx = {"lots": [_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
-                    for r in rows if _is_game_row(r)]}
+    items, options = browse([_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
+                             for r in rows if _is_game_row(r)], search)
+    ctx = {"lots": items}
     if _is_partial(request):
         return _render(request, "partials/game_rows.html", ctx)
     ctx.update(_header(request, conn))
-    ctx.update(filters=filters, platforms=_platform_names(catalog))
+    ctx.update(filters={**filters, "source":source, **search.values()},
+               platforms=_platform_names(catalog), sites=SITE_NAMES, **available_options(options))
     return _render(request, "game_lots.html", ctx)
 
 
@@ -665,6 +687,65 @@ def scan_listing(request: Request, listing_id: int,
 
 
 # --- Keyless eBay browser helper -----------------------------------------------
+
+
+@router.get('/connections', response_class=HTMLResponse)
+def connections_page(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    cfg=request.app.state.cfg
+    ctx=_header(request,conn)
+    ctx.update(helper_token=request.app.state.browser_token, ebay_helper=ebay_browser.browser_status(conn),
+               hibid_helper=_hibid_helper_status(conn), discord_connected=bool(cfg.discord_webhook_url),
+               notify_reasons=cfg.notify_reasons,
+               hibid_mode=cfg.hibid_mode, message='')
+    response=_render(request,'connections.html',ctx)
+    response.headers['Cache-Control']='no-store'
+    response.headers['Referrer-Policy']='no-referrer'
+    return response
+
+
+@router.post('/connections/discord', response_class=HTMLResponse)
+def discord_connect(request: Request, webhook_url: str = Form('')):
+    try:
+        url=connections.validate_webhook(webhook_url)
+        connections.save_discord(request.app.state.cfg,url)
+    except (ValueError,OSError) as error:
+        # Validation/storage errors never contain the user-entered secret.
+        message=str(error) if isinstance(error,ValueError) else 'Could not save the connection. Check local file permissions.'
+        return _render(request,'partials/scan_status.html',{'error':True,'message':message},400)
+    return HTMLResponse('Discord connected. Alerts use this channel immediately. Your webhook is stored with Windows protection.',
+                        headers={'HX-Refresh':'true'})
+
+
+@router.post('/connections/discord/disconnect', response_class=HTMLResponse)
+def discord_disconnect(request: Request):
+    try:
+        connections.save_discord(request.app.state.cfg,'')
+    except (ValueError,OSError):
+        return HTMLResponse('Could not remove the saved connection. Check local file permissions.',status_code=400)
+    return HTMLResponse('Discord disconnected. Alerts are off.',headers={'HX-Refresh':'true'})
+
+
+@router.post('/connections/discord/test', response_class=HTMLResponse)
+def discord_test(request: Request):
+    from dealfinder.notify import Notifier
+    import httpx
+    cfg=request.app.state.cfg
+    if not cfg.discord_webhook_url:
+        return HTMLResponse('Connect a Discord channel first.',status_code=400)
+    with httpx.Client(timeout=15,follow_redirects=False) as http:
+        sent=Notifier(None,cfg,http)._deliver({'content':'Dealfinder is connected. Deal alerts will arrive in this channel.',
+                                              'allowed_mentions':{'parse':[]}})
+    return HTMLResponse('Test message sent.' if sent else 'Discord could not receive the test. Check the webhook and channel permissions.',
+                        status_code=200 if sent else 400)
+
+
+@router.post('/connections/discord/preferences', response_class=HTMLResponse)
+async def discord_preferences(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    form=await request.form(max_files=0,max_fields=6)
+    reasons={reason:form.get(reason)=='on' for reason in request.app.state.cfg.notify_reasons}
+    request.app.state.cfg.notify_reasons=reasons
+    db.set_setting(conn,'discord_notify_reasons',json.dumps(reasons))
+    return HTMLResponse('Alert preferences saved.')
 
 
 @router.get("/sources/ebay", response_class=HTMLResponse)
@@ -813,6 +894,98 @@ async def ebay_helper_results(request: Request, conn: sqlite3.Connection = Depen
 
 
 # --- HiBid browser-page imports ------------------------------------------------
+
+
+def _hibid_helper_status(conn):
+    try:
+        value = json.loads(db.get_setting(conn, hibid_browser.STATUS_KEY, '{}'))
+        return value if isinstance(value, dict) else {}
+    except ValueError:
+        return {}
+
+
+@router.post('/browser/hibid/next')
+def hibid_helper_next(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    cfg = request.app.state.cfg
+    with request.app.state.browser_lock:
+        if cfg.hibid_mode != 'browser' or Budget(conn,cfg,local_now).paused():
+            return {'paused':True, 'reason':'HiBid collection is paused or disabled'}
+        queries = list(dict.fromkeys(cfg.broad_queries.get('hibid', [])))
+        if not queries:
+            return {'paused':True, 'reason':'No HiBid search queries configured'}
+        try:
+            index = int(db.get_setting(conn,'hibid_browser_rotation','0'))
+        except ValueError:
+            index = 0
+        query = queries[index % len(queries)]
+        db.set_setting(conn,'hibid_browser_rotation',str(index+1))
+        status = {**_hibid_helper_status(conn), 'state':'searching', 'error':'',
+                  'query':query, 'connected_at':utc_now().isoformat()}
+        db.set_setting(conn,hibid_browser.STATUS_KEY,json.dumps(status))
+        return {'source':'hibid', 'kind':'active', 'query':query, 'url':search_link(query),
+                'position':index % len(queries)+1, 'total':len(queries)}
+
+
+@router.post('/browser/next')
+async def browser_helper_next(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    if len(await request.body()) > 4096:
+        raise HTTPException(413,'Helper request too large')
+    try:
+        data = await request.json()
+        sites = [s for s in ('ebay','hibid') if s in data.get('sites',[])]
+    except (ValueError,TypeError,AttributeError):
+        raise HTTPException(400,'Expected enabled sites') from None
+    if not sites:
+        return {'paused':True, 'reason':'No sites enabled'}
+    with request.app.state.browser_lock:
+        index = int(db.get_setting(conn,'browser_site_rotation','0'))
+        db.set_setting(conn,'browser_site_rotation',str(index+1))
+    for offset in range(len(sites)):
+        site = sites[(index+offset) % len(sites)]
+        job = await run_in_threadpool(hibid_helper_next if site == 'hibid' else ebay_helper_next,request,conn)
+        if not job.get('paused'):
+            return {**job,'source':site}
+    return {'paused':True,'reason':'Automatic collection paused or no searches available'}
+
+
+def _save_hibid_capture(request, conn, data):
+    at = datetime.fromisoformat(data.get('captured_at',''))
+    if at.tzinfo is None or not -timedelta(seconds=30) <= utc_now()-at <= timedelta(minutes=2):
+        raise ValueError('Capture must be from the last two minutes')
+    with request.app.state.browser_lock, IMPORT_LOCK:
+        status = {'query':str(data.get('query',''))[:120], 'connected_at':utc_now().isoformat()}
+        if data.get('error'):
+            status.update(state='needs_attention',error=str(data['error'])[:200])
+        else:
+            html = data.get('html','')
+            if not isinstance(html,str):
+                raise ValueError('Expected rendered listing HTML')
+            page = parse_browser_page(html,at)
+            matched = request.app.state.runner.build_pipeline(conn).import_listings(page.listings) if page.listings else 0
+            save_snapshot(conn,status['query'],page,at,matched)
+            status.update(state='ready',error='',captured_at=at.isoformat(),cards=page.cards,
+                          usable=len(page.listings),matched=matched,skipped=page.skipped)
+            run = db.start_run(conn,'hibid',at)
+            db.finish_run(conn,run,'ok',len(page.listings),'Automatic browser capture',utc_now())
+        db.set_setting(conn,hibid_browser.STATUS_KEY,json.dumps(status))
+        return status
+
+
+@router.post('/browser/hibid/results')
+async def hibid_helper_results(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    if request.app.state.cfg.hibid_mode != 'browser':
+        raise HTTPException(400,'HiBid browser collection is disabled')
+    if int(request.headers.get('content-length','0')) > MAX_PAGE_BYTES+65536:
+        raise HTTPException(413,'HiBid capture exceeds 5 MB')
+    if len(await request.body()) > MAX_PAGE_BYTES+65536:
+        raise HTTPException(413,'HiBid capture exceeds 5 MB')
+    try:
+        data = await request.json()
+        if not isinstance(data,dict):
+            raise ValueError('Expected capture object')
+        return {'ok':True, **await run_in_threadpool(_save_hibid_capture,request,conn,data)}
+    except (ValueError,TypeError) as error:
+        return JSONResponse({'error':str(error)[:200]},status_code=400)
 
 
 @router.get("/sources/hibid", response_class=HTMLResponse)

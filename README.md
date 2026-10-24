@@ -140,30 +140,58 @@ available on the same setup page; reload eBay before copying its results.
 
 For JavaScript workflow checks, run `node --test tests/browser_helper.test.cjs`.
 
-## HiBid browser import
+## Connections and automatic HiBid search
 
-HiBid's direct API currently returns HTTP 403, so the default mode imports
-results that you load in your normal browser. Open **HiBid import** in the
-dashboard, choose a search, and wait for lots to load. Complete any sign-in or
-verification in HiBid's tab. Press **Ctrl+A**, **Ctrl+C**, then paste into the
-import box and click **Import HiBid results**. Alternatively, save the loaded
-page as **Webpage, Complete** and upload its HTML file.
+Open **Connections** in the sidebar. Browser helper **1.2** supports both eBay and
+HiBid. Existing users should replace the helper files, reload the extension, allow
+its HiBid permission, reload Connections in that browser, and click **Connect both
+sites**. You can start or stop either site independently. ShopGoodwill already
+searches public listings automatically and needs no account connection.
 
-Only USD lots with shipping, a payable bid and a closing countdown are accepted.
-The app matches them against your catalog. Imports expire after 30 minutes;
-refresh HiBid and import again to update prices. Expired prices are hidden and
-excluded from scans and alerts. Importing itself sends no alerts and starts no
-paid scans. Shipping costs and premiums remain estimates; check the auction.
+The helper rotates searches automatically in one background tab every 30 seconds.
+No per-search copying or importing is needed. Keep the app and browser running.
+If a site requests sign-in or verification, its collection stops and keeps its tab
+open for you; the other enabled site continues. Complete verification yourself,
+then reconnect that site. App Pause suspends new searches on both sites.
 
-This is a manual browser capture, not unattended HiBid search. No cookies or raw
-page HTML are stored in the database. `hibid_mode` can be `browser` (default),
-`api` (legacy adapter) or `off`; `hibid_snapshot_minutes` accepts 1–120 minutes.
-See [the HiBid validation report](docs/hibid-browser-import.md).
+Only USD HiBid lots with shipping, a payable bid and a closing countdown are
+accepted. Captures expire after 30 minutes and are never renewed just by
+reprocessing them. Shipping costs and premiums remain estimates. Browser capture
+itself starts no paid scans or alerts; scheduled refreshes retain all budget and
+notification gates. Manual import remains available as a fallback. The legacy API
+is still blocked; no browser session tokens or cookies are replayed.
+
+For **Discord**, expand Connect Discord, copy a channel webhook from Discord's
+channel settings → Integrations → Webhooks, and paste it into the password field.
+On Windows this is saved using DPAPI for the current Windows user, outside SQLite
+and source archives. A saved connection takes effect without a restart and takes
+precedence over the environment variable. Disconnect disables it across restarts.
+Select your alert types and optionally click Send test message. Single-item deal
+alerts are opt-in; the existing default alert preferences are preserved.
+
+Discord account sign-in alone cannot choose an alert channel. Webhook setup avoids
+requiring users to register an OAuth application. Discord's alternative
+[webhook.incoming OAuth flow](https://discord.com/developers/docs/topics/oauth2)
+requires a registered application and an authorization-code exchange.
+
+## Search and sorting
+
+Deals, Bulk lots and Game lots share title/model/edition search, brand, console /
+platform, condition, minimum/maximum current price and deal-rating filters. Site,
+category and existing lot-platform filters still work together with these controls.
+Console matching uses catalog identities first so a bundled game's name does not
+change the detected console. Brand choices include chip makers and card vendors.
+
+Sort ascending or descending by condition, current price, estimated profit,
+profit margin (profit divided by total purchase cost), average sold value, deal
+rating or time left. Unknown values sort last in either direction. A lot's sold
+value uses its known quantity; missing quantities remain unknown. Search and sort
+choices survive automatic row refreshes, bookmarks and page reloads.
 
 ## API keys and the webhook (all optional)
 
 Everything is optional. A missing key disables only the feature that needs it,
-and the dashboard says so. Secrets are read from environment variables only,
+and the dashboard says so. API keys are read from environment variables; Discord can also use the protected Connections form,
 never from `config.yaml`.
 
 | Variable | Enables | Where to get it |
@@ -223,7 +251,7 @@ misconfiguration here cannot spend more than that limit.
 
 ## Discord alerts
 
-When `DISCORD_WEBHOOK_URL` is set, alerts are sent for:
+When a Discord channel is connected or `DISCORD_WEBHOOK_URL` is set, alerts are sent for:
 
 - photo finds (rare items or valuable lots found by scanning),
 - target hits (a listing at or below the max price you set for a product on the Catalog page),
@@ -255,9 +283,9 @@ Parts of this app depend on sites that give no stability guarantees.
   verified against live responses on October 23, 2026. Requests include explicit
   price bounds and exclude pickup-only listings. Actual shipping still needs to
   be checked on the seller's listing; the dashboard labels shipping estimates.
-- **HiBid** defaults to browser import, verified with real copied results on
-  October 23, 2026. The legacy API still returns HTTP 403. Browser imports require
-  manual refreshes and depend on the visible card markup.
+- **HiBid** uses automatic browser-helper search after one-time connection.
+  Live card selectors were checked on October 24, 2026. The legacy API remains
+  blocked; browser verification must be completed by the user when requested.
 - **eBay sold prices** (the market values) are scraped from eBay's public
   sold-listings page, whose markup changes from time to time. The live check
   returned HTTP 403. A block stops further sold-price requests for that refresh

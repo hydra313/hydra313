@@ -128,6 +128,8 @@ class Notifier:
             _redactor.secrets.add(cfg.discord_webhook_url)
 
     def enabled(self) -> bool:
+        if self.cfg.discord_webhook_url:
+            _redactor.secrets.add(self.cfg.discord_webhook_url)
         return bool(self.cfg.discord_webhook_url)
 
     def notify(self, listing_id: int, reason: Reason, details: list[str]) -> bool:
@@ -169,8 +171,12 @@ class Notifier:
         return resp is not None and resp.is_success
 
     def _post(self, payload: dict) -> httpx.Response | None:
+        url = self.cfg.discord_webhook_url
+        if not url:
+            return None
+        _redactor.secrets.add(url)
         try:
-            resp = self.http.post(self.cfg.discord_webhook_url, json=payload)
+            resp = self.http.post(url, json=payload)
         except Exception as e:  # noqa: BLE001 - a failed send must never stop a refresh
             log.warning("discord webhook request failed: %s", type(e).__name__)
             resp = None

@@ -14,6 +14,20 @@ T0 = datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc)
 WEBHOOK = "https://discord.com/api/webhooks/123/SECRET-TOKEN"
 
 
+@respx.mock
+def test_runtime_connection_change_is_effective_and_redacted(conn,http,caplog):
+    cfg=Config()
+    notifier=Notifier(conn,cfg,http,clock=lambda:T0)
+    assert not notifier.enabled()
+    cfg.discord_webhook_url=WEBHOOK
+    route=respx.post(WEBHOOK).respond(204)
+    caplog.set_level(logging.INFO,logger='httpx')
+    assert notifier.notify(add(conn,make_listing()),'target_hit',[])
+    assert route.call_count == 1 and 'SECRET-TOKEN' not in caplog.text
+    cfg.discord_webhook_url=None
+    assert not notifier.enabled()
+
+
 class FakeTime:
     """Injected clock + sleep: sleeping advances the clock instead of waiting."""
 

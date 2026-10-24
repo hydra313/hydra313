@@ -403,7 +403,7 @@ def test_banner_missing_keys(cfg, fake):
         banner = client.get("/").text
     assert "eBay keyless mode" in banner and "/sources/ebay" in banner
     assert "ANTHROPIC_API_KEY" in banner
-    assert "DISCORD_WEBHOOK_URL" in banner
+    assert "Connect Discord" in banner
 
     cfg.ebay_client_id = "id-secret-value"
     cfg.ebay_client_secret = "ebay-secret-value"
@@ -463,7 +463,7 @@ def test_default_factory_wires_optional_features(cfg, conn):
     assert set(pipeline.sources) == {"ebay", "shopgoodwill", "hibid"}
     assert pipeline.sources["ebay"].browser_assisted
     assert pipeline.scanner is None
-    assert pipeline.notifier is None
+    assert not pipeline.notifier.enabled()  # supports connecting a channel without restarting
 
     cfg.ebay_client_id = "id"
     assert default_pipeline_factory(cfg)(conn).sources["ebay"].browser_assisted
@@ -530,7 +530,7 @@ def test_nav_links_on_every_page(client):
         nav = LexborHTMLParser(html).css_first('nav[aria-label="Main navigation"]')
         for href, label in (("/", "Deals"), ("/lots/hardware", "Bulk lots"),
                             ("/lots/games", "Game lots"), ("/catalog", "Catalog"),
-                            ("/sources/hibid", "HiBid import")):
+                            ("/sources/hibid", "HiBid search")):
             link = nav.css_first(f'a[href="{href}"]')
             assert link is not None and label in link.text()
         active = nav.css('a[aria-current="page"]')
@@ -1141,6 +1141,90 @@ def test_expired_hibid_prices_hide_and_cannot_be_scanned(client, cfg, conn, fake
     assert fake.scanned == []
 
 # Keyless helper requests have a narrow, local capability; normal CSRF stays enforced.
+def test_hibid_helper_rotates_queries_imports_and_obeys_security_pause(client, cfg, conn, fake):
+    assert client.post('/browser/hibid/next').status_code == 403
+    headers = {'X-Dealfinder-Token':client.app.state.browser_token}
+    first = client.post('/browser/hibid/next', headers=headers).json()
+    second = client.post('/browser/hibid/next', headers=headers).json()
+    assert first['url'].startswith('https://hibid.com/lots?') and first['query'] != second['query']
+    html = (Path(__file__).parent / 'fixtures/hibid/browser_search.html').read_text(encoding='utf-8')
+    response = client.post('/browser/hibid/results', headers=headers,
+                          json={'query':first['query'], 'html':html, 'captured_at':now_utc().isoformat()})
+    assert response.status_code == 200 and response.json()['usable'] == 2
+    assert {l.source for l in fake.imported} == {'hibid'} and not fake.scanned
+    Budget(conn,cfg,local_now).set_paused(True)
+    assert client.post('/browser/hibid/next',headers=headers).json()['paused']
+
+
+def test_hibid_automatic_empty_search_continues_and_stale_capture_rejected(client, conn):
+    headers = {'X-Dealfinder-Token':client.app.state.browser_token}
+    for html in ('<p>No lots found</p>', '<div class="app-auction-lot-card"><a href="/lot/123">Pickup only</a></div>'):
+        response = client.post('/browser/hibid/results',headers=headers,
+                               json={'query':'rtx','html':html,'captured_at':now_utc().isoformat()})
+        assert response.status_code == 200 and response.json()['usable'] == 0
+    assert client.post('/browser/hibid/results',headers=headers,
+                       json={'html':'No lots found','captured_at':(now_utc()-timedelta(minutes=5)).isoformat()}).status_code == 400
+    assert client.post('/browser/hibid/results',headers=headers,json={'html':'Loading','captured_at':now_utc().isoformat()}).status_code == 400
+
+
+def test_connections_page_and_shared_search_controls(client,conn):
+    page = client.get('/connections')
+    assert page.status_code == 200 and 'Discord' in page.text and 'Connect HiBid' in page.text
+    for path in ('/', '/lots/hardware', '/lots/games'):
+        page = LexborHTMLParser(client.get(path).text)
+        for field in ('q','brand','console','condition','sort','direction','min_price','max_price','rating'):
+            assert page.css_first(f'[name="{field}"]') is not None
+    a=seed(conn,'search-sony',category='console',key='ps5-spider-man-2',title='PS5 Spider-Man 2',price=100)
+    b=seed(conn,'search-nintendo',category='console',key='unknown',title='Nintendo Switch 2',price=200)
+    html=client.get('/?brand=sony&console=PlayStation+5&q=spider&sort=price&direction=asc').text
+    assert row_html(html,a) and row_html(html,b) is None
+
+
+def test_discord_setup_validates_urls_never_echoes_secret_and_connects_without_restart(client,cfg,conn,monkeypatch):
+    from dealfinder import connections
+    saved=[]
+    def save(config,url):
+        saved.append(url)
+        config.discord_webhook_url=url or None
+    monkeypatch.setattr(connections,'save_discord',save)
+    assert client.post('/connections/discord',data={'webhook_url':'http://127.0.0.1/admin'}).status_code == 400
+    assert not saved
+    url='https://discord.com/api/webhooks/123456789012345678/'+'test-secret-token-'*3
+    response=client.post('/connections/discord',data={'webhook_url':url})
+    assert response.status_code == 200 and 'connected' in response.text.lower()
+    assert cfg.discord_webhook_url == url
+    assert 'test-secret-token' not in response.text+client.get('/connections').text
+    assert all('test-secret-token' not in r[0] for r in conn.execute('SELECT value FROM settings'))
+    assert client.post('/connections/discord/disconnect').status_code == 200
+    assert cfg.discord_webhook_url is None
+
+
+def test_browser_site_rotation_and_saved_alert_preferences(client,cfg,conn):
+    from dealfinder.connections import load_preferences
+    headers={'X-Dealfinder-Token':client.app.state.browser_token}
+    assert client.post('/browser/next',json={'sites':['ebay','hibid']}).status_code == 403
+    jobs=[client.post('/browser/next',json={'sites':['ebay','hibid']},headers=headers).json() for _ in range(4)]
+    assert [j['source'] for j in jobs] == ['ebay','hibid','ebay','hibid']
+    assert client.post('/connections/discord/preferences',data={'resale_deal':'on','target_hit':'on'}).status_code == 200
+    restarted=Config(db_path=cfg.db_path)
+    load_preferences(restarted)
+    assert restarted.notify_reasons['resale_deal'] and restarted.notify_reasons['target_hit']
+    assert not restarted.notify_reasons['game_lot_deal']
+
+
+@pytest.mark.parametrize('path,kind,key,condition', [
+    ('/lots/hardware','hardware_lot','ps2-console','for_parts'),
+    ('/lots/games','game_lot','ps2','unknown'),  # no per-game condition evidence in this lot
+])
+def test_shared_filters_apply_to_lot_pages_and_partial_refreshes(client,conn,path,kind,key,condition):
+    a=seed_lot(conn,'lot-search-a',kind=kind,key=key,title='Sony PlayStation 2 bundle',price=50)
+    b=seed_lot(conn,'lot-search-b',kind=kind,key=key,title='Sony PlayStation 2 bundle',price=200)
+    for headers in ({},{'HX-Request':'true'}):
+        response=client.get(path,params={'q':'bundle','brand':'Sony','console':'PlayStation 2','min_price':'100',
+                                        'sort':'price','direction':'asc','condition':condition},headers=headers)
+        assert response.status_code == 200
+        assert row_html(response.text,a) is None and row_html(response.text,b)
+
 def test_ebay_helper_token_is_required_and_cannot_authorize_other_routes(client):
     assert client.post('/browser/ebay/next').status_code == 403
     assert client.post('/browser/ebay/next', headers={'X-Dealfinder-Token':'wrong'}).status_code == 403
@@ -1194,7 +1278,8 @@ def test_ebay_helper_download_contains_scoped_extension(client):
         manifest = json.loads(archive.read('manifest.json'))
         assert manifest['manifest_version'] == 3
         assert set(manifest['permissions']) == {'storage','alarms'}
-        assert manifest['host_permissions'] == ['https://www.ebay.com/*', 'http://127.0.0.1:8000/*']
+        assert manifest['host_permissions'] == ['https://www.ebay.com/*', 'https://hibid.com/*', 'http://127.0.0.1:8000/*']
+        assert 'capture-hibid.js' in archive.namelist()
         assert {'background.js','capture.js','connect.js'} <= set(archive.namelist())
     setup = client.get('/sources/ebay')
     assert setup.headers['Cache-Control'] == 'no-store'

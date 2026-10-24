@@ -1,9 +1,8 @@
 {% extends "base.html" %}
-{% block title %}HiBid browser import · Dealfinder{% endblock %}
+{% block title %}HiBid search · Dealfinder{% endblock %}
 {% block content %}
-<div class="page-heading"><div><span class="eyebrow">BRING YOUR FINDS IN</span><h1>HiBid browser import</h1><p>From your browser to your watchlist.</p></div><span class="heading-icon" aria-hidden="true">↗</span></div>
-<p>Search HiBid in your normal browser, then bring its results here. Imports use the
-  visible USD bid amounts and shipping flags. They do not place bids, send alerts or start paid scans.</p>
+<div class="page-heading"><div><span class="eyebrow">AUTOMATIC AUCTION SEARCH</span><h1>HiBid search</h1><p>Find your catalog items without importing each search.</p></div><span class="heading-icon" aria-hidden="true">↗</span></div>
+<section class="import-status"><h2>Connect once, scan automatically</h2><p>The browser helper searches HiBid and adds eligible listings automatically. Connect HiBid on the Connections page; manual import is an optional fallback.</p><a class="primary" href="/connections">Connect HiBid</a></section>
 {% if mode != 'browser' %}
 <p class="error">Browser import is disabled. Set <code>hibid_mode: browser</code> in config.yaml and restart.</p>
 {% endif %}
@@ -20,6 +19,7 @@
   <p><a href="/?source=hibid&amp;show_all=true">View imported HiBid listings</a> · <a href="/lots/hardware?show_all=true">Bulk lots</a> · <a href="/lots/games?show_all=true">Game lots</a></p>
   {% endif %}
 </section>
+<details><summary>Manual import fallback</summary>
 <h2>1. Open a search</h2>
 <p class="import-searches">{% for search in searches %}<a href="{{ search.url }}" target="_blank" rel="noopener noreferrer">Open HiBid: {{ search.query }}</a> {% endfor %}</p>
 <p>Wait for the results to load. If HiBid asks you to sign in or complete verification, finish that in its browser tab.</p>
@@ -43,4 +43,5 @@
   <div id="hibid-result" role="status"></div>
 </form>
 <script src="/static/hibid-import.js"></script>
+</details>
 {% endblock %}

@@ -22,6 +22,7 @@ from dealfinder.sources.base import SourceNeedsAttention
 BASE_URL = "https://hibid.com"
 SEARCH_URL = BASE_URL + "/lots?q={query}&miles=-1"
 SNAPSHOT_KEY = "hibid_browser_snapshots"
+STATUS_KEY = "hibid_browser_status"
 MAX_PAGE_BYTES = 5 * 1024 * 1024
 MAX_CARDS = 1000
 MAX_QUERIES = 30
@@ -137,6 +138,8 @@ def parse_browser_page(html: str, captured_at: datetime) -> BrowserPage:
         node.decompose()
     cards = tree.css(SELECTORS["card"])
     fragment = False
+    if not cards and re.search(r'\b(?:no lots found|no results found|0 lots|0 results)\b', _text(tree.body), re.I):
+        return BrowserPage()
     if not cards:
         # Copying rendered page content sometimes drops the outer card wrapper.
         # Split groups at each lot link; ignore duplicate links for the same lot.
@@ -235,7 +238,7 @@ class HiBidBrowserSource:
                 latest[listing.source_id] = listing
         if not latest:
             reason = "snapshot expired or no usable USD lots" if snapshots else "browser import needed"
-            raise SourceNeedsAttention(f"HiBid {reason}: import a fresh browser search page.")
+            raise SourceNeedsAttention(f"HiBid {reason}: connect the automatic browser helper on Connections.")
         return list(latest.values())
 
     def photos(self, source_id: str, known: list[str]) -> list[str]:

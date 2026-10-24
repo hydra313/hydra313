@@ -77,3 +77,46 @@ test('sold jobs use sold search and preserve capture kind',async()=>{
  assert.equal(JSON.parse(h.calls[1].options.body).kind,'sold');
  assert.deepEqual(h.removed,[17]);
 });
+
+test('HiBid jobs run automatically and ordinary HiBid tabs cannot capture',async()=>{
+ const h=harness();
+ h.context.fetch=async(url,options)=>{
+  h.calls.push({url,options});
+  return {ok:true,json:async()=>url.endsWith('/next') ? {source:'hibid',kind:'active',query:'ps5',url:'https://hibid.com/lots?q=ps5&miles=-1'} : {ok:true}};
+ };
+ await h.message({type:'pair',token,site:'hibid'},{url:'http://127.0.0.1:8000/connections',tab:{id:3}});
+ const sender={url:'https://hibid.com/lots?q=ps5&miles=-1',tab:{id:17}};
+ assert.equal((await h.message({type:'ready'},sender)).ok,true);
+ assert.ok((await h.message({type:'capture',html:'private'},{...sender,tab:{id:99}})).error);
+ await h.message({type:'capture',html:'cards',captured_at:new Date().toISOString()},sender);
+ assert.ok(h.calls[1].url.endsWith('/browser/hibid/results'));
+ assert.deepEqual(h.removed,[17]);
+});
+
+test('a verification failure stops only its site while other sites continue',async()=>{
+ const h=harness();
+ await h.message({type:'pair',token,site:'all'},{url:'http://127.0.0.1:8000/connections',tab:{id:3}});
+ await h.message({type:'capture',error:'eBay verification needed'},ebay);
+ assert.equal(h.state.enabled,true);
+ assert.deepEqual(Array.from(h.state.sites),['hibid']);
+ assert.equal(h.state.pending,null);
+ assert.equal(h.removed.length,0);
+});
+
+test('stopping HiBid preserves an in-flight eBay search and its capture',async()=>{
+ const h=harness();
+ const setup={url:'http://127.0.0.1:8000/connections',tab:{id:3}};
+ await h.message({type:'pair',token,site:'all'},setup);
+ await h.message({type:'stop',site:'hibid'},setup);
+ assert.equal(h.state.pending?.source,'ebay');
+ assert.deepEqual(Array.from(h.state.sites),['ebay']);
+ assert.equal((await h.message({type:'capture',html:'cards',captured_at:new Date().toISOString()},ebay)).ok,true);
+ assert.deepEqual(h.removed,[17]);
+});
+
+test('stopping all closes only the pending helper-owned tab',async()=>{
+ const h=harness(); await h.message({type:'pair',token},local);
+ await h.message({type:'stop'},local);
+ assert.equal(h.state.enabled,false); assert.equal(h.state.pending,null);
+ assert.deepEqual(h.removed,[17]);
+});

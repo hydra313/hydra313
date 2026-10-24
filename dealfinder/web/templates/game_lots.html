@@ -2,7 +2,9 @@
 {% block title %}Game lots · Dealfinder{% endblock %}
 {% block content %}
 <div class="page-heading"><div><span class="eyebrow">BUILD YOUR COLLECTION</span><h1>Game lots</h1><p>Collections worth exploring, priced one game at a time.</p></div><span class="heading-icon" aria-hidden="true">◫</span></div>
-<form class="filters" hx-get="/lots/games" hx-target="#lot-rows" hx-trigger="change, submit, listings-updated from:body" hx-push-url="true">
+<form class="filters browse-filters" hx-get="/lots/games" hx-target="#lot-rows" hx-trigger="change, submit, keyup changed delay:400ms from:input[name='q'], listings-updated from:body" hx-sync="this:replace" hx-push-url="true">
+  {% include "partials/browse_filters.html" %}
+  <label>Site<select name="source"><option value="">All</option>{% for id,name in sites.items() %}<option value="{{ id }}"{% if filters.source == id %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
   <label>Platform
     <select name="platform">
       <option value="">All</option>
@@ -17,6 +19,8 @@
   </label>
   <label class="check"><input type="checkbox" name="photo_finds_only" value="1"{% if filters.photo_finds_only %} checked{% endif %}> 💎 Photo finds only</label>
   {% include "partials/show_all.html" %}
+<button type="submit" class="primary">Search</button>
+<a class="reset-filters" href="{{ request.url.path }}">Reset filters</a>
 </form>
 <p class="muted">All active lots are shown by default, including unpriced lots and lots with an unknown quantity. Open a listing to review it or scan its photos.</p>
 {% include "partials/deal_legend.html" %}

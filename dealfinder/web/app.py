@@ -22,6 +22,7 @@ from dealfinder import db
 from dealfinder.budget import Budget
 from dealfinder.catalog import Catalog, load_catalog
 from dealfinder.config import Config
+from dealfinder.connections import load_saved, load_preferences
 from dealfinder.market import MarketService
 from dealfinder.notify import Notifier
 from dealfinder.pipeline import Pipeline, SpendNotRecorded
@@ -100,8 +101,7 @@ class DefaultPipelineFactory:
     def __init__(self, cfg: Config) -> None:
         self.cfg = cfg
         self.http = HttpClient()
-        self.notify_http = (httpx.Client(timeout=NOTIFY_TIMEOUT_S)
-                            if cfg.discord_webhook_url else None)
+        self.notify_http = httpx.Client(timeout=NOTIFY_TIMEOUT_S)
 
     def __call__(self, conn: sqlite3.Connection) -> Pipeline:
         cfg, http = self.cfg, self.http
@@ -125,9 +125,7 @@ class DefaultPipelineFactory:
         if cfg.anthropic_api_key:
             client = anthropic.Anthropic(api_key=cfg.anthropic_api_key, max_retries=1)
             scanner = VisionScanner(client, http, cfg)
-        notifier = None
-        if self.notify_http is not None:
-            notifier = Notifier(conn, cfg, self.notify_http)
+        notifier = Notifier(conn, cfg, self.notify_http)
         return Pipeline(conn, cfg, load, sources, market, scanner,
                         Budget(conn, cfg, local_now), notifier, utc_now)
 
@@ -254,6 +252,11 @@ def create_app(
 ) -> FastAPI:
     from dealfinder.web.routes import router
 
+    try:
+        load_saved(cfg)
+    except (ValueError,OSError):
+        log.warning('Saved connection could not be opened; reconnect on the Connections page.')
+    load_preferences(cfg)
     factory = build_pipeline or default_pipeline_factory(cfg)
     runner = Runner(cfg, factory)
 
@@ -291,7 +294,8 @@ def create_app(
 
     @app.middleware("http")
     async def csrf_guard(request: Request, call_next):
-        if request.url.path.startswith("/browser/ebay/"):
+        if request.url.path in {"/browser/next", "/browser/ebay/next", "/browser/ebay/results",
+                                "/browser/hibid/next", "/browser/hibid/results"}:
             token = request.headers.get("x-dealfinder-token", "")
             if (_local_port(request.headers.get("host", "")) is None
                     or not secrets.compare_digest(token, app.state.browser_token)):

@@ -28,7 +28,7 @@ Deals are sent to Discord.
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 982 Python tests and 8 browser-helper workflow tests pass.
+- 1005 Python tests and 12 browser-helper workflow tests pass.
 - Category controls submit lowercase database values and normalize old capitalized
   links. eBay discovery queries alternate between GPUs, CPUs, consoles, controllers
   and both lot categories so the larger GPU catalog cannot delay all other searches.
@@ -44,7 +44,18 @@ Deals are sent to Discord.
   item IDs, excludes unknown accepted offers and dates outside 90 days, and feeds
   the existing variant/condition matchers. Fresh snapshots override negative or
   asking-price caches. An unrelated HTTP block must not hide local evidence.
-- Browser helper 1.1 alternates active searches and needed sold evidence. Active
+- Shared `web/browse.py` handles text, brand, console, condition, price range and
+  rating filters plus both sort directions for price/profit/margin/sold/rating/time.
+  Unknown values sort last. Options stay usable when HTMX changes categories.
+- `/connections` provides per-site helper controls and secure Discord channel setup.
+  Discord secrets are DPAPI protected for the current Windows user in ignored
+  `*.credentials` files beside SQLite; never render, log, commit or archive them.
+  Environment variables remain supported. Saved connection/disconnection takes
+  precedence, and notifier config updates work without restarting. Alert preference
+  booleans are stored in settings; existing defaults and deduplication stay intact.
+- Browser helper 1.2 supports automatic HiBid searches and eBay active/sold capture.
+  One site's verification/import failure must not stop another enabled site.
+  It alternates enabled sites and eBay active searches and needed sold evidence. Active
   query rotation has a separate index so alternating modes never skip half the
   catalog. Sold-page sign-in is completed by the user; no login data is read.
 - A signed-in live sold capture read 242 cards and retained 197 dated records;
@@ -62,7 +73,8 @@ Deals are sent to Discord.
   reads only rendered USD fixed-price cards (Buy It Now / or Best Offer), and stops
   on verification or parsing/import failures. It never solves verification.
   Other eBay tabs cannot submit captures. Pause suppresses new helper queries.
-- `/browser/ebay/*` endpoints require the local capability token, stored in an
+- The exact `/browser/next`, `/browser/ebay/{next,results}` and
+  `/browser/hibid/{next,results}` endpoints require the local capability token, stored in an
   ignored `*.browser-token` file beside SQLite. That token grants only those
   ingestion endpoints; normal CSRF rules still apply elsewhere. Do not log or
   commit the token. Setup HTML is no-store and no-referrer.
@@ -78,8 +90,11 @@ Deals are sent to Discord.
   do not supply auction closing times. Direct sold requests remain blocked;
   signed-in browser captures can supply sold evidence locally.
   See `docs/live-validation-2026-10-23.md` for evidence and remaining limits.
-- HiBid defaults to manual browser capture with 30-minute expiry. See
-  `docs/hibid-browser-import.md`; no database reset is needed for this change.
+- HiBid defaults to automatic browser-helper collection after one-time connection,
+  with 30-minute expiry. Manual import remains a fallback. Version 1.2 requires
+  reloading the extension and approving the new HiBid host permission. Live card
+  selectors were checked against 69 rendered results on October 24, 2026.
+  See `docs/hibid-browser-import.md`; no database reset is needed.
 - Windows users can double-click `Start-Dealfinder.cmd` after installation.
   It starts a hidden server, waits for readiness and opens the dashboard; repeated
   launches reuse the server. Logs go in the ignored `logs/` folder.
@@ -123,7 +138,8 @@ Run from the repo root so `catalog/` (the seed YAML) is found.
 settings go in `config.yaml`; copy `config.example.yaml`, and note that unknown
 keys raise an error.
 
-Secrets come only from environment variables. Each one is optional and
+API secrets come from environment variables; Discord also supports protected local
+Connections setup on Windows. Each credential is optional and
 disables only its own API feature: `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`,
 `ANTHROPIC_API_KEY` and `DISCORD_WEBHOOK_URL`.
 
@@ -238,8 +254,8 @@ Steps:
 
 ## Known gaps (prioritized)
 
-1. Direct HiBid API and eBay sold requests are blocked; HiBid browser import works
-   but needs manual capture. Authenticated eBay Browse, Anthropic
+1. Direct HiBid API and eBay sold requests are blocked; helper 1.2 automates browser
+   capture after one-time connection. Authenticated eBay Browse, Anthropic
    and Discord still need live credential checks. ShopGoodwill is verified
    against captured search and photo responses; adapters fetch one page only.
 2. GPU/CPU hardware lots still take their quantity from the photo-wide unit

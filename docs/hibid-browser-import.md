@@ -1,4 +1,25 @@
-# HiBid browser import — October 23, 2026
+# HiBid automatic search — October 24, 2026
+
+Browser helper 1.2 now rotates HiBid searches automatically. Open Connections,
+update/reload the extension, allow HiBid permission and click Connect HiBid (or
+Connect both sites). It captures only the helper-owned search tab, sanitizes the
+visible listing fields and submits them through capability-protected local routes.
+Other browsing tabs and authentication/session fields are never captured.
+
+One query is checked every 30 seconds across enabled sites. Verification stops
+only the affected site and preserves its tab for the user. Empty searches continue
+the rotation. Captures keep their real observation time and expire after 30 minutes.
+Only USD lots with shipping, a payable bid and a closing countdown are eligible.
+
+Live check on October 24: 69 rendered RTX search cards exposed the expected title,
+money, countdown, shipping and bid selectors. The automated workflow is covered by
+Python route/security tests and browser-helper tests. Direct API access remains
+blocked. The one-time updated extension permission must be granted in the user's
+browser before unattended HiBid collection can run.
+
+The original manual import remains an optional fallback, documented below.
+
+## Original manual-import validation — October 23, 2026
 
 Direct HiBid HTTP requests returned Cloudflare HTTP 403 while a normal browser
 could load search results. The app now defaults to importing rendered browser
