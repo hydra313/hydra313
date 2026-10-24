@@ -25,19 +25,18 @@
            value="{{ '%g'|format(filters.ending_within_h) if filters.ending_within_h is not none else '' }}">
   </label>
   <label class="check"><input type="checkbox" name="new_only" value="true"{% if filters.new_only %} checked{% endif %}> New only</label>
-  <label class="check"><input type="checkbox" name="target_only" value="true"{% if filters.target_only %} checked{% endif %}> 🎯 Target hits only</label>
   {% include "partials/show_all.html" %}
 <button type="submit" class="primary">Search</button>
 <a class="reset-filters" href="{{ request.url.path }}">Reset filters</a>
 </form>
-<p class="muted">All active listings are shown by default, including items without a deal estimate. A missing market value does not mean an item is a bargain.</p>
+<p class="muted">{% if filters.show_all %}Browsing all eligible listings, including unpriced and lower-margin items. Uncheck the option above to return to verified good deals.{% else %}Showing good deals supported by recent eBay sold prices. Enable “Include unpriced and lower-margin listings” to browse everything. Profit estimates include fees and shipping; auction bids can change.{% endif %}</p>
 {% include "partials/deal_legend.html" %}
 <div class="table-wrap"><table class="deals">
   <thead>
     <tr>
       <th><span class="sr-only">Image</span></th><th>Title</th>
       <th>Current price</th><th>Average eBay sold</th><th>Est. profit</th><th>Deal rating</th>
-      <th>Product</th><th>Condition</th><th>Site</th><th>Time left</th><th><span class="sr-only">Actions</span></th>
+      <th><span class="sr-only">Actions</span></th>
     </tr>
   </thead>
   <tbody id="deal-rows">

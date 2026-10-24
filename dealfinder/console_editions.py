@@ -144,6 +144,9 @@ PLATFORMS = {
 def edition_text(text: str) -> str:
     text = ''.join(c for c in unicodedata.normalize('NFKD', text) if not unicodedata.combining(c))
     text = normalize(text).replace('gray', 'grey')
+    # SCPH-7xxxx/9xxxx identifies PS2 Slim even when the seller omits 'Slim'.
+    if re.search(r'\bscph ?[79]\d{4}(?:[a-z]{1,2})?\b|\bslim\b', text) and re.search(r'\b(?:ps2|playstation ?2)\b', text):
+        text = re.sub(r'\b(?:ps2|playstation ?2)(?: slim)?\b', 'ps2 slim', text)
     text = re.sub(r'\bspiderman\b', 'spider man', text)
     text = re.sub(r'\bsnes\b', 'super nintendo', text)
     text = re.sub(r'\blove ?plus\s*\+?', 'loveplus', text)
@@ -154,7 +157,14 @@ def edition_text(text: str) -> str:
 
 
 def primary_title(text: str) -> str:
-    return _PRIMARY_END.split(text, maxsplit=1)[0]
+    head = _PRIMARY_END.split(text, maxsplit=1)[0]
+    # 'Console Box Set CIB' and 'Console Controller Set' sell the complete console.
+    # A controller *for* a console still has the accessory before the console.
+    hardware = re.search(r'\b(?:console|system|unit)\b', head)
+    accessory = _ACCESSORY.search(head)
+    if hardware and accessory and hardware.start() < accessory.start():
+        head = head[:accessory.start()].strip()
+    return head
 
 
 def _identity(pattern: str, text: str) -> str:
@@ -279,7 +289,9 @@ def _load(path: str, mtime: int, size: int, curated: tuple[Product, ...]):
             name += ' (Promotional edition)'
         product = Product(id='cv-' + row['slug'], category='console', name=name,
                           ebay_query=spec['name'], match=spec['pattern'],
-                          required_tokens=spec['tokens'],
+                          required_tokens=(('hyakushiki',) if row['slug'] == 'sony-playstation-2-golden-console'
+                                           else ('sakura','pink') if row['slug'] == 'sony-playstation-2-50-millionth-edition-sakura-pink-console'
+                                           else spec['tokens']),
                           source_url=REFERENCE_BASE + row['slug'],
                           discovery_query=spec['family'] + ' console', promotional=promotional)
         groups[key] = product

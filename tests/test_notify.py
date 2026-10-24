@@ -337,3 +337,18 @@ def test_empty_details_still_sends(conn, cfg, http, ft):
     assert make_notifier(conn, cfg, http, ft).notify(lid, "target_hit", []) is True
     assert route.call_count == 1
     assert status_of(conn, lid, "target_hit") == "sent"
+
+@respx.mock
+def test_item_subscriptions_filter_before_claim_and_can_be_changed(conn,http):
+    from dealfinder.subscriptions import set_subscription
+    cfg=Config(discord_webhook_url=WEBHOOK)
+    listing_id=add(conn,make_listing())
+    db.set_setting(conn,'discord_item_scope','selected')
+    notifier=Notifier(conn,cfg,http,clock=lambda:T0)
+    route=respx.post(WEBHOOK).respond(204)
+    assert not notifier.notify(listing_id,'target_hit',[])
+    assert conn.execute('SELECT COUNT(*) FROM notifications').fetchone()[0] == 0
+    set_subscription(conn,'product','rtx-4070',True)
+    assert notifier.notify(listing_id,'target_hit',[])
+    assert route.call_count == 1
+    assert not notifier.notify(listing_id,'target_hit',[])

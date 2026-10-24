@@ -14,6 +14,7 @@
     <div>{{ label }}: {% if m %}{{ m.value|money }} <span class="badge{% if m.low %} low{% endif %}">{{ m.badge }}</span>{% else %}—{% endif %}</div>
     {% endfor %}
   </td>
+  <td data-label="Discord alerts"><label class="check"><input type="checkbox" name="notify_item" value="true" form="{{ form_id }}"{% if r.notify %} checked{% endif %}> Alert me</label></td>
   <td class="actions">
     <form id="{{ form_id }}" hx-post="/catalog/{{ r.table }}/{{ r.id|urlencode }}" hx-include="closest tr" hx-target="closest tr" hx-swap="outerHTML">
       <button type="submit">Save</button>

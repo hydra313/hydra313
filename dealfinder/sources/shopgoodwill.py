@@ -116,8 +116,16 @@ class ShopGoodwillSource:
         self._http = http
 
     def search(self, query: str) -> list[Listing]:
-        resp = self._http.request("POST", SEARCH_URL, json=build_search_body(query))
-        return parse_search(resp.json())
+        found = {}
+        for page in range(1, 6):
+            resp = self._http.request("POST", SEARCH_URL, json=build_search_body(query, page=page))
+            data = resp.json()
+            items = data.get('searchResults', {}).get('items', [])
+            for listing in parse_search(data):
+                found[listing.source_id] = listing
+            if not isinstance(items,list) or len(items) < 40:
+                break
+        return list(found.values())
 
     def photos(self, source_id: str, known: list[str]) -> list[str]:
         url = ITEM_URL.format(item_id=quote(source_id, safe=""))

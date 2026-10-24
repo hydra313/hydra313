@@ -179,3 +179,15 @@ def test_detail_discards_unsafe_or_unresolvable_photo_paths():
     assert parse_item_detail({"imageServer": "https://images.example.com/",
                               "imageUrlString": "relative.jpg;https://images.example.com/full.jpg"}) == [
         "https://images.example.com/relative.jpg", "https://images.example.com/full.jpg"]
+
+@respx.mock
+def test_search_follows_full_pages_deduplicates_and_stops_at_empty_page():
+    item=SEARCH['searchResults']['items'][0]
+    pages=[]
+    def respond(request):
+        page=json.loads(request.content)['page'];pages.append(page)
+        items=[{**item,'itemId':str(i+240000000)} for i in range(40)] if page==1 else [{**item,'itemId':'240000999'}] if page==2 else []
+        return httpx.Response(200,json={'searchResults':{'items':items}})
+    respx.post(SEARCH_URL).mock(side_effect=respond)
+    results=make_source().search('limited edition console')
+    assert pages == [1,2] and len(results)==41

@@ -153,3 +153,14 @@ def test_source_authentication_warnings_are_not_lost_behind_official_labels():
 def test_distinct_factory_colorways_are_not_mixed(title, expected):
     result = match_single(title, load_seed(CATALOG).products)
     assert result is not None and result[0].id == expected
+
+@pytest.mark.parametrize('title, identity', [
+ ('Sony PlayStation2 PS2 Hyakushiki Gold Limited Edition Console SCPH-55000 GU','cv-sony-playstation-2-golden-console'),
+ ('Sony PlayStation 2 PS2 Console Sakura Pink SCPH-50000 Limited Edition Japan','cv-sony-playstation-2-50-millionth-edition-sakura-pink-console'),
+ ('Sony PlayStation 2 PS2 Aqua Blue Console Box Set CIB Complete','cv-sony-playstation-2-aqua-blue-console-eu'),
+ ('Sony Playstation2 SCPH-77000PK Pink Limited Console Tested','cv-sony-playstation-2-slim-pink-console-jp'),
+ ('SONY Playstation2 SCPH-90000 Cinnabar Red Limited Edition Console Tested Working','cv-sony-playstation-2-slim-cinnabar-red-console'),
+])
+def test_real_ps2_seller_titles_do_not_require_reference_site_marketing_words(title, identity):
+    result=match_single(title,load_seed(CATALOG).products)
+    assert result is not None and result[0].id==identity

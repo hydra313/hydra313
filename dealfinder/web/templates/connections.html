@@ -7,19 +7,19 @@
   <p>Connect eBay and HiBid once. The helper rotates catalog searches in one background tab every 30 seconds, collecting listings without manual imports. Keep this PC, ConsoleHawk and your browser running.</p>
   <p id="helper-connection" role="status">Install or update the helper, then reload this page in Chrome or Edge.</p>
   <div class="row"><button class="primary" data-connect-site="all" data-helper-token="{{ helper_token }}">Connect both sites</button><button data-stop-site="all">Stop all browser searches</button></div>
-  <details><summary>Install or update the helper · version 1.2</summary>
+  <details><summary>Install or update the helper · version 1.3</summary>
     <ol class="setup-steps">
       <li><a href="/sources/ebay/helper.zip">Download the helper</a> and extract it into your existing helper folder.</li>
       <li>Open <code>edge://extensions</code> or <code>chrome://extensions</code>, enable Developer mode, then choose Load unpacked and select that folder. If already installed, click its Reload button and approve the new HiBid permission.</li>
       <li>Reload this page in that browser and click Connect both sites.</li>
     </ol>
-    <p>Version 1.1 only reads eBay; update to 1.2 to enable HiBid. No browser cookies, passwords, bids or purchases are read or submitted.</p>
+    <p>Version 1.3 collects auctions and Buy It Now results. No browser cookies, passwords, bids or purchases are read or submitted.</p>
   </details>
 </section>
 <div class="connection-grid">
   <section class="connection-card">
     <span class="eyebrow">LISTINGS + SOLD COMPARISONS</span><h2>eBay</h2>
-    <p>Keyless Buy It Now listings and matching dated sold results. If eBay asks for sign-in, sign in in its own tab.</p>
+    <p>Keyless auction and Buy It Now listings and matching dated sold results. If eBay asks for sign-in, sign in in its own tab.</p>
     <p class="connection-state">{{ 'Needs attention' if ebay_helper.error else 'Last capture: ' + ebay_helper.captured_at if ebay_helper.captured_at else 'No capture yet' }}</p>
     {% if ebay_helper.error %}<p class="error">{{ ebay_helper.error }}</p>{% endif %}
     <div class="row"><button data-connect-site="ebay" data-helper-token="{{ helper_token }}">Connect eBay</button><button data-stop-site="ebay">Stop eBay</button><a href="https://www.ebay.com/signin/" target="_blank" rel="noopener noreferrer">Sign in to eBay ↗</a></div>
@@ -54,8 +54,11 @@
     {% if discord_connected %}<div class="row"><button hx-post="/connections/discord/test" hx-target="#discord-result" hx-disabled-elt="this">Send test message</button><button hx-post="/connections/discord/disconnect" hx-target="#discord-result">Disconnect Discord</button></div>{% endif %}
     <div id="discord-result" role="status"></div>
     <form class="import-form" hx-post="/connections/discord/preferences" hx-target="#alert-result">
+      <h3>Items to notify me about</h3>
+      <label>Item selection<select name="item_scope"><option value="all"{% if item_scope == 'all' %} selected{% endif %}>All enabled catalog items</option><option value="selected"{% if item_scope == 'selected' %} selected{% endif %}>Selected catalog items only</option></select></label>
+      <p><a href="/catalog">Choose individual items in the catalog</a> · {{ subscription_count }} selected. Also enable the matching alert type below.</p>
       <h3>Alert types</h3>
-      {% for id,label in [('resale_deal','Single-item deals'),('hardware_lot_deal','Hardware lot deals'),('game_lot_deal','Game lot deals'),('target_hit','Target price hits'),('photo_find','Photo finds')] %}
+      {% for id,label in [('resale_deal','Single-item deals'),('hardware_lot_deal','Hardware lot deals'),('game_lot_deal','Game lot deals'),('target_hit','Target price hits')] %}
       <label class="check"><input type="checkbox" name="{{ id }}"{% if notify_reasons.get(id) %} checked{% endif %}>{{ label }}</label>{% endfor %}
       <button type="submit">Save alert preferences</button><div id="alert-result" role="status"></div>
     </form>

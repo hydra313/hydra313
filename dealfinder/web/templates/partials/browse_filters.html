@@ -1,3 +1,4 @@
+<input type="hidden" name="page" value="{{ page|default(1) }}">
 <label class="search-field">Search listings
   <input type="search" name="q" value="{{ filters.q }}" maxlength="200" placeholder="Model, edition, title…">
 </label>
@@ -11,7 +12,10 @@
     {% for name in consoles %}<option value="{{ name }}"{% if filters.console|lower == name|lower %} selected{% endif %}>{{ name }}</option>{% endfor %}
   </select>
 </label>
-<label>Condition
+<label>Sort by<select name="sort">{% for id,name in sorts.items() %}<option value="{{ id }}"{% if filters.sort == id %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+<label>Order<select name="direction"><option value="desc"{% if filters.direction == 'desc' %} selected{% endif %}>Highest / latest first</option><option value="asc"{% if filters.direction == 'asc' %} selected{% endif %}>Lowest / soonest first</option></select></label>
+
+<details class="filter-advanced"{% if filters.condition or filters.min_price or filters.max_price or filters.rating %} open{% endif %}><summary>Price, condition and rating filters</summary><div class="advanced-grid"><label>Condition
   <select name="condition"><option value="">All conditions</option>
     {% for id, name in [('new','New / open box'),('used','Used'),('for_parts','For parts / repair'),('unknown','Unknown')] %}
     <option value="{{ id }}"{% if filters.condition == id %} selected{% endif %}>{{ name }}</option>{% endfor %}
@@ -25,5 +29,4 @@
     <option value="{{ id }}"{% if filters.rating == id %} selected{% endif %}>{{ name }}</option>{% endfor %}
   </select>
 </label>
-<label>Sort by<select name="sort">{% for id,name in sorts.items() %}<option value="{{ id }}"{% if filters.sort == id %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
-<label>Order<select name="direction"><option value="desc"{% if filters.direction == 'desc' %} selected{% endif %}>Highest / latest first</option><option value="asc"{% if filters.direction == 'asc' %} selected{% endif %}>Lowest / soonest first</option></select></label>
+</div></details>

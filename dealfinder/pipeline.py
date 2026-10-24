@@ -14,6 +14,7 @@ from dealfinder import db
 from dealfinder.budget import Budget
 from dealfinder.catalog import Catalog
 from dealfinder.classify import classify
+from dealfinder.discovery import broad_queries
 from dealfinder.config import Config
 from dealfinder.finds import FindEval, evaluate_finds
 from dealfinder.market import MarketService
@@ -194,7 +195,7 @@ class Pipeline:
         if getattr(self.sources[name], "browser_assisted", False):
             return [""]  # one pass over all captured queries; no network requests
         if name != "ebay":
-            return list(self.cfg.broad_queries.get(name, []))
+            return broad_queries(catalog, self.cfg.broad_queries.get(name, []))
         try:
             index = int(db.get_setting(self.conn, ROTATION_SETTING, "0") or 0)
         except ValueError:

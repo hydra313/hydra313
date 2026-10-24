@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ConsoleHawk Browser Helper",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Automatically collect visible eBay and HiBid search listings for your local ConsoleHawk app.",
   "minimum_chrome_version": "120",
   "permissions": ["alarms", "storage"],

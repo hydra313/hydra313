@@ -20,7 +20,7 @@ function validJob(job) {
     return source === "ebay" && ["active","sold"].includes(job.kind || "active")
       && url.origin === "https://www.ebay.com" && url.pathname === "/sch/i.html"
       && url.searchParams.get("_nkw") === job.query
-      && url.searchParams.get(job.kind === "sold" ? "LH_Sold" : "LH_BIN") === "1";
+      && (job.kind === "sold" ? url.searchParams.get("LH_Sold") === "1" : !url.searchParams.has("LH_Sold"));
   } catch { return false; }
 }
 async function stop(reason, report = true, onlySite = null) {
@@ -70,7 +70,7 @@ async function handle(message,sender) {
     if (url.origin !== APP || !["/sources/ebay","/sources/hibid","/connections"].includes(url.pathname)) return {error:"Untrusted setup page"};
     if (message.type === "status") {
       const state = await chrome.storage.local.get(["enabled","sites","lastError"]);
-      return {ok:true,version:chrome.runtime.getManifest?.().version || "1.2.1",...state};
+      return {ok:true,version:chrome.runtime.getManifest?.().version || "1.3.0",...state};
     }
     if (message.type === "stop") { await stop("",false,message.site || null); return {ok:true}; }
     if (!/^[A-Za-z0-9_-]{40,100}$/.test(message.token || "")) return {error:"Invalid connection token"};
@@ -92,7 +92,9 @@ async function handle(message,sender) {
     if (message.error) { await stop(String(message.error).slice(0,200),true,pending.source || "ebay"); return {ok:false}; }
     try {
       await api(`${pending.source || "ebay"}/results`,state.token,{query:pending.query,kind:pending.kind,
-        html:message.html,captured_at:message.captured_at});
+        html:message.html,captured_at:message.captured_at,
+        page:Number(new URL(pending.url).searchParams.get("_pgn") || 1),
+        auction:new URL(pending.url).searchParams.get("LH_Auction") === "1"});
       await chrome.storage.local.set({pending:null,lastError:""});
       try { await chrome.tabs.remove(pending.tabId); } catch {}
       return {ok:true};

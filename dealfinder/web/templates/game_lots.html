@@ -17,12 +17,11 @@
     <input type="number" name="ending_within_h" min="0" step="1" inputmode="numeric"
            value="{{ '%g'|format(filters.ending_within_h) if filters.ending_within_h is not none else '' }}"> h
   </label>
-  <label class="check"><input type="checkbox" name="photo_finds_only" value="1"{% if filters.photo_finds_only %} checked{% endif %}> 💎 Photo finds only</label>
   {% include "partials/show_all.html" %}
 <button type="submit" class="primary">Search</button>
 <a class="reset-filters" href="{{ request.url.path }}">Reset filters</a>
 </form>
-<p class="muted">All active lots are shown by default, including unpriced lots and lots with an unknown quantity. Open a listing to review it or scan its photos.</p>
+<p class="muted">Showing lots with reliable sold comparisons and worthwhile estimated profit. Include other listings to review unpriced lots.</p>
 {% include "partials/deal_legend.html" %}
 <div class="table-wrap"><table class="deals">
   <thead>

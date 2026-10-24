@@ -95,10 +95,19 @@ def browse(items: list[dict], filters: BrowseFilters) -> tuple[list[dict], dict]
         if f[key] and f[key].casefold() not in [v.casefold() for v in options[key+'s']]:
             options[key+'s'].append(f[key])
     minimum, maximum = _number(f['min_price']), _number(f['max_price'])
-    words = normalize(f['q']).split()
+    query_console = metadata('',f['q'])['console']
+    query_text = normalize(f['q'])
+    if query_console:
+        for pattern in PLATFORMS.values():
+            query_text = re.sub(pattern,' ',query_text)
+    words = query_text.split()
+    def same_family(actual):
+        return not query_console or actual == query_console or any(
+            actual == query_console + suffix for suffix in (' Slim',' Pro',' Lite',' OLED Model',' XL'))
     def matches(d):
         text = normalize(d['title']+' '+d['product'])
-        return (all(word in text for word in words)
+        return (all(re.search(r'\b'+re.escape(word)+r'\b',text) for word in words)
+                and same_family(d['console'])
                 and (not f['brand'] or f['brand'].casefold() in [b.casefold() for b in d['brands']])
                 and (not f['console'] or f['console'].casefold() == d['console'].casefold())
                 and (not f['condition'] or f['condition'].casefold() == d.get('condition','unknown').casefold())
@@ -117,3 +126,10 @@ def browse(items: list[dict], filters: BrowseFilters) -> tuple[list[dict], dict]
         unknown = [d for d in result if value(d) is None]
         result = sorted(known,key=value,reverse=f['direction']=='desc') + unknown
     return result, options
+
+
+def visible_deals(items: list[dict], show_all: bool) -> list[dict]:
+    """Unknown values and small/negative margins need an explicit opt-in."""
+    from dealfinder.matcher import unrelated_accessory
+    return [d for d in items if not unrelated_accessory(d['title'])
+            and (show_all or d['rating']['tone'] == 'good')]

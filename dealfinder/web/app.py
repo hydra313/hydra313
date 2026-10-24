@@ -122,9 +122,7 @@ class DefaultPipelineFactory:
             sources["hibid"] = HiBidSource(http, utc_now)
         market = MarketService(conn, cfg, BrowserSoldFetcher(http, conn, cfg, utc_now), ebay, catalog, utc_now)
         scanner = None
-        if cfg.anthropic_api_key:
-            client = anthropic.Anthropic(api_key=cfg.anthropic_api_key, max_retries=1)
-            scanner = VisionScanner(client, http, cfg)
+        # Paid photo scanning was removed from the shipped app.
         notifier = Notifier(conn, cfg, self.notify_http)
         return Pipeline(conn, cfg, load, sources, market, scanner,
                         Budget(conn, cfg, local_now), notifier, utc_now)

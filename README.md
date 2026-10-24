@@ -67,20 +67,19 @@ launcher with the project and its `.venv` folder; a Windows shortcut can point
 to it from anywhere. Startup errors appear in the launcher window, with app
 logs saved in `logs/`. The app keeps running after you close the browser.
 
-**Show all listings** is on by default on Deals, Bulk lots, and Game lots. This
-includes results with no market value, listings below the deal thresholds, and
-lots whose quantity is unknown. Uncheck it to show only deal and target matches.
-Missing market values are not evidence of a bargain. Ended, dismissed, and stale
-listings stay hidden. Running and completed refreshes update the rows automatically while
-keeping the current filters. The dashboard uses dark mode throughout.
+The default view shows only good deals supported by recent matching eBay sold
+averages. Missing or weak evidence, small margins and negative profit stay hidden.
+Enable **Include unpriced and lower-margin listings** to review them. Counts show
+how many matches are hidden or awaiting comparisons. Deals displays 100 results
+per page; Next/Previous preserves filters. Pictures are 120 px on desktop and
+150 px on phones. Rows update only when data changes (or once per minute for time
+and freshness), without resetting the page or filters.
 
-The database, `dealfinder.db`, is created in the folder you run from. If you
-ran a pre-release build of this project, delete the old `dealfinder.db` first,
-because the schema changed during development.
+Keep your existing `dealfinder.db`; this update does not require a reset.
 
 ## eBay without API keys
 
-Open **eBay browser** in the sidebar. Download and extract the helper, load its
+Open **Connections** in the sidebar. Download and extract the helper, load its
 folder with **Load unpacked** on Chrome or Edge's Extensions page (Developer mode),
 then reopen the setup page in that same browser and click **Connect and start**.
 This one-time browser installation is needed because direct eBay requests are
@@ -89,7 +88,7 @@ blocked on some networks. It does not bypass verification or replay browser cook
 The helper rotates through enabled catalog queries, one search every 30 seconds,
 using a single background tab. Searches alternate across GPUs, CPUs, consoles,
 controllers and both lot categories, giving each category an early turn.
-It alternates visible USD **Buy It Now** cards with
+It collects visible USD **auctions and Buy It Now** cards, interleaved with
 sold-price searches for products actually on your dashboard. Keep the browser and ConsoleHawk open. Sleep and
 browser throttling can delay checks. The header reports when the helper is not
 connected. A verification or parser failure stops the helper and leaves its tab
@@ -98,10 +97,13 @@ its loop, and the header's Pause stops new automatic searches too.
 
 Imports contain only listing fields, not account details, cookies or passwords.
 They do not send alerts or initiate paid photo scans. Subsequent scheduled runs
-use the usual notification and photo-budget gates. Cached records retain their
+use notification preferences and deduplication. Cached records retain their
 original observation time and expire under the normal stale-listing rule (two
 full eBay passes, six hours by default); reprocessing a cache is not a new capture.
-Auction search still uses the optional official API. Sold searches can require
+Auction searches use ending-time order to capture visible closing countdowns;
+cards with an unknown closing time are excluded. Full pages queue further pages,
+up to five pages per query. Search text and console filters queue both formats
+without blocking the dashboard. Sold searches can require
 you to sign in to eBay in the helper's browser. It leaves that tab open for you
 and never reads credentials or solves verification. Direct sold-price requests
 can remain blocked; captured sold pages supply evidence locally without an API key.
@@ -142,7 +144,7 @@ For JavaScript workflow checks, run `node --test tests/browser_helper.test.cjs`.
 
 ## Connections and automatic HiBid search
 
-Open **Connections** in the sidebar. Browser helper **1.2** supports both eBay and
+Open **Connections** in the sidebar. Browser helper **1.3** supports both eBay and
 HiBid. Existing users should replace the helper files, reload the extension, allow
 its HiBid permission, reload Connections in that browser, and click **Connect both
 sites**. You can start or stop either site independently. ShopGoodwill already
@@ -196,8 +198,7 @@ never from `config.yaml`.
 
 | Variable | Enables | Where to get it |
 | --- | --- | --- |
-| `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET` | Official eBay API search, including auctions; keyless Buy It Now uses the browser helper | https://developer.ebay.com: join the developer program, create an app, and use the **production** keyset (App ID is the client ID, Cert ID is the client secret) |
-| `ANTHROPIC_API_KEY` | Photo scanning | https://console.anthropic.com |
+| `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET` | Official eBay API search, keyless auctions and Buy It Now are also available through the browser helper | https://developer.ebay.com: join the developer program, create an app, and use the **production** keyset (App ID is the client ID, Cert ID is the client secret) |
 | `DISCORD_WEBHOOK_URL` | Discord alerts | In Discord: Server Settings, Integrations, Webhooks, New Webhook, Copy Webhook URL |
 
 Set them before starting the app.
@@ -207,7 +208,6 @@ macOS / Linux:
 ```
 export EBAY_CLIENT_ID="your-app-id"
 export EBAY_CLIENT_SECRET="your-cert-id"
-export ANTHROPIC_API_KEY="sk-ant-..."
 export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
 python -m dealfinder
 ```
@@ -217,49 +217,32 @@ Windows PowerShell:
 ```
 $env:EBAY_CLIENT_ID = "your-app-id"
 $env:EBAY_CLIENT_SECRET = "your-cert-id"
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
 $env:DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/..."
 python -m dealfinder
 ```
 
 These last only for that terminal session.
 
-## Photo scanning and what it costs
+## Photos
 
-Some lots are only worth buying because of what is in the photos (a box of
-mixed consoles, a lot with a rare game in it). Photo scanning sends a lot's
-photos to Claude to identify the items and value them.
-
-**It is off by default.** Turn it on with the "Photo scanning" switch in the
-dashboard header. It also needs `ANTHROPIC_API_KEY`.
-
-- **Cost:** each scan costs roughly $0.05 to $0.12, and at most about $0.50.
-- **Caps:** the defaults are $5 per day and $50 per month. Only lots under $300
-  are scanned automatically. The daily cap, monthly cap and max scan price are
-  all editable in the header, and the header shows what you have spent today
-  and this month. (`initial_daily_cap`, `initial_monthly_cap` and
-  `initial_max_scan_price` in `config.yaml` set the starting values; once you
-  edit them in the header, the saved values win.)
-- **One lot at a time:** the "Scan this lot" button on a listing's page runs a
-  single scan. It works even when the scanning switch is off, as long as
-  `ANTHROPIC_API_KEY` is set and the daily and monthly caps allow it, and it
-  ignores the max scan price filter.
-
-As a backstop, also set a monthly spend limit on the API key in the Anthropic
-Console (console.anthropic.com, Settings, Limits). Then even a bug or a
-misconfiguration here cannot spend more than that limit.
+Listing photos remain free to view. Paid AI photo analysis, its controls and its
+manual endpoints have been removed. No Anthropic client is created, even if a
+previous API key is still present. Historical scan data is preserved locally.
 
 ## Discord alerts
 
 When a Discord channel is connected or `DISCORD_WEBHOOK_URL` is set, alerts are sent for:
 
-- photo finds (rare items or valuable lots found by scanning),
 - target hits (a listing at or below the max price you set for a product on the Catalog page),
 - hardware-lot deals,
 - game-lot deals.
 
 Plain resale deals (a single item priced below market) are **off by default**.
-Turn them on with `notify_reasons` in `config.yaml`:
+Enable **Single-item deals** under Connections → Discord. To alert only for
+chosen products, select **Selected catalog items only**, then check **Alert me**
+on the desired catalog rows and Save. Search enablement and notifications are
+independent. An unselected item does not consume its notification claim.
+The same defaults can also be set with `notify_reasons` in `config.yaml`:
 
 ```yaml
 notify_reasons:
@@ -320,3 +303,20 @@ pytest
 ```
 
 The tests never touch the network or the real Anthropic API.
+
+## Coverage and matching
+
+Console discovery includes Halo 3, PS2 and every enabled sourced console family's
+query, alongside exact curated editions. ShopGoodwill and HiBid use the same
+console-family expansion. ShopGoodwill follows up to five 40-item pages per query.
+The browser helper rotates one search every 30 seconds; it needs a running browser,
+PC and app. This is a rotating monitor with bounded result pages, not a complete
+instantaneous copy of every marketplace. HiBid requires visible USD, shipping and
+closing-time evidence. Verification stops that site until the user reconnects it.
+
+Fans, protectors, loose buttons, controller parts, replacement housings, fight
+sticks and other nontraditional controls are excluded before single/lot routing
+and from saved results. A console sold with its ordinary controller or box can
+still match. PS2 model/edition aliases cover seller wording such as Hyakushiki,
+Sakura Pink and SCPH-77000PK. Explicitly used items cannot inherit a brand-new
+valuation. Contaminated old comparison caches are recomputed from retained evidence.

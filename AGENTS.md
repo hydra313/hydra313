@@ -15,9 +15,8 @@ It looks for:
 - **broken hardware lots**, valued as repair-and-resell;
 - **working video game lots.**
 
-Prices come from eBay sold listings. When the user turns it on, Claude
-(`claude-opus-5-5`) reads lot photos to spot rare items, under spending caps.
-Deals are sent to Discord.
+Prices come from eBay sold listings. Paid photo analysis has been removed at the
+user’s request. Listing photos remain visible. Selected deals are sent to Discord.
 
 - **Spec (authoritative):** `docs/superpowers/specs/2026-10-22-auction-deal-finder-design.md`
 - **Build plan:** `docs/superpowers/plans/2026-10-22-auction-deal-finder.md`
@@ -26,9 +25,33 @@ Deals are sent to Discord.
 
 ## Current state (as of 2026-10-24)
 
+The October 24 refinement in `docs/consolehawk-refinement-2026-10-24.md` supersedes
+older photo-scan UI, all-results defaults, fixed-price-only capture and single-page
+ShopGoodwill assumptions in the original design. Preserve the existing DB and
+connections. Browser helper 1.3 files are installed; Chrome reload/reconnection is
+pending because Windows UI automation could not verify its current tab URL.
+
+- Per-item Discord subscriptions live in settings, separate from catalog enablement.
+  Catalog Alert me + Connections selected scope + matching reason must all be set.
+- Default pages require a fresh good sold-based rating. All-results opt-in remains.
+  Deals paginates by 100 and shows hidden/pending counts. Query aliases respect
+  console generations. Current sold values determine displayed single-item profit.
+- `matcher.unrelated_accessory` is shared by classification, saved rows, sold-cache
+  validation and alerts; its pure title cache avoids repeated normalization.
+- No production factory creates a vision scanner. Legacy scan/control endpoints
+  return 410. Retained budget/vision libraries and historical data are archival;
+  never expose or re-enable paid scanning without a new user request.
+- Status polling carries a browser-specific content revision, so idle polls do not
+  reload the listing table. Per-request valuation caching avoids thousands of
+  duplicate comparison queries. Always preserve page/filter state on auto refresh.
+- eBay captures auctions with visible countdowns and both listing formats. Browser
+  queries prioritize console families, request searches and subscribed products.
+  Full pages queue bounded pagination. Source query caps remain documented.
+
+
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 1005 Python tests and 12 browser-helper workflow tests pass.
+- 1049 Python tests and 12 browser-helper workflow tests pass.
 - Public app name is ConsoleHawk. The UI uses olive armor green and warm visor
   orange, with an original SVG hawk mark and favicon. Keep deal-rating semantic
   colors distinct. Internal module, DB filenames, pairing headers and alarm IDs
@@ -80,7 +103,7 @@ Deals are sent to Discord.
   matches without API credentials. The helper needs one-time Load unpacked setup;
   the installed Chrome helper has been verified collecting both sites.
 - The helper rotates one enabled catalog query every 30 seconds in one owned tab,
-  reads only rendered USD fixed-price cards (Buy It Now / or Best Offer), and stops
+  reads rendered USD active cards (auctions require visible countdowns), and stops
   on verification or parsing/import failures. It never solves verification.
   Other eBay tabs cannot submit captures. Pause suppresses new helper queries.
 - The exact `/browser/next`, `/browser/ebay/{next,results}` and
@@ -108,7 +131,7 @@ Deals are sent to Discord.
 - Windows users can double-click `Start-ConsoleHawk.cmd` after installation.
   It starts a hidden server, waits for readiness and opens the dashboard; repeated
   launches reuse the server. Logs go in the ignored `logs/` folder.
-- **Show all listings** is on by default on Deals and both lot pages, including
+- **Include unpriced and lower-margin listings** is an explicit opt-in, including
   unpriced listings and unknown-quantity lots. Unchecking it submits an explicit
   false value. Refresh completion updates the current filtered rows.
   Explicit Intel/AMD conflicts reject CPU matches, including hardware lots.
@@ -267,7 +290,7 @@ Steps:
 1. Direct HiBid API and eBay sold requests are blocked; helper 1.2 automates browser
    capture after one-time connection. Authenticated eBay Browse, Anthropic
    and Discord still need live credential checks. ShopGoodwill is verified
-   against captured search and photo responses; adapters fetch one page only.
+   against captured search and photo responses; ShopGoodwill now paginates up to five pages per query.
 2. GPU/CPU hardware lots still take their quantity from the photo-wide unit
    estimate, which can include accessories.
 3. There is no "retry scan" for failed or refused scans in the UI.

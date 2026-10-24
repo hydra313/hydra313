@@ -23,9 +23,10 @@ ITEM_ID = re.compile(r"/itm/(?:[^/]+/)?(\d{9,15})(?:/|$)")
 USD = re.compile(r"\$([\d,]+(?:\.\d{1,2})?)")
 
 
-def search_link(query: str) -> str:
+def search_link(query: str, auction: bool = False, page: int = 1) -> str:
     return ("https://www.ebay.com/sch/i.html?_nkw=" + quote_plus(query)
-            + "&_sop=10&_ipg=60&LH_BIN=1&LH_PrefLoc=1")
+            + ("&_sop=1&LH_Auction=1" if auction else "&_sop=10")
+            + "&_ipg=240&_pgn=" + str(max(1, page)))
 
 
 def _text(node) -> str:
@@ -39,9 +40,18 @@ def _listing(card, captured_at: datetime) -> Listing | None:
     if not title or title.lower() == "shop on ebay" or len(title) > 1000:
         return None
     text = _text(card)
-    # Unknown closing times cannot safely represent auctions. The helper searches BIN only.
-    if (not re.search(r"\bbuy it now\b|\bor best offer\b", text, re.I)
-            or re.search(r"\b\d[\d,]*\s+bids?\b", text, re.I)
+    bids = re.search(r"\b([\d,]+)\s+bids?\b", text, re.I)
+    end_time = None
+    if bids:
+        countdown = re.search(r'((?:\d+\s*[dhms]\s*)+)\s*left\b', text, re.I)
+        if countdown:
+            seconds = sum(int(n) * {'d':86400,'h':3600,'m':60,'s':1}[u.lower()]
+                          for n,u in re.findall(r'(\d+)\s*([dhms])', countdown[1], re.I))
+            if 0 < seconds <= 35 * 86400:
+                end_time = captured_at + timedelta(seconds=seconds)
+        if end_time is None:
+            return None  # never invent auction closing times
+    if ((not bids and not re.search(r"\bbuy it now\b|\bor best offer\b", text, re.I))
             or re.search(r"\b(sold|ended|pickup only)\b", text, re.I)):
         return None
     raw_price = _text(card.css_first(".s-card__price, .s-item__price"))
@@ -85,7 +95,8 @@ def _listing(card, captured_at: datetime) -> Listing | None:
             images.append(url)
     return Listing("ebay", f"v1|{match[1]}|0", title,
                    f"https://www.ebay.com/itm/{match[1]}", price, shipping, True,
-                   list(dict.fromkeys(images))[:8], False, None,
+                   list(dict.fromkeys(images))[:8], bool(bids), end_time,
+                   bid_count=int(bids[1].replace(',', '')) if bids else 0,
                    condition_id=condition_id, observed_at=captured_at)
 
 

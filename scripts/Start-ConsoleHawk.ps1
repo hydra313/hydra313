@@ -3,7 +3,7 @@ param([switch]$NoBrowser)
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $pythonExe = Join-Path $projectRoot '.venv\Scripts\python.exe'
-$dashboardUrl = 'http://127.0.0.1:8000/?show_all=true'
+$dashboardUrl = 'http://127.0.0.1:8000/'
 $logDirectory = Join-Path $projectRoot 'logs'
 $launchMutex = New-Object System.Threading.Mutex($false, 'Local\DealfinderLaunch8000')
 $ownsMutex = $false

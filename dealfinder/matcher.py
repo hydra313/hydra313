@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from collections.abc import Sequence
 
 from dealfinder.models import Category, Condition, Product
@@ -80,6 +81,34 @@ CATEGORY_EXCLUDES: dict[Category, list[str]] = {
     "controller": _CONSOLE_EXCLUDES,
 }
 
+# Apply before lot routing as well as single-item/sold matching. Edition words
+# on an accessory do not identify the hardware it fits.
+_NON_HARDWARE = re.compile(
+    r'\b(?:fight ?sticks?|fighting sticks?|arcade (?:fight|fighting|controller|stick)|leverless|'
+    r'haute ?(?:pad|42)|hitbox|racing wheel|steering wheel|flight stick|'
+    r'cooling fans?|rgb fans?|controller parts?|drive bezels?|dvd drive bezels?|eject buttons?|'
+    r'analog stick modules?|replacement housings?|dance pads?|guitar controllers?|drum controllers?|'
+    r'flight controllers?|hotas|light guns?|replacement (?:buttons?|shells?|sticks?|parts?|ports?)|'
+    r'button sets?|thumb ?grips?|thumbstick caps?|silicone (?:protective )?cases?|'
+    r'protective (?:cases?|covers?)|controller protectors?|replacement shells?)\b')
+
+
+@lru_cache(maxsize=32768)
+def unrelated_accessory(title: str) -> bool:
+    text = normalize(title)
+    if _NON_HARDWARE.search(text) or re.search(r'\b(?:non|not|no) halo\b', text):
+        return True
+    console = re.search(r'\bconsoles?\b',text)
+    theme = re.search(r'\b(?:halo ?[345]|halo reach|halo infinite|god of war|spider man|battlefront)\b',text)
+    if (console and theme and console.start() < theme.start()
+            and re.search(r'\b(?:black|white|standard|regular|chrome)\b',text)
+            and not re.search(r'\b(?:limited|special|collectors?|anniversary) edition\b',text)):
+        return True  # ordinary hardware bundled with a themed game/controller
+    # A full gamepad can advertise programmable buttons; loose button kits cannot.
+    return bool(re.search(r'\bbuttons?\b', text) and not re.search(
+        r'\b(?:wireless|wired|programmable|remappable|back)\b.*\b(?:controller|gamepad)\b|'
+        r'\b(?:controller|gamepad)\b.*\b(?:programmable|remappable|back) buttons?\b', text))
+
 _NEW_IN_TITLE = re.compile(
     r"\bsealed\b|\bnew in box\b|\bnib\b|\bbnib\b|\bbrand new\b|\bfactory sealed\b"
 )
@@ -105,9 +134,11 @@ def _any(patterns: Sequence[str], text: str) -> bool:
 
 
 def detect_condition(title_norm: str, condition_id: str | None) -> Condition | None:
+    if condition_id == _EBAY_FOR_PARTS_ID:
+        return None
+    if re.search(r'(?<!not )\b(?:used|pre owned|preowned)\b', title_norm):
+        return "used"
     if condition_id is not None:
-        if condition_id == _EBAY_FOR_PARTS_ID:
-            return None
         return "new" if condition_id in _EBAY_NEW_IDS else "used"
     return "new" if _NEW_IN_TITLE.search(title_norm) else "used"
 
@@ -116,6 +147,8 @@ def match_single(
     title: str, products: Sequence[Product], condition_id: str | None = None
 ) -> tuple[Product, Condition] | None:
     title_norm = normalize(title)
+    if unrelated_accessory(title):
+        return None
     condition_text = re.sub(r'\b(dead rising|red dead redemption|dead by daylight|dead space)\b',
                             '', title_norm)
     if _any(GLOBAL_EXCLUDES, condition_text):

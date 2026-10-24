@@ -67,9 +67,9 @@ def test_empty_search_is_not_confused_with_verification_or_layout_failure():
         parse_active_page('<h1>Pardon our interruption</h1>', NOW)
 
 
-def test_search_link_is_fixed_price_newest_first():
+def test_search_link_is_all_formats_newest_first():
     url = search_link('rtx 4070 & gpu')
-    assert "LH_BIN=1" in url and "_sop=10" in url and "rtx+4070+%26+gpu" in url
+    assert "LH_BIN" not in url and "_sop=10" in url and "rtx+4070+%26+gpu" in url
 
 
 def test_browser_source_never_renews_capture_time(tmp_path):
@@ -83,3 +83,24 @@ def test_browser_source_never_renews_capture_time(tmp_path):
     with pytest.raises(SourceNeedsAttention):
         expired.search('')
     conn.close()
+
+@pytest.mark.parametrize('time,delta', [('2d 3h left',timedelta(days=2,hours=3)), ('25m 12s left',timedelta(minutes=25,seconds=12))])
+def test_auction_cards_preserve_bids_and_visible_closing_countdown(time, delta):
+    html = card(buying='4 bids') + ''
+    html = html.replace('</li>', f'<div class="s-card__time-left">{time}</div></li>')
+    item = parse_active_page(html, NOW).listings[0]
+    assert item.is_auction and item.bid_count == 4
+    assert item.end_time == NOW + delta
+
+
+def test_search_supports_auction_mode_without_excluding_buy_now_from_default():
+    assert 'LH_BIN' not in search_link('halo 3 xbox 360')
+    assert 'LH_Auction=1' in search_link('halo 3 xbox 360', auction=True)
+
+
+def test_real_auction_page_retains_visible_bids_and_excludes_missing_times():
+    from pathlib import Path
+    html=(Path(__file__).parent/'fixtures/ebay/live-halo-auctions.html').read_text(encoding='utf-8')
+    page=parse_active_page(html,NOW)
+    assert page.cards==123 and len(page.listings)>100
+    assert all(l.is_auction and l.end_time>NOW and l.bid_count>=0 for l in page.listings)

@@ -12,6 +12,8 @@ from typing import Literal
 import httpx
 
 from dealfinder import db
+from dealfinder.subscriptions import accepts
+from dealfinder.matcher import unrelated_accessory
 from dealfinder.config import Config
 
 log = logging.getLogger(__name__)
@@ -136,9 +138,12 @@ class Notifier:
         if not self.cfg.notify_reasons.get(reason, False) or not self.enabled():
             return False
         row = db.get_listing(self.conn, listing_id)
-        if row is None:
+        if row is None or row["dismissed"] or unrelated_accessory(row["title"]) or not accepts(self.conn,row):
             return False
         now = self.clock()
+        from dealfinder.pipeline import _ended
+        if _ended(row,now,self.cfg):
+            return False
         if row["end_time"] and datetime.fromisoformat(row["end_time"]) < now:
             return False
         if not db.claim_notification(self.conn, listing_id, reason, now):

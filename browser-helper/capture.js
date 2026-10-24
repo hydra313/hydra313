@@ -20,13 +20,14 @@
       const fields = [
         [".s-card__title, .s-item__title", "s-card__title"],
         [".s-card__price, .s-item__price", "s-card__price"],
+        [".s-card__time-left, .s-item__time-left, .s-card__timeleft, .s-item__time-end", "s-card__time-left"],
         [".s-card__subtitle, .SECONDARY_INFO", "s-card__subtitle"],
         [".s-card__caption, .s-item__caption--signal, .POSITIVE", "s-card__caption"],
         [".s-card__attribute-row, .s-item__shipping, .s-item__logisticsCost, .s-item__purchase-options-with-icon, .s-item__bids, .s-item__bidCount", "s-card__attribute-row"],
       ];
       for (const [selector, className] of fields) {
         for (const node of card.querySelectorAll(selector)) {
-          if (className === "s-card__attribute-row" && !/shipping|delivery|buy it now|best offer|\bbids?\b|pickup/i.test(node.innerText)) continue;
+          if (className === "s-card__attribute-row" && !/shipping|delivery|buy it now|best offer|\bbids?\b|pickup|\bleft\b/i.test(node.innerText)) continue;
           const field = document.createElement("div"); field.className = className;
           field.textContent = node.innerText; item.append(field);
         }

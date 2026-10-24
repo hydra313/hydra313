@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"400","swap":true},{"code":"[45]..","swap":false,"error":true}]}'>
   <title>{% block title %}ConsoleHawk{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v=8">
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v=9">
   <link rel="icon" href="/static/consolehawk-mark.svg" type="image/svg+xml">
   <meta name="theme-color" content="#192018">
   <script src="/static/htmx.min.js"></script>
@@ -17,7 +17,7 @@
     <p class="nav-label">WORKSPACE</p>
     <nav aria-label="Main navigation">
       {% set current = request.url.path %}
-      {% for href, label, symbol in [('/', 'Deals', '◈'), ('/lots/hardware', 'Bulk lots', '▦'), ('/lots/games', 'Game lots', '◫'), ('/catalog', 'Catalog', '≡'), ('/connections', 'Connections', '↻'), ('/sources/ebay', 'eBay browser', '↗'), ('/sources/hibid', 'HiBid search', '↗')] %}
+      {% for href, label, symbol in [('/', 'Deals', '◈'), ('/lots/hardware', 'Bulk lots', '▦'), ('/lots/games', 'Game lots', '◫'), ('/catalog', 'Catalog', '≡'), ('/connections', 'Connections', '↻')] %}
       <a href="{{ href }}"{% if current == href %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ symbol }}</span>{{ label }}</a>
       {% endfor %}
     </nav>
@@ -33,5 +33,6 @@
       <footer class="page-footer">Spot the classics. Hunt the deals.<span>ConsoleHawk · Local edition</span></footer>
     </main>
   </div>
+  <script src="/static/refresh.js"></script>
 </body>
 </html>

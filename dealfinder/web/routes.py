@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import io
 import logging
 import math
@@ -18,7 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 
-from dealfinder import db, connections
+from dealfinder import db, connections, subscriptions
 from dealfinder.budget import Budget
 from dealfinder.catalog import Catalog, load_catalog
 from dealfinder.config import Config
@@ -26,8 +27,11 @@ from dealfinder.console_editions import edition_text
 from dealfinder.deal_rating import compare_deal
 from dealfinder.models import BulkProduct, MarketValue
 from dealfinder.market import SOLD_ERROR_SETTING
+from dealfinder.matcher import detect_condition
+from dealfinder.text import normalize
 from dealfinder.pipeline import SCAN_KINDS, stale_before, hibid_snapshot_before
 from dealfinder.pipeline import ebay_queries
+from dealfinder.discovery import browser_queries, broad_queries
 from dealfinder.sources import ebay_browser
 from dealfinder.sources import ebay_sold_browser
 from dealfinder.sources import hibid_browser
@@ -36,7 +40,7 @@ from dealfinder.sources.hibid_browser import (
     IMPORT_LOCK, MAX_PAGE_BYTES, parse_browser_page, save_snapshot, search_link, snapshot_status,
 )
 from dealfinder.web.app import local_now, utc_now
-from dealfinder.web.browse import BrowseFilters, browse, available_options
+from dealfinder.web.browse import BrowseFilters, browse, available_options, visible_deals
 
 log = logging.getLogger(__name__)
 
@@ -260,9 +264,19 @@ def _header_response(request: Request, conn: sqlite3.Connection,
 def _status_response(request: Request, conn: sqlite3.Connection,
                      refresh_status: str | None = None):
     ctx = _header(request, conn, refresh_status=refresh_status)
+    ctx["listing_revision"] = _listing_revision(conn)
     response = _render(request, "partials/header_status.html", ctx)
-    response.headers["HX-Trigger"] = "listings-updated"
+    revision = _listing_revision(conn)
+    # Each browser carries its own revision; idle polling never invalidates rows.
+    if request.query_params.get('revision') != revision:
+        response.headers["HX-Trigger"] = "listings-updated"
     return response
+
+
+def _listing_revision(conn):
+    listing = tuple(conn.execute("SELECT COUNT(*), MAX(last_seen), SUM(price), SUM(profit), SUM(dismissed) FROM listings").fetchone())
+    market = tuple(conn.execute("SELECT COUNT(*), MAX(computed_at), SUM(value) FROM market_values").fetchone())
+    return hashlib.sha256(repr((listing,market,int(utc_now().timestamp()//60))).encode()).hexdigest()[:20]
 
 
 @router.get("/header/status", response_class=HTMLResponse)
@@ -274,8 +288,7 @@ def header_status(request: Request, conn: sqlite3.Connection = Depends(get_conn)
 @router.post("/controls/scan", response_class=HTMLResponse)
 def toggle_scan(request: Request, on: bool = Form(...),
                 conn: sqlite3.Connection = Depends(get_conn)):
-    Budget(conn, request.app.state.cfg, local_now).set_scan_enabled(on)
-    return _header_response(request, conn)
+    return HTMLResponse("Photo scanning has been removed. No paid scan was started.", status_code=410)
 
 
 @router.post("/controls/pause", response_class=HTMLResponse)
@@ -288,12 +301,7 @@ def toggle_pause(request: Request, on: bool = Form(...),
 @router.post("/controls/caps", response_class=HTMLResponse)
 def set_caps(request: Request, daily: str = Form(""), monthly: str = Form(""),
              max_scan_price: str = Form(""), conn: sqlite3.Connection = Depends(get_conn)):
-    values = [v.strip() or None for v in (daily, monthly, max_scan_price)]
-    try:
-        Budget(conn, request.app.state.cfg, local_now).set_caps(*values)
-    except ValueError as e:
-        return _header_response(request, conn, caps_error=str(e), status_code=400)
-    return _header_response(request, conn)
+    return HTMLResponse("Photo scanning has been removed. No paid scan was started.", status_code=410)
 
 
 @router.post("/refresh", response_class=HTMLResponse)
@@ -357,25 +365,33 @@ def _market(mv: MarketValue | None) -> dict | None:
 
 
 def _deal(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, names: dict[str, str],
-          new_since: datetime | None, now: datetime) -> dict:
+          new_since: datetime | None, now: datetime, value_cache: dict | None = None) -> dict:
     images = json.loads(row["image_urls"] or "[]")
     first_seen = _parse_time(row["first_seen"])
-    value = db.get_market_value(conn, row["key"], row["condition"]) if row["condition"] else None
+    cache = value_cache if value_cache is not None else {}
+    condition = detect_condition(normalize(row['title']), '1000' if row['condition']=='new' else '3000')
+    key = (row['key'],condition)
+    if key not in cache:
+        cache[key] = db.get_market_value(conn,*key) if key[1] else None
+    value = cache[key]
+    profit = row["profit"]
+    if value and value.method == 'sold_average' and row['total_cost'] is not None:
+        profit = value.value * (1-cfg.sell_fee_rate) - cfg.sell_shipping.get(row['category'],0) - row['total_cost']
     return {
         "id": row["id"],
         "title": row["title"],
         "url": _http_url(row["url"]),
         "image": _http_url(images[0]) if images else None,
         "product": names.get(row["key"], row["key"]),
-        "condition": row["condition"] or "—",
+        "condition": condition or "—",
         "end_at": _parse_time(row["end_time"]),
         "site": SITE_NAMES.get(row["source"], row["source"]),
         "total_cost": row["total_cost"],
         "price": row["price"],
-        "rating": compare_deal(value, row["total_cost"], row["profit"], 1, cfg, now),
+        "rating": compare_deal(value, row["total_cost"], profit, 1, cfg, now),
         "breakdown": _breakdown(row, cfg) if row["total_cost"] is not None else "",
-        "market": _value(conn, row),
-        "profit": row["profit"],
+        "market": _market(value),
+        "profit": profit,
         "discount": row["discount_pct"],
         "time_left": _time_left(row["end_time"], now),
         "target": bool(row["is_target_hit"]),
@@ -396,12 +412,24 @@ def _hours(value: str | None) -> float | None:
 @router.get("/", response_class=HTMLResponse)
 def deals(request: Request, category: str | None = None, source: str | None = None,
           ending_within_h: str | None = None, new_only: bool = False,
-          target_only: bool = False, show_all: bool = True,
-          search: BrowseFilters = Depends(),
+          target_only: bool = False, show_all: bool = False,
+          search: BrowseFilters = Depends(), page: int = Query(1,ge=1),
           conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()
     partial = _is_partial(request)
+    public_query = ' '.join(v for v in (search.console,search.q) if v).strip()[:200]
+    if len(public_query) >= 3:
+        with request.app.state.browser_lock:
+            last = db.get_setting(conn,'last_requested_search','')
+            marker = json.dumps([public_query,int(now.timestamp()//600)])
+            if marker != last:
+                queue = json.loads(db.get_setting(conn,'ebay_requested_searches','[]'))
+                queue = [q for q in queue if q.get('query') != public_query]
+                queue = [{'query':public_query,'auction':False,'page':1},
+                         {'query':public_query,'auction':True,'page':1}] + queue
+                db.set_setting(conn,'ebay_requested_searches',json.dumps(queue[:12]))
+                db.set_setting(conn,'last_requested_search',marker)
     if partial:
         new_since = _parse_time(db.get_setting(conn, NEW_SINCE))
     else:
@@ -421,11 +449,20 @@ def deals(request: Request, category: str | None = None, source: str | None = No
         category=filters["category"], source=filters["source"],
         ending_within_h=filters["ending_within_h"],
         new_since=new_since if new_only else None, target_only=target_only,
-        deals_only=not show_all,
+        deals_only=False,
         stale_before=stale_before(cfg, now), hibid_before=hibid_snapshot_before(cfg, now))
     names = _product_names(conn, cfg)
-    items, options = browse([_deal(conn, cfg, r, names, new_since, now) for r in rows], search)
-    ctx = {"deals": items}
+    values = {}
+    items, options = browse([_deal(conn, cfg, r, names, new_since, now, values) for r in rows], search)
+    eligible = visible_deals(items, show_all)
+    pages = max(1,math.ceil(len(eligible)/100))
+    page = min(page,pages)
+    ctx = {"deals": eligible[(page-1)*100:page*100], "available_count":len(items),
+           "page":page, "pages":pages,
+           "next_page":request.url.include_query_params(page=page+1) if page < pages else None,
+           "previous_page":request.url.include_query_params(page=page-1) if page > 1 else None,
+           "pending_count":sum(d['rating']['tone']=='unknown' for d in items),
+           "hidden_count":len(items)-len(eligible)}
     if partial:
         return _render(request, "partials/listing_rows.html", ctx)
     db.set_setting(conn, LAST_VISIT, now.isoformat())
@@ -506,7 +543,7 @@ def _lot(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, catalog: Catal
 
 
 @router.get("/lots/hardware", response_class=HTMLResponse)
-def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bool = True,
+def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bool = False,
                   category: str = "", source: str = "", ending_within_h: str = "",
                   search: BrowseFilters = Depends(),
                   conn: sqlite3.Connection = Depends(get_conn)):
@@ -516,12 +553,13 @@ def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bo
                              category=category.strip().casefold() or None, source=source or None,
                              ending_within_h=_hours(ending_within_h),
                              photo_finds_only=photo_finds_only,
-                             deals_only=not show_all,
+                             deals_only=False,
                              stale_before=stale_before(cfg, now),
                              hibid_before=hibid_snapshot_before(cfg, now))
     catalog = _catalog(conn, cfg)
     items, options = browse([_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
                              for r in rows if not _is_game_row(r)], search)
+    items = visible_deals(items, show_all)
     ctx = {"lots": items}
     if _is_partial(request):
         return _render(request, "partials/hardware_rows.html", ctx)
@@ -536,7 +574,7 @@ def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bo
 @router.get("/lots/games", response_class=HTMLResponse)
 def game_lots(request: Request, platform: str | None = None,
               ending_within_h: str | None = None, photo_finds_only: bool = False,
-              show_all: bool = True,
+              show_all: bool = False,
               source: str = "", search: BrowseFilters = Depends(),
               conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
@@ -548,13 +586,14 @@ def game_lots(request: Request, platform: str | None = None,
     }
     rows = db.query_listings(conn, ["game_lot", "scan_only"], now, **filters,
                              source=source or None,
-                             deals_only=not show_all,
+                             deals_only=False,
                              stale_before=stale_before(cfg, now),
                              hibid_before=hibid_snapshot_before(cfg, now))
     filters["show_all"] = show_all
     catalog = _catalog(conn, cfg)
     items, options = browse([_lot(conn, cfg, r, catalog, now, bool(r["photo_find"]))
                              for r in rows if _is_game_row(r)], search)
+    items = visible_deals(items, show_all)
     ctx = {"lots": items}
     if _is_partial(request):
         return _render(request, "partials/game_rows.html", ctx)
@@ -656,34 +695,7 @@ def listing_detail(request: Request, listing_id: int,
 @router.post("/listing/{listing_id}/scan", response_class=HTMLResponse)
 def scan_listing(request: Request, listing_id: int,
                  conn: sqlite3.Connection = Depends(get_conn)):
-    """Scan on demand: ignores the on/off switch and the price filter, not the caps
-    (§11.2). The pipeline re-checks everything under the scan lock."""
-    cfg = request.app.state.cfg
-    row = db.get_listing(conn, listing_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="listing not found")
-    now = utc_now()
-    end = _parse_time(row["end_time"])
-    cutoff = hibid_snapshot_before(cfg, now)
-    unavailable = (row["dismissed"] or row["kind"] not in SCAN_KINDS
-                   or (row["source"] == "hibid" and cutoff is not None
-                       and _parse_time(row["last_seen"]) <= cutoff)
-                   or (end is not None and end <= now)
-                   or (end is None and _parse_time(row["last_seen"]) < stale_before(cfg, now)))
-    if unavailable or db.get_scan(conn, listing_id) is not None:
-        return _render(request, "partials/scan_status.html", {"error": True,
-                       "message": "Not scanned: this listing is ineligible or already scanned."})
-    decision = Budget(conn, cfg, local_now).can_manual_scan()
-    if not decision.allowed:
-        return _render(request, "partials/scan_status.html",
-                       {"error": True, "message": f"Not scanned: {decision.reason}"})
-    if not cfg.anthropic_api_key:
-        return _render(request, "partials/scan_status.html", {"error": True,
-                       "message": "Not scanned: ANTHROPIC_API_KEY is not set."})
-    request.app.state.runner.start_scan(listing_id)
-    return _render(request, "partials/scan_status.html",
-                   {"error": False, "message": "Scanning… reload this page in a minute"
-                                               " to see the results."})
+    return HTMLResponse("Photo scanning has been removed. No paid scan was started.", status_code=410)
 
 
 # --- Keyless eBay browser helper -----------------------------------------------
@@ -695,7 +707,8 @@ def connections_page(request: Request, conn: sqlite3.Connection = Depends(get_co
     ctx=_header(request,conn)
     ctx.update(helper_token=request.app.state.browser_token, ebay_helper=ebay_browser.browser_status(conn),
                hibid_helper=_hibid_helper_status(conn), discord_connected=bool(cfg.discord_webhook_url),
-               notify_reasons=cfg.notify_reasons,
+               notify_reasons=cfg.notify_reasons, item_scope=db.get_setting(conn,"discord_item_scope","all"),
+               subscription_count=len(subscriptions.subscriptions(conn)),
                hibid_mode=cfg.hibid_mode, message='')
     response=_render(request,'connections.html',ctx)
     response.headers['Cache-Control']='no-store'
@@ -741,7 +754,11 @@ def discord_test(request: Request):
 
 @router.post('/connections/discord/preferences', response_class=HTMLResponse)
 async def discord_preferences(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
-    form=await request.form(max_files=0,max_fields=6)
+    form=await request.form(max_files=0,max_fields=8)
+    scope = form.get("item_scope", "all")
+    if scope not in ("all", "selected"):
+        raise HTTPException(400, "Unknown alert scope")
+    db.set_setting(conn,"discord_item_scope",scope)
     reasons={reason:form.get(reason)=='on' for reason in request.app.state.cfg.notify_reasons}
     request.app.state.cfg.notify_reasons=reasons
     db.set_setting(conn,'discord_notify_reasons',json.dumps(reasons))
@@ -817,7 +834,11 @@ def ebay_helper_next(request: Request, conn: sqlite3.Connection = Depends(get_co
         if Budget(conn, cfg, local_now).paused():
             return {"paused": True, "reason": "Automatic checks paused"}
         catalog = load_catalog(cfg.catalog_dir, conn, cfg)
-        queries = ebay_queries(catalog)
+        queries = browser_queries(catalog)
+        # Subscriptions get timely coverage without removing other catalog searches.
+        selected = subscriptions.subscriptions(conn)
+        priority = [p.ebay_query for p in catalog.enabled_products() if f"product:{p.id}" in selected]
+        queries = list(dict.fromkeys(priority + queries))
         sold_queries = ebay_sold_browser.needed_queries(conn, catalog, cfg, utc_now())
         api_mode = bool(cfg.ebay_client_id and cfg.ebay_client_secret)
         if api_mode and not sold_queries:
@@ -833,10 +854,20 @@ def ebay_helper_next(request: Request, conn: sqlite3.Connection = Depends(get_co
             query = sold_queries[(index // 2) % len(sold_queries)]
             url = sold_url(query)
         else:
-            active_index = int(db.get_setting(conn, "ebay_browser_active_rotation", "0"))
-            query = queries[active_index % len(queries)]
-            db.set_setting(conn, "ebay_browser_active_rotation", str(active_index + 1))
-            url = ebay_browser.search_link(query)
+            queue = json.loads(db.get_setting(conn,'ebay_requested_searches','[]'))
+            if queue:
+                job = queue.pop(0)
+                query = job['query']
+                url = ebay_browser.search_link(query,auction=bool(job['auction']),page=int(job['page']))
+                db.set_setting(conn,'ebay_requested_searches',json.dumps(queue))
+            else:
+                try:
+                    active_index = int(db.get_setting(conn, "ebay_browser_active_rotation", "0"))
+                except ValueError:
+                    active_index = 0
+                query = queries[(active_index // 2) % len(queries)]
+                db.set_setting(conn, "ebay_browser_active_rotation", str(active_index + 1))
+                url = ebay_browser.search_link(query, auction=active_index % 2 == 1)
         db.set_setting(conn, ebay_browser.ROTATION_KEY, str(index + 1))
         status = {**ebay_browser.browser_status(conn), "connected_at": utc_now().isoformat(),
                   "query": query, "kind": kind, "error": "", "state": "searching"}
@@ -865,6 +896,13 @@ def _save_ebay_capture(request, conn, data):
                 cards, matched = usable, 0
             else:
                 cards, usable, matched = _import_ebay(request.app.state.runner, conn, html, at)
+                page = data.get('page',1)
+                if isinstance(page,int) and not isinstance(page,bool) and 1 <= page < 5 and cards >= 240:
+                    query = str(data.get('query',''))[:200]
+                    queue = json.loads(db.get_setting(conn,'ebay_requested_searches','[]'))
+                    followup = {'query':query,'auction':data.get('auction') is True,'page':page+1}
+                    if query and followup not in queue:
+                        db.set_setting(conn,'ebay_requested_searches',json.dumps(([followup]+queue)[:12]))
             status = {"state": "ready", "captured_at": at.isoformat(),
                       "connected_at": utc_now().isoformat(), "cards": cards,
                       "usable": usable, "matched": matched, "kind": kind, "query": str(data.get("query", ""))[:200]}
@@ -910,7 +948,7 @@ def hibid_helper_next(request: Request, conn: sqlite3.Connection = Depends(get_c
     with request.app.state.browser_lock:
         if cfg.hibid_mode != 'browser' or Budget(conn,cfg,local_now).paused():
             return {'paused':True, 'reason':'HiBid collection is paused or disabled'}
-        queries = list(dict.fromkeys(cfg.broad_queries.get('hibid', [])))
+        queries = broad_queries(load_catalog(cfg.catalog_dir,conn,cfg),cfg.broad_queries.get('hibid', []))
         if not queries:
             return {'paused':True, 'reason':'No HiBid search queries configured'}
         try:
@@ -1092,6 +1130,7 @@ def _catalog_row(conn: sqlite3.Connection, table: str, item, override: sqlite3.R
     row = {"table": table, "id": item.id, "name": item.name, "enabled": item.enabled,
            "category": getattr(item, "category", None), "custom": custom,
            "fields": {}, "markets": [], "error": None,
+           "notify": f"{table}:{item.id}" in subscriptions.subscriptions(conn),
            "reference": _http_url(getattr(item, 'source_url', None))}
     for field in _FIELDS[table]:
         set_value = override[field] if override is not None else None
@@ -1219,7 +1258,8 @@ def add_custom_entry(request: Request, kind: str, entry_id: str = Form("", alias
 @router.post("/catalog/{table}/{item_id}", response_class=HTMLResponse)
 def update_catalog(request: Request, table: str, item_id: str, enabled: bool = Form(False),
                    max_price: str = Form(""), repair_cost: str = Form(""),
-                   success_rate: str = Form(""), conn: sqlite3.Connection = Depends(get_conn)):
+                   success_rate: str = Form(""), notify_item: bool = Form(False),
+                   conn: sqlite3.Connection = Depends(get_conn)):
     if table not in CATALOG_TABLES:
         raise HTTPException(status_code=404, detail="unknown catalog table")
     cfg = request.app.state.cfg
@@ -1241,6 +1281,7 @@ def update_catalog(request: Request, table: str, item_id: str, enabled: bool = F
         error = str(e)
     else:
         db.set_override(conn, CATALOG_TABLES[table], item_id, **fields)
+        subscriptions.set_subscription(conn, table, item_id, notify_item)
         catalog = _catalog(conn, cfg) or catalog
     [row] = _catalog_rows(conn, catalog, table, only=item_id)
     if error is not None:

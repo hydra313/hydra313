@@ -120,10 +120,26 @@ def row_html(html, listing_id):
     return m.group(0) if m else None
 
 
+class AllListingsClient:
+    """Explicit all-results view for tests unrelated to deal eligibility."""
+    def __init__(self, client): self.client=client
+    def __getattr__(self,name): return getattr(self.client,name)
+    def get(self,url,**kwargs):
+        from urllib.parse import urlsplit,parse_qsl,urlunsplit,urlencode
+        parts=urlsplit(url)
+        if parts.path in ('/','/lots/hardware','/lots/games'):
+            params=dict(parse_qsl(parts.query))
+            params.update(kwargs.pop('params',{}) or {})
+            params.setdefault('show_all','true')
+            url=urlunsplit((parts.scheme,parts.netloc,parts.path,urlencode(params),parts.fragment))
+        return self.client.get(url,**kwargs)
+
+
 # --- deals page ----------------------------------------------------------------
 
 
-def test_deals_page_lists_all_active_listings_by_default(client, conn):
+def test_explicit_all_view_lists_active_items(client, conn):
+    client = AllListingsClient(client)
     plain = seed(conn, "a1", title="RTX 4090 Founders")
     hit = seed(conn, "a2", title="RTX 4090 cheap", target=True)
     gone = seed(conn, "a3", title="RTX 4090 dismissed")
@@ -138,7 +154,7 @@ def test_deals_page_lists_all_active_listings_by_default(client, conn):
     assert row_html(html, plain) is not None
     assert "RTX 4090 Founders" in html
     assert "GeForce RTX 4090" in html  # product name from the catalog
-    assert "🎯" in row_html(html, hit)
+    assert row_html(html, hit) is not None
     assert "🎯" not in row_html(html, plain)
     assert row_html(html, gone) is None
     assert row_html(html, no_deal) is not None
@@ -147,6 +163,7 @@ def test_deals_page_lists_all_active_listings_by_default(client, conn):
 
 
 def test_filters_query_params(client, conn):
+    client = AllListingsClient(client)
     gpu = seed(conn, "f1", source="ebay", end_in_h=30)
     console = seed(conn, "f2", source="hibid", key="ps5-spider-man-2", category="console",
                    end_in_h=2)
@@ -175,6 +192,7 @@ def test_filters_query_params(client, conn):
     ("controller", "Controller", "dualsense-30th-anniversary"),
 ])
 def test_category_dropdown_values_and_old_capitalized_links_work(client, conn, category, label, key):
+    client = AllListingsClient(client)
     lid = seed(conn, "category-"+category, category=category, key=key)
     page = LexborHTMLParser(client.get('/').text)
     option = next(n for n in page.css('select[name="category"] option') if n.text() == label)
@@ -187,6 +205,7 @@ def test_category_dropdown_values_and_old_capitalized_links_work(client, conn, c
 
 
 def test_new_badge_uses_previous_visit(client, conn):
+    client = AllListingsClient(client)
     previous = now_utc() - timedelta(hours=2)
     db.set_setting(conn, "last_visit", previous.isoformat())
     old = seed(conn, "n1", first_seen=previous - timedelta(hours=1))
@@ -212,45 +231,20 @@ def test_new_badge_uses_previous_visit(client, conn):
 # --- header controls -----------------------------------------------------------
 
 
-def test_toggle_scan_persists(client, cfg, conn):
-    assert "Photo scanning: off" in client.get("/").text  # off on first run (§11.2)
-
-    resp = client.post("/controls/scan", data={"on": "true"})
-    assert resp.status_code == 200
-    assert "Photo scanning: on" in resp.text
-    assert Budget(conn, cfg, local_now).scan_enabled() is True
-
-    resp = client.post("/controls/scan", data={"on": "false"})
-    assert "Photo scanning: off" in resp.text
-    assert Budget(conn, cfg, local_now).scan_enabled() is False
+def test_paid_scan_controls_are_removed(client,cfg,conn):
+    assert 'Photo scanning:' not in client.get('/').text
+    assert client.post('/controls/scan',data={'on':'true'}).status_code == 410
+    assert not Budget(conn,cfg,local_now).scan_enabled()
 
 
-def test_caps_validation(client, cfg, conn):
-    resp = client.post("/controls/caps",
-                       data={"daily": "-1", "monthly": "40", "max_scan_price": "200"})
-    assert resp.status_code == 400
-    assert "must be a finite number" in resp.text
-    assert Budget(conn, cfg, local_now).caps().monthly == 50.0  # nothing written
-
-    resp = client.post("/controls/caps",
-                       data={"daily": "abc", "monthly": "40", "max_scan_price": "200"})
-    assert resp.status_code == 400
-    assert "must be a number" in resp.text
-
-    resp = client.post("/controls/caps",
-                       data={"daily": "3", "monthly": "40", "max_scan_price": "200"})
-    assert resp.status_code == 200
-    caps = Budget(conn, cfg, local_now).caps()
-    assert (caps.daily, caps.monthly, caps.max_scan_price) == (3.0, 40.0, 200.0)
-    assert 'value="3.00"' in resp.text
+def test_paid_scan_budget_form_is_removed(client):
+    assert client.post('/controls/caps',data={'daily':'3','monthly':'40'}).status_code == 410
+    assert '/controls/caps' not in client.get('/').text
 
 
-def test_spend_shown_in_header(client, cfg, conn):
-    lid = seed(conn, "s1")
-    Budget(conn, cfg, local_now).record(lid, 1000, 500, 0.126)
-    html = client.get("/").text
-    spend = LexborHTMLParser(html).css_first("#header-controls .spend")
-    assert " ".join(spend.text(separator=" ").split()) == "Today $0.13 / Month $0.13"
+def test_scan_spend_does_not_clutter_header(client):
+    html=client.get('/').text
+    assert 'Scan budgets' not in html and 'scanning-control' not in html
 
 
 def test_pause_toggle(client, cfg, conn):
@@ -422,6 +416,7 @@ def test_banner_missing_keys(cfg, fake):
 
 
 def test_dismiss(client, conn):
+    client = AllListingsClient(client)
     lid = seed(conn, "d1")
     assert row_html(client.get("/").text, lid) is not None
     resp = client.post(f"/listing/{lid}/dismiss")
@@ -473,7 +468,7 @@ def test_default_factory_wires_optional_features(cfg, conn):
     factory = default_pipeline_factory(cfg)
     pipeline = factory(conn)
     assert set(pipeline.sources) == {"ebay", "shopgoodwill", "hibid"}
-    assert pipeline.scanner is not None
+    assert pipeline.scanner is None  # removed even if an old API key remains
     assert pipeline.notifier is not None
     factory.close()
 
@@ -525,12 +520,12 @@ def save_value(conn, key, condition, value, comps=(), count=6, low=False):
 
 
 def test_nav_links_on_every_page(client):
-    for path in ("/", "/lots/hardware", "/lots/games", "/catalog", "/sources/hibid"):
+    for path in ("/", "/lots/hardware", "/lots/games", "/catalog", "/connections"):
         html = client.get(path).text
         nav = LexborHTMLParser(html).css_first('nav[aria-label="Main navigation"]')
         for href, label in (("/", "Deals"), ("/lots/hardware", "Bulk lots"),
                             ("/lots/games", "Game lots"), ("/catalog", "Catalog"),
-                            ("/sources/hibid", "HiBid search")):
+                            ("/connections", "Connections")):
             link = nav.css_first(f'a[href="{href}"]')
             assert link is not None and label in link.text()
         active = nav.css('a[aria-current="page"]')
@@ -538,6 +533,7 @@ def test_nav_links_on_every_page(client):
 
 
 def test_hardware_lots_page(client, conn):
+    client = AllListingsClient(client)
     plain = seed_lot(conn, "h1", title="4 PS2 consoles untested", quantity=4, price=80.0,
                      profit=81.0)
     find = seed_lot(conn, "h2", title="PS2 console lot", quantity=5, price=130.0, deal=False)
@@ -574,6 +570,7 @@ def test_hardware_lots_page(client, conn):
 
 
 def test_game_lots_page_per_game_columns(client, conn):
+    client = AllListingsClient(client)
     ps2 = seed_lot(conn, "g1", kind="game_lot", key="ps2", category=None, quantity=20,
                    price=40.0, profit=55.0, end_in_h=30, title="20 PS2 games lot")
     n64 = seed_lot(conn, "g2", kind="game_lot", key="n64", category=None, quantity=8,
@@ -632,71 +629,32 @@ def test_listing_detail_shows_comps_and_scan_items(client, conn):
     assert 'href="https://www.ebay.com/itm/1"' in html
     assert "PS2 games bundle 12" in html
     assert "javascript:" not in html  # unsafe URLs are never rendered
-    # Photos from the scan, beside the identified items.
-    assert 'src="https://img.example.com/p0.jpg"' in html
-    assert 'src="https://img.example.com/p2.jpg"' in html
-    items = re.search(r'<table class="deals items".*?</table>', html, re.DOTALL).group(0)
-    silent = re.search(r"<tr>(?:(?!</tr>).)*Silent Hill 2.*?</tr>", items, re.DOTALL).group(0)
-    assert 'href="#photo-2"' in silent and "Photo 3" in silent
-    assert "Complete in box" in silent and "High" in silent and "$80.00" in silent
-    madden = re.search(r"<tr>(?:(?!</tr>).)*Madden 2004.*?</tr>", items, re.DOTALL).group(0)
-    assert "#photo-1" not in madden  # its photo URL failed the guard
-    assert "$2.00" in madden and "Low" in madden
-    ico = re.search(r"<tr>(?:(?!</tr>).)*&lt;i&gt;Ico.*?</tr>", items, re.DOTALL).group(0)
-    assert "#photo" not in ico and "Medium" in ico
-    kh = re.search(r"<tr>(?:(?!</tr>).)*Kingdom Hearts.*?</tr>", items, re.DOTALL).group(0)
-    assert "#photo" not in kh  # index out of range
-    assert "💎" in html
-    assert "Scan this lot" not in html  # already scanned
+    assert 'Photo scan' not in html and 'Scan this lot' not in html
+    assert 'Silent Hill 2' not in html  # historical paid-scan output is not a product feature
 
     assert client.get("/listing/999999").status_code == 404
 
 
-def test_scan_button_only_for_unscanned_live_lots(cfg, fake, conn):
-    cfg.anthropic_api_key = "sk-ant-test"
-    unscanned = seed_lot(conn, "u1", end_in_h=5)
-    scan_only = seed_lot(conn, "u2", kind="scan_only", quantity=None)
-    ended = seed_lot(conn, "u3", end_in_h=-1)
-    single = seed(conn, "s1")
-    scanned = seed_lot(conn, "u4")
-    add_scan(conn, scanned, status="failed", error="no usable photos")
-    app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
-    with HtmxClient(app) as client:
-        for lid in (unscanned, scan_only):
-            html = client.get(f"/listing/{lid}").text
-            assert "Scan this lot" in html and f'hx-post="/listing/{lid}/scan"' in html
-        for lid in (ended, single, scanned):
-            assert "Scan this lot" not in client.get(f"/listing/{lid}").text
-        assert "no usable photos" in client.get(f"/listing/{scanned}").text
-
-    cfg.anthropic_api_key = None
-    app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
-    with HtmxClient(app) as client:
-        html = client.get(f"/listing/{unscanned}").text
-    assert "Scan this lot" not in html and "ANTHROPIC_API_KEY" in html
+def test_photo_feature_removed_even_with_existing_api_key(cfg,fake,conn):
+    cfg.anthropic_api_key='sk-ant-test'
+    lid=seed_lot(conn,'old-scan')
+    with HtmxClient(create_app(cfg,build_pipeline=lambda c:fake,start_scheduler=False)) as client:
+        assert 'Scan this lot' not in client.get(f'/listing/{lid}').text
+        assert client.post(f'/listing/{lid}/scan').status_code == 410
+    assert fake.scanned == []
 
 
-def test_manual_scan_denied_shows_reason(client, cfg, conn, fake, monkeypatch):
-    lid = seed_lot(conn, "m1")
-    started: list[int] = []
-    monkeypatch.setattr(client.app.state.runner, "start_scan", started.append)
-    Budget(conn, cfg, local_now).set_caps(daily=0.0)
-    resp = client.post(f"/listing/{lid}/scan")
-    assert resp.status_code == 200
-    assert "daily cap reached" in resp.text
-    assert "Scanning" not in resp.text
-    assert started == [] and fake.scanned == []
+def test_removed_scan_never_starts(client,conn,fake):
+    lid=seed_lot(conn,'removed-scan')
+    assert client.post(f'/listing/{lid}/scan').status_code == 410
+    assert fake.scanned == []
 
 
-def test_manual_scan_runs_when_switch_off(client, cfg, conn, fake):
-    cfg.anthropic_api_key = "test-key"
-    lid = seed_lot(conn, "m1")
-    assert Budget(conn, cfg, local_now).scan_enabled() is False
-    resp = client.post(f"/listing/{lid}/scan")
-    assert resp.status_code == 200
-    assert "Scanning…" in resp.text
-    assert fake.scan_done.wait(5)
-    assert fake.scanned == [(lid, True)]
+def test_removed_scan_cannot_be_enabled_with_a_key(client,cfg,conn,fake):
+    cfg.anthropic_api_key='sk-ant-test'
+    lid=seed_lot(conn,'removed-scan-key')
+    assert client.post(f'/listing/{lid}/scan').status_code == 410
+    assert fake.scanned == []
 
 
 def test_manual_scan_error_shown_until_next_successful_scan(client, fake):
@@ -915,8 +873,8 @@ def test_origin_must_match_local_host_and_port(client, origin):
 def test_htmx_post_from_local_origin_allowed(client, cfg, conn, host, origin):
     headers = {"Host": host, **({"Origin": origin} if origin else {})}
     resp = client.post("/controls/scan", data={"on": "true"}, headers=headers)
-    assert resp.status_code == 200
-    assert Budget(conn, cfg, local_now).scan_enabled() is True
+    assert resp.status_code == 410
+    assert Budget(conn, cfg, local_now).scan_enabled() is False
 
 
 def test_get_unaffected(cfg, fake):
@@ -944,6 +902,7 @@ def test_every_post_in_templates_uses_htmx():
 
 
 def test_stale_listings_hidden(client, conn):
+    client = AllListingsClient(client)
     assert client.app.state.cfg.ebay_full_pass_hours == 3
     stale = seed(conn, "old", title="RTX 4090 gone", first_seen=now_utc() - timedelta(hours=7))
     fresh = seed(conn, "new", title="RTX 4090 here", first_seen=now_utc() - timedelta(hours=1))
@@ -957,11 +916,12 @@ def test_stale_listings_hidden(client, conn):
     html = client.get("/lots/hardware").text
     assert f"/listing/{new_lot}" in html and f"/listing/{old_lot}" not in html
     client.app.state.cfg.anthropic_api_key = "sk-ant-test"
-    assert "Scan this lot" in client.get(f"/listing/{new_lot}").text
+    assert "Scan this lot" not in client.get(f"/listing/{new_lot}").text
     assert "Scan this lot" not in client.get(f"/listing/{old_lot}").text
 
 
 def test_unseen_auction_with_known_end_still_shown(client, conn):
+    client = AllListingsClient(client)
     auction = seed(conn, "auc", title="RTX 4090 auction", end_in_h=5,
                    first_seen=now_utc() - timedelta(hours=7))
     lot = seed_lot(conn, "auclot", end_in_h=5)
@@ -971,7 +931,7 @@ def test_unseen_auction_with_known_end_still_shown(client, conn):
     assert row_html(client.get("/").text, auction) is not None
     assert f"/listing/{lot}" in client.get("/lots/hardware").text
     client.app.state.cfg.anthropic_api_key = "sk-ant-test"
-    assert "Scan this lot" in client.get(f"/listing/{lot}").text
+    assert "Scan this lot" not in client.get(f"/listing/{lot}").text
 
 
 def test_show_all_exposes_unpriced_singles_but_keeps_other_filters(client, conn):
@@ -1017,14 +977,14 @@ def test_show_all_defaults_and_explicit_checkbox_values(client, conn, path, kind
     lid = (seed(conn, "default-all", deal=False) if kind == "single" else
            seed_lot(conn, "default-all", kind=kind, key=key, category=category, deal=False))
     for headers in ({}, HTMX):
-        assert row_html(client.get(path, headers=headers).text, lid) is not None
+        assert row_html(client.get(path, headers=headers).text, lid) is None
         assert row_html(client.get(path + "?show_all=false", headers=headers).text, lid) is None
         # A checked checkbox follows the hidden false value in the form submission.
         assert row_html(client.get(path + "?show_all=false&show_all=true", headers=headers).text,
                         lid) is not None
     html = LexborHTMLParser(client.get(path).text)
     assert html.css_first('input[type="hidden"][name="show_all"]').attributes['value'] == 'false'
-    assert 'checked' in html.css_first('input[type="checkbox"][name="show_all"]').attributes
+    assert 'checked' not in html.css_first('input[type="checkbox"][name="show_all"]').attributes
 
 
 def test_sold_lookup_failure_is_visible_and_escaped(client, conn):
@@ -1056,18 +1016,10 @@ def test_refresh_completion_updates_rows_without_reloading(client, fake):
     assert client.get("/header/status").headers["HX-Trigger"] == "listings-updated"
 
 
-def test_manual_scan_rejects_missing_key_and_ineligible_listings(client, cfg, conn, fake):
-    lid = seed_lot(conn, "no-key")
-    assert "ANTHROPIC_API_KEY is not set" in client.post(f"/listing/{lid}/scan").text
-    assert fake.scanned == []
-    cfg.anthropic_api_key = "test-key"
-    single = seed(conn, "single-no-scan")
-    ended = seed_lot(conn, "ended-no-scan", end_in_h=-1)
-    db.dismiss_listing(conn, lid)
-    for listing_id in (lid, single, ended):
-        assert "Not scanned" in client.post(f"/listing/{listing_id}/scan").text
-        assert "Scan this lot" not in client.get(f"/listing/{listing_id}").text
-    assert client.post("/listing/999999/scan").status_code == 404
+def test_all_legacy_scan_links_are_retired(client,conn,fake):
+    lid=seed_lot(conn,'retired-scan')
+    for listing_id in (lid,999999):
+        assert client.post(f'/listing/{listing_id}/scan').status_code == 410
     assert fake.scanned == []
 
 
@@ -1137,7 +1089,7 @@ def test_expired_hibid_prices_hide_and_cannot_be_scanned(client, cfg, conn, fake
     assert row_html(client.get("/lots/hardware?show_all=true").text, lot) is None
     cfg.anthropic_api_key = "test"
     assert "Scan this lot" not in client.get(f"/listing/{lot}").text
-    assert "Not scanned" in client.post(f"/listing/{lot}/scan").text
+    assert client.post(f"/listing/{lot}/scan").status_code == 410
     assert fake.scanned == []
 
 # Keyless helper requests have a narrow, local capability; normal CSRF stays enforced.
@@ -1168,6 +1120,7 @@ def test_hibid_automatic_empty_search_continues_and_stale_capture_rejected(clien
 
 
 def test_connections_page_and_shared_search_controls(client,conn):
+    client = AllListingsClient(client)
     page = client.get('/connections')
     assert page.status_code == 200 and 'Discord' in page.text and 'Connect HiBid' in page.text
     for path in ('/', '/lots/hardware', '/lots/games'):
@@ -1217,6 +1170,7 @@ def test_browser_site_rotation_and_saved_alert_preferences(client,cfg,conn):
     ('/lots/games','game_lot','ps2','unknown'),  # no per-game condition evidence in this lot
 ])
 def test_shared_filters_apply_to_lot_pages_and_partial_refreshes(client,conn,path,kind,key,condition):
+    client = AllListingsClient(client)
     a=seed_lot(conn,'lot-search-a',kind=kind,key=key,title='Sony PlayStation 2 bundle',price=50)
     b=seed_lot(conn,'lot-search-b',kind=kind,key=key,title='Sony PlayStation 2 bundle',price=200)
     for headers in ({},{'HX-Request':'true'}):
@@ -1297,8 +1251,9 @@ def test_unhandled_refresh_failure_is_visible(cfg, fake):
         status = c.get('/header/status').text
         assert 'Refresh failed' in status and '&lt;failure&gt;' in status
 
-@pytest.mark.parametrize('price,profit,tone,label', [(580,200,'good','Good deal'),(830,10,'average','Average'),(880,-20,'overpriced','At limit')])
+@pytest.mark.parametrize('price,profit,tone,label', [(580,200,'good','Good deal'),(800,10,'average','Average'),(880,-20,'overpriced','At limit')])
 def test_sold_average_and_deal_colors_render_next_to_current_price(client, conn, price, profit, tone, label):
+    client = AllListingsClient(client)
     lid=seed(conn,'rating-'+tone,price=price,profit=profit)
     mv=MarketValue('rtx-4090','used',1000,8,'sold_average',False,now_utc())
     db.save_market_value(conn,mv,[])
@@ -1312,6 +1267,7 @@ def test_sold_average_and_deal_colors_render_next_to_current_price(client, conn,
 
 
 def test_stale_and_asking_values_do_not_color_listings(client, conn):
+    client = AllListingsClient(client)
     lid=seed(conn,'rating-unknown',price=100,profit=500)
     for method,at in [('active_bin',now_utc()),('sold',now_utc()),('sold_average',now_utc()-timedelta(days=2))]:
         db.save_market_value(conn,MarketValue('rtx-4090','used',1000,8,method,False,at),[])
@@ -1325,7 +1281,8 @@ def test_helper_alternates_sold_evidence_without_skipping_active_catalog_queries
     headers={'X-Dealfinder-Token':client.app.state.browser_token}
     jobs=[client.post('/browser/ebay/next',headers=headers).json() for _ in range(4)]
     assert [job['kind'] for job in jobs]==['active','sold','active','sold']
-    assert jobs[0]['query'] != jobs[2]['query']
+    assert jobs[0]['query'] == jobs[2]['query']
+    assert 'LH_Auction=1' in jobs[2]['url'] and 'LH_Auction' not in jobs[0]['url']
     assert 'LH_Sold=1' in jobs[1]['url'] and jobs[1]['query']=='rtx 4090'
 
 
@@ -1342,3 +1299,83 @@ def test_sold_helper_capture_saves_comps_and_starts_repricing(client, fake, conn
     assert fake.imported==[]  # sold comps are evidence, not live offers
     from dealfinder.sources.ebay_sold_browser import snapshots
     assert snapshots(conn)['rtx 4090']['comps'][0]['price']==900
+
+@pytest.mark.parametrize('path', ['/', '/lots/hardware', '/lots/games'])
+def test_profit_first_default_has_clear_opt_in_without_target_or_scan_controls(client,path):
+    html=client.get(path).text
+    assert 'Include unpriced and lower-margin listings' in html
+    assert 'Target hits only' not in html and 'Photo finds only' not in html
+    assert 'Photo scanning:' not in html
+
+
+def test_cached_accessory_never_reappears_even_in_all_results(client,conn):
+    lid=seed(conn,'old-bad-accessory',key='ps5-pro-30th-anniversary',category='console',
+             title='PS5 PRO SLIM 30th Anniversary RGB Cooling Fan For PlayStation 5')
+    assert row_html(client.get('/?show_all=true').text,lid) is None
+
+
+def test_idle_status_does_not_trigger_repeated_listing_replacement(client,conn):
+    first=client.get('/header/status')
+    node=LexborHTMLParser(first.text).css_first('#header-status')
+    url=node.attributes['hx-get']
+    assert client.get(url).headers.get('HX-Trigger') is None
+    seed(conn,'new-capture')
+    assert client.get(url).headers.get('HX-Trigger') == 'listings-updated'
+
+
+def test_catalog_item_alert_selection_persists_independent_of_search(client,conn):
+    from dealfinder.subscriptions import subscriptions
+    response=client.post('/catalog/product/xbox-360-halo-3-special-edition',data={'enabled':'true','notify_item':'true'})
+    assert response.status_code == 200
+    assert 'product:xbox-360-halo-3-special-edition' in subscriptions(conn)
+    assert 'name="notify_item"' in response.text and 'checked' in response.text
+    assert client.post('/connections/discord/preferences',data={'resale_deal':'on','item_scope':'selected'}).status_code == 200
+    page=client.get('/connections').text
+    assert '1 selected' in page and 'value="selected" selected' in page
+    client.post('/catalog/product/xbox-360-halo-3-special-edition',data={'enabled':'true'})
+    assert not subscriptions(conn)
+
+
+
+def test_search_requests_queue_both_formats_once_and_keep_regular_rotation(client,conn):
+    client.get('/?q=Halo+3+Xbox+360&show_all=true')
+    queue=json.loads(db.get_setting(conn,'ebay_requested_searches'))
+    assert [job['auction'] for job in queue] == [False,True]
+    client.get('/?q=Halo+3+Xbox+360&show_all=true',headers=HTMX)
+    assert json.loads(db.get_setting(conn,'ebay_requested_searches')) == queue
+    headers={'X-Dealfinder-Token':client.app.state.browser_token}
+    jobs=[client.post('/browser/ebay/next',headers=headers).json() for _ in range(3)]
+    assert jobs[0]['query']==jobs[1]['query']=='Halo 3 Xbox 360'
+    assert 'LH_Auction=1' in jobs[1]['url']
+    assert jobs[2]['query'] != jobs[1]['query']
+
+
+def test_default_view_uses_current_sold_value_instead_of_stale_stored_profit(client,conn):
+    lid=seed(conn,'cached-false-profit',price=850,profit=500)
+    db.save_market_value(conn,MarketValue('rtx-4090','used',900,8,'sold_average',False,now_utc()),[])
+    assert row_html(client.get('/').text,lid) is None
+    row=row_html(client.get('/?show_all=true').text,lid)
+    assert 'deal-overpriced' in row
+
+
+def test_full_ebay_pages_queue_a_bounded_next_page(client,conn):
+    from tests.test_ebay_browser import card
+    headers={'X-Dealfinder-Token':client.app.state.browser_token}
+    html=''.join(card(item=str(900000000000+i)) for i in range(240))
+    payload={'html':html,'query':'halo 3 xbox 360','page':1,'auction':True,'captured_at':now_utc().isoformat()}
+    assert client.post('/browser/ebay/results',json=payload,headers=headers).status_code == 200
+    queue=json.loads(db.get_setting(conn,'ebay_requested_searches'))
+    assert queue[0] == {'query':'halo 3 xbox 360','page':2,'auction':True}
+    db.set_setting(conn,'ebay_requested_searches','[]')
+    payload['page']=5
+    client.post('/browser/ebay/results',json=payload,headers=headers)
+    assert json.loads(db.get_setting(conn,'ebay_requested_searches')) == []
+
+
+def test_large_result_sets_are_paginated_without_losing_matches(client,conn):
+    ids=[seed(conn,f'page-{i}') for i in range(101)]
+    first=client.get('/?show_all=true').text
+    assert row_html(first,ids[0]) and row_html(first,ids[-1]) is None
+    second=client.get('/?show_all=true&page=2').text
+    assert row_html(second,ids[-1]) and row_html(second,ids[0]) is None
+    assert 'Page 2 of 2' in second and '101 matching active listings' in second

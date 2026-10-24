@@ -461,3 +461,37 @@ def test_no_seed_product_name_hits_an_exclude():
     for p in SEED.products:
         result = match_single(p.name, SEED.products)
         assert result is not None and result[0].id == p.id, p.id
+
+@pytest.mark.parametrize('title', [
+    'Microsoft Xbox 360 Halo 3 Special Edition Console DVD Drive Bezel + Eject',
+    'Hori Fighting Stick PS5 30th Anniversary Controller',
+    'PS5 PRO SLIM 30th Anniversary Edition RGB Cooling Fan For SONY PlayStation 5',
+    'Retro Black Gloss Ps5 Buttons 30th Anniversary Logo',
+    'HautePad P12 Pro Wired PS5 PC Arcade Fighting Controller Anniversary Edition',
+    'PS5 30th Anniversary DualSense replacement buttons set',
+    'Lot of 10 PS5 30th Anniversary controller buttons',
+    'PS5 30th Anniversary controller silicone protective case',
+    'Xbox 360 Halo 3 Special Edition replacement shell',
+    'PS5 30th Anniversary arcade fight stick controller',
+])
+def test_accessories_and_arcade_controls_never_enter_any_listing_path(title, catalog):
+    assert _classify(title, catalog) is None
+    assert match_single(title, catalog.products) is None
+
+@pytest.mark.parametrize('title', [
+    'Xbox 360 Halo 3 Special Edition Console Working with controller',
+    'Sony PS2 PlayStation 2 Slim Sakura Pink Console Tested',
+    'Sony PlayStation 2 Ocean Blue Console SCPH-37000 Tested',
+    'PS5 DualSense 30th Anniversary Limited Edition Wireless Controller',
+])
+def test_collectible_hardware_remains_eligible(title, catalog):
+    result = _classify(title, catalog)
+    assert result is not None and result.kind == 'single'
+
+@pytest.mark.parametrize('title', [
+ 'Microsoft Xbox 360 S Slim Black Console Halo 4 NCAA Football 12 3 Game Bundle',
+ 'Microsoft Xbox 360 S Chrome Black Console Bundle Halo 4 Kinect Controller',
+ 'Microsoft Original Limited Green Edition Xbox Console Tested Rare non Halo',
+])
+def test_ordinary_consoles_with_franchise_games_are_not_premium_edition_hardware(title,catalog):
+    assert _classify(title,catalog) is None

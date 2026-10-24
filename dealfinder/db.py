@@ -9,6 +9,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Collection, Literal, get_args
 
+from dealfinder.matcher import unrelated_accessory
+
 from dealfinder.models import (
     Category, Classified, Comp, Listing, MarketValue, ScanResult, Scored,
 )
@@ -349,7 +351,7 @@ def query_listings(
         f" WHERE {' AND '.join(where)}"
         " ORDER BY l.is_target_hit DESC, photo_find DESC, l.rank_score DESC, l.id"
     )
-    return conn.execute(sql, params).fetchall()
+    return [r for r in conn.execute(sql, params).fetchall() if not unrelated_accessory(r["title"])]
 
 
 def dismiss_listing(conn: sqlite3.Connection, listing_id: int) -> None:
@@ -463,6 +465,9 @@ def get_market_value(
         ).fetchone()
     if row is None:
         return None
+    if table == 'market_values' and any(unrelated_accessory(c['title']) for c in conn.execute(
+            'SELECT title FROM comps WHERE key = ? AND condition = ?', (key,condition))):
+        return None  # recompute contaminated historical comparisons, keep the audit rows
     return MarketValue(
         key=key,
         condition=condition,

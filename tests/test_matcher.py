@@ -164,3 +164,8 @@ def test_detect_condition_from_title(title, expected):
 def test_detect_condition_ebay_id_wins_over_title(cid, expected):
     assert detect_condition("rtx 4090", cid) == expected
     assert detect_condition("rtx 4090 factory sealed", cid) == expected
+
+
+def test_explicit_used_condition_cannot_be_valued_as_brand_new():
+    assert detect_condition(normalize('Xbox Series X Halo Infinite Lightly Used 70 hrs'),'1000') == 'used'
+    assert detect_condition(normalize('Xbox Series X Halo Infinite Not Used Factory Sealed'),'1000') == 'new'

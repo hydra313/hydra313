@@ -5,7 +5,7 @@ import re
 from dealfinder.catalog import Catalog
 from dealfinder.config import Config
 from dealfinder.lots import GAME_WORDS, HARDWARE_WORDS, match_game_lot, match_hardware_lot
-from dealfinder.matcher import match_single
+from dealfinder.matcher import match_single, unrelated_accessory
 from dealfinder.models import Classified, Listing
 from dealfinder.text import mask, normalize, parse_quantity, quantity_mask
 
@@ -33,7 +33,7 @@ def _has_game_count(title_norm: str, mask_patterns: list[str]) -> bool:
 
 def classify(listing: Listing, catalog: Catalog, cfg: Config) -> Classified | None:
     """Spec section 6.3: route a listing to exactly one path, or reject it."""
-    if not listing.shipping_offered:
+    if not listing.shipping_offered or unrelated_accessory(listing.title):
         return None
     title_norm = normalize(listing.title)
     mask_patterns = catalog.mask_patterns()

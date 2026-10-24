@@ -281,3 +281,17 @@ kbd { padding: 2px 5px; border: 1px solid #3c4832; border-bottom-width: 2px; bor
 .connection-card summary, .connection-setup summary { cursor: pointer; font-weight: 600; }
 .connection-card ol { padding-left: 20px; line-height: 1.7; }
 @media (max-width: 560px) { .browse-filters { grid-template-columns: 1fr; } .browse-filters .search-field { grid-column: auto; } .connection-card, .connection-setup { padding: 18px; } }
+/* Comfortable listing scale, with large uncropped product photos. */
+body { font-size: 15px; }
+.deals { font-size: 14px; }
+.deals td { padding: 18px 12px; }
+.deals td.title { min-width: 250px; font-size: 15px; line-height: 1.5; }
+.deals td.img { min-width: 132px; width: 132px; }
+.deals td.img img, .deals td.img:empty::after { width: 120px; height: 120px; object-fit: contain; border-radius: 10px; background: #fff; }
+.comparison-note, .deal-rating { font-size: 12px; }
+.deals td.actions a, .deals td.actions button { font-size: 13px; }
+.filter-advanced { grid-column: 1 / -1; }
+.filter-advanced summary { cursor: pointer; color: var(--accent); padding: 8px 0; }
+.filter-advanced .advanced-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 14px; margin-top: 12px; }
+.listing-meta { color: var(--muted); font-size: 13px; margin-top: 8px; }
+@media(max-width:760px) { .deals td.title { min-width: 0; font-size: 16px; } .deals td.img img { width: 150px; height:150px; } .deals td.img { width:auto; } }

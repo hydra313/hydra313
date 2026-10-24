@@ -1,5 +1,5 @@
 {# Keep polling while idle too, so scheduler runs and browser imports appear live. #}
-<div id="header-status" class="status" hx-get="/header/status" hx-trigger="every {{ '3s' if refreshing else '10s' }}" hx-swap="outerHTML">
+<div id="header-status" class="status" hx-get="/header/status?revision={{ listing_revision|default('') }}" hx-trigger="every {{ '3s' if refreshing else '10s' }}" hx-swap="outerHTML">
   <div class="refresh-feedback"><span id="refresh-status" aria-live="polite">{{ refresh_status }}</span>
     <span class="muted">{% if paused %}Automatic checks paused{% else %}Automatic checks every {{ refresh_minutes }} min{% if next_check %} · Next check in {{ next_check }}{% endif %}{% endif %}</span>
     {% if progress_query %}<span class="muted">Searching: {{ progress_query }}</span>{% endif %}
