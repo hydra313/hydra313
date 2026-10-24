@@ -1,0 +1,22 @@
+<form id="custom-{{ kind }}" class="custom" hx-post="/catalog/custom/{{ kind }}" hx-target="this" hx-swap="outerHTML">
+  <h3>{{ 'Custom product' if kind == 'product' else 'Custom bulk product' }}</h3>
+  <label>ID <input name="id" required pattern="[a-z0-9][a-z0-9\-]*" placeholder="my-gpu-oc" value="{{ v.id or '' }}"></label>
+  <label>Category
+    <select name="category">
+      {% for c in categories %}<option value="{{ c|upper if c in ['gpu', 'cpu'] else c|capitalize }}"{% if v.category == c %} selected{% endif %}>{{ c|upper if c in ['gpu', 'cpu'] else c|capitalize }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Name <input name="name" required value="{{ v.name or '' }}"></label>
+  <label>eBay query <input name="ebay_query" required value="{{ v.ebay_query or '' }}"></label>
+  <label>Match pattern <input name="match" required value="{{ v.match or '' }}"></label>
+  {% if kind == 'product' %}
+  <label>Exclude patterns, one per line <textarea name="exclude" rows="2">{{ v.exclude or '' }}</textarea></label>
+  <label>Max price $ <input type="number" name="max_price" min="0" step="0.01" value="{{ v.max_price or '' }}"></label>
+  {% else %}
+  <label>Repair per unit $ <input type="number" name="repair_cost" min="0" step="0.01" placeholder="category default" value="{{ v.repair_cost or '' }}"></label>
+  <label>Success rate (0–1) <input type="number" name="success_rate" min="0" max="1" step="0.01" placeholder="category default" value="{{ v.success_rate or '' }}"></label>
+  {% endif %}
+  <button type="submit">Add</button>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  {% if message %}<p class="note" role="status">{{ message }}</p>{% endif %}
+</form>

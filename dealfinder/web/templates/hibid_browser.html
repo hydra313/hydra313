@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}HiBid search · Dealfinder{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">AUTOMATIC AUCTION SEARCH</span><h1>HiBid search</h1><p>Find your catalog items without importing each search.</p></div><span class="heading-icon" aria-hidden="true">↗</span></div>
+<section class="import-status"><h2>Connect once, scan automatically</h2><p>The browser helper searches HiBid and adds eligible listings automatically. Connect HiBid on the Connections page; manual import is an optional fallback.</p><a class="primary" href="/connections">Connect HiBid</a></section>
+{% if mode != 'browser' %}
+<p class="error">Browser import is disabled. Set <code>hibid_mode: browser</code> in config.yaml and restart.</p>
+{% endif %}
+<section class="import-status" aria-label="HiBid snapshot status">
+  {% if snapshot.state == 'missing' %}
+  <h2>Browser needs attention</h2><p>No search page has been imported yet.</p>
+  {% else %}
+  <h2>{{ 'Ready · browser snapshot' if snapshot.state == 'ready' else 'Browser needs attention · snapshot expired' }}</h2>
+  <p>Last page: {{ snapshot.captured_at.astimezone().strftime('%Y-%m-%d %H:%M') }} ·
+    {{ snapshot.cards }} {{ 'card' if snapshot.cards == 1 else 'cards' }} read · {{ snapshot.count }} usable USD {{ 'lot' if snapshot.count == 1 else 'lots' }} · {{ snapshot.matched }} catalog {{ 'match' if snapshot.matched == 1 else 'matches' }}.</p>
+  <p>Prices expire at {{ snapshot.expires.astimezone().strftime('%Y-%m-%d %H:%M') }}.
+    Expired prices are hidden from results and excluded from alerts and scans.</p>
+  {% if snapshot.skipped %}<ul>{% for reason, count in snapshot.skipped.items() %}<li>{{ count }} skipped: {{ reason }}</li>{% endfor %}</ul>{% endif %}
+  <p><a href="/?source=hibid&amp;show_all=true">View imported HiBid listings</a> · <a href="/lots/hardware?show_all=true">Bulk lots</a> · <a href="/lots/games?show_all=true">Game lots</a></p>
+  {% endif %}
+</section>
+<details><summary>Manual import fallback</summary>
+<h2>1. Open a search</h2>
+<p class="import-searches">{% for search in searches %}<a href="{{ search.url }}" target="_blank" rel="noopener noreferrer">Open HiBid: {{ search.query }}</a> {% endfor %}</p>
+<p>Wait for the results to load. If HiBid asks you to sign in or complete verification, finish that in its browser tab.</p>
+<h2>2. Copy or save the results</h2>
+<p>On the HiBid page, press <kbd>Ctrl+A</kbd>, then <kbd>Ctrl+C</kbd>. Paste into the box below.
+  Or press <kbd>Ctrl+S</kbd>, save as <strong>Webpage, Complete</strong>, and select the .html file.</p>
+<h2>3. Import the page</h2>
+<form id="hibid-import-form" class="import-form" hx-post="/sources/hibid/import"
+      hx-encoding="multipart/form-data" hx-target="#hibid-result" hx-disabled-elt="#hibid-import-submit">
+  <label>Search label <input type="text" name="query" value="rtx" maxlength="120"></label>
+  <label>When you loaded HiBid (local time)
+    <input type="datetime-local" name="captured_at" value="{{ captured_default }}" required></label>
+  <p class="muted">Use the page's capture time. Refresh older pages first; imported prices expire after {{ snapshot_minutes }} minutes.</p>
+  <label>Paste copied HiBid results or HTML
+    <textarea id="hibid-page" name="page_html" rows="7" placeholder="Paste the copied search page here"></textarea></label>
+  <p id="hibid-paste-status" class="muted" aria-live="polite"></p>
+  <label>Or choose a saved HTML page <input type="file" name="page_file" accept=".html,.htm,text/html"></label>
+  <p class="muted">Maximum 5 MB. Only USD lots with shipping, a payable bid and a closing countdown are imported.
+    Shipping costs and buyer premiums use your configured estimates; verify them on the auction page.</p>
+  <button id="hibid-import-submit" type="submit"{% if mode != 'browser' %} disabled{% endif %}>Import HiBid results</button>
+  <div id="hibid-result" role="status"></div>
+</form>
+<script src="/static/hibid-import.js"></script>
+</details>
+{% endblock %}

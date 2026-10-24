@@ -1,0 +1,11 @@
+{
+  "itemId": "v1|110000000001|0",
+  "title": "NVIDIA GeForce RTX 4070 Founders Edition 12GB",
+  "price": {"value": "250.00", "currency": "USD"},
+  "image": {"imageUrl": "https://i.ebayimg.com/images/g/aaa/s-l1600.jpg"},
+  "additionalImages": [
+    {"imageUrl": "https://i.ebayimg.com/images/g/bbb/s-l1600.jpg"},
+    {"imageUrl": "https://i.ebayimg.com/images/g/ccc/s-l1600.jpg"},
+    {"imageUrl": "https://i.ebayimg.com/images/g/ddd/s-l1600.jpg"}
+  ]
+}

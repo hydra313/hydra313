@@ -1,0 +1,7 @@
+- id: dualsense-god-of-war-ragnarok
+  category: controller
+  name: DualSense God of War Ragnarok
+  ebay_query: "dualsense god of war ragnarok"
+  match: '\bdualsense\b.*\bragnar[oö]k\b'
+  exclude: []
+  max_price: null

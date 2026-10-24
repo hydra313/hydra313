@@ -1,0 +1,381 @@
+# Curated limited-edition consoles (spec 5.1). The wider sourced reference
+# snapshot is in console_editions.json; see docs/console-catalog-audit.md.
+
+# PlayStation 30th Anniversary Collection, Sony, Nov 2024
+- id: ps5-30th-anniversary
+  category: console
+  name: PlayStation 5 Digital Edition 30th Anniversary Bundle
+  ebay_query: "ps5 30th anniversary"
+  match: '\b(ps5|playstation ?5)\b(?! pro\b)(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b30th anniversary\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# PlayStation 30th Anniversary Collection, Sony, Nov 2024
+- id: ps5-pro-30th-anniversary
+  category: console
+  name: PlayStation 5 Pro 30th Anniversary Bundle
+  ebay_query: "ps5 pro 30th anniversary"
+  match: '\b(ps5|playstation ?5) pro\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b30th anniversary\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# Sony, Sep 2023 (the later PS5 Slim Spider-Man 2 bundle is a standard bundle)
+- id: ps5-spider-man-2
+  category: console
+  name: PS5 Console Marvel's Spider-Man 2 Limited Edition Bundle
+  ebay_query: "ps5 spider-man 2 limited edition bundle"
+  match: '\b(ps5|playstation ?5)\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bspider ?man 2\b.*\blimited\b|\bspider ?man 2\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b))(?=.*\blimited\b).*\b(ps5|playstation ?5)\b'
+  exclude: ['\bslim\b', '\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# Microsoft, Nov 2021
+- id: xbox-series-x-halo-infinite
+  category: console
+  name: Xbox Series X Halo Infinite Limited Edition
+  ebay_query: "xbox series x halo infinite limited edition"
+  match: '\bxbox series x\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bhalo infinite\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# Microsoft, Oct 2024
+- id: xbox-series-x-galaxy-black
+  category: console
+  name: Xbox Series X 2TB Galaxy Black Special Edition
+  ebay_query: "xbox series x galaxy black"
+  match: '\bxbox series x\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bgalaxy black\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# Nintendo, Apr 2023
+- id: switch-oled-zelda-totk
+  category: console
+  name: Nintendo Switch OLED Model Zelda Tears of the Kingdom Edition
+  ebay_query: "switch oled zelda tears of the kingdom"
+  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(tears of the kingdom|totk)\b|\b(tears of the kingdom|totk)\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(nintendo )?switch oled\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# Nintendo, Nov 2022
+- id: switch-oled-pokemon-scarlet-violet
+  category: console
+  name: Nintendo Switch OLED Model Pokémon Scarlet & Violet Edition
+  ebay_query: "switch oled pokemon scarlet violet"
+  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(scarlet|violet)\b|\b(scarlet|violet)\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(nintendo )?switch oled\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# Nintendo, Aug 2022
+- id: switch-oled-splatoon-3
+  category: console
+  name: Nintendo Switch OLED Model Splatoon 3 Edition
+  ebay_query: "switch oled splatoon 3"
+  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bsplatoon 3\b|\bsplatoon 3\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(nintendo )?switch oled\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# Nintendo, Oct 2023
+- id: switch-oled-mario-red
+  category: console
+  name: Nintendo Switch OLED Model Mario Red Edition
+  ebay_query: "switch oled mario red"
+  match: '\b(nintendo )?switch oled\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\bmario red\b|\bmario red\b(?!.*\bportal\b)(?=.*\b(consoles?|bundle|systems?|digital edition)\b|(?!.*\b(dualsense|controllers?|joy ?cons?)\b)).*\b(nintendo )?switch oled\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# PlayStation 30th Anniversary Collection, Sony, Nov 2024
+- id: playstation-portal-30th-anniversary
+  category: console
+  name: PlayStation Portal Remote Player 30th Anniversary
+  ebay_query: "playstation portal 30th anniversary"
+  match: '\b(playstation )?portal\b.*\b30th anniversary\b'
+  exclude: ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bcarrying case\b', '(?<!with )(?<!and )\bcases?\b', '(?<!with )(?<!and )\bdocks?\b', '(?<!with )(?<!and )\bstands?\b', '\bsteel ?books?\b', '(?<!with )(?<!and )(?<!\+ )\bgames?\b']
+  max_price: null
+
+# Collectible limited-edition consoles of any generation (spec 5.1, user addition
+# 2026-10-22). Each is a real release whose recent sold prices are well above a
+# standard console of the same model. Lookaheads let either word order match.
+# The edition name must come before the first with / and / + (after it, the name
+# is an extra such as "console with Halo 3 game"); home consoles also need an
+# edition word and a console / system / storage marker. The shared excludes drop
+# games, parts and accessories unless they follow with / and / +, so "console
+# with Halo 3 game" or "with charger" still match; drive, power and box-content
+# words also pass after a console / system word ("Console 20GB HDD"), but
+# motherboards and parts never do.
+
+# Microsoft, Sep 2007 (green and gold, 20GB)
+- id: xbox-360-halo-3-special-edition
+  category: console
+  name: Xbox 360 Halo 3 Special Edition Console
+  ebay_query: "xbox 360 halo 3 special edition console"
+  match: '^(?=.*\bxbox ?360\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bhalo ?3\b(?!\W*odst))(?!.*\b(legendary|odst)\b)(?=.*\b((special|limited|spartan|collector\W?s?) edition|halo ?3 edition|spartan)\b|.*\bgreen\b.*\bgold\b|.*\bgold\b.*\bgreen\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?gb|spartan edition)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: &collectible_excludes ['\bcovers?\b', '\b(face ?)?plates?\b', '\bwraps?\b', '\bdecals?\b', '\bstickers?\b', '\bcarrying case\b', '\bsteel ?books?\b', '\bguides?\b', '\bcustom\b', '\b(shells?|housings?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bgames?\b(?! ?(boy|cube|gear)\b)', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(carts?|cartridges?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(cases?|docks?|stands?|headsets?|stylus(es)?|pouch(es)?|screen protectors?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+|\b(consoles?|systems?)\b(?! (hard drives?|hdds?|power supply|power bricks?|ac adapters?|chargers?|batter(y|ies)|hinges?|manuals?|inserts?|bags?|network adapters?|charge kits?|ar cards|(kinect )?sensors?|box)\b)).)*\b(hard drives?|hdds?|power supply|power bricks?|ac adapters?|chargers?|batter(y|ies)|hinges?|manuals?|inserts?|bags?|network adapters?|charge kits?|ar cards|(kinect )?sensors?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+|\b(consoles?|systems?)\b(?! (hard drives?|hdds?|power supply|power bricks?|ac adapters?|chargers?|batter(y|ies)|hinges?|manuals?|inserts?|bags?|network adapters?|charge kits?|ar cards|(kinect )?sensors?|box)\b)).)*\bbox( and| \+)? (manuals?|inserts?)\b', '^(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(motherboards?|parts)\b']
+  max_price: null
+
+# Microsoft, Sep 2010 (Xbox 360 S, silver, 250GB)
+- id: xbox-360-halo-reach-limited-edition
+  category: console
+  name: Xbox 360 S Halo Reach Limited Edition Console 250GB
+  ebay_query: "xbox 360 halo reach limited edition console"
+  match: '^(?=.*\bxbox ?360\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bhalo\W*reach\b)(?!.*\blegendary\b)(?=.*\b((special|limited) edition|silver)\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?gb)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Microsoft, Apr 2012 (Kinect Star Wars limited edition bundle, R2-D2 console, 320GB)
+- id: xbox-360-star-wars-r2-d2
+  category: console
+  name: Xbox 360 Star Wars R2-D2 Limited Edition Kinect Bundle 320GB
+  ebay_query: "xbox 360 star wars r2-d2 limited edition console"
+  match: '^(?=.*\bxbox ?360\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(star wars|r2 ?d2)\b)(?=.*\b(r2 ?d2|(special|limited) edition)\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?gb)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Microsoft, 2003 (original Xbox, translucent green Halo Special Edition)
+- id: xbox-halo-special-edition
+  category: console
+  name: Original Xbox Halo Special Edition Green Console
+  ebay_query: "original xbox halo special edition green console"
+  match: '^(?=.*\bxbox\b(?! ?(360|one|series)\b))(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bhalo\b(?! ?(2|3|4|5|reach|infinite|wars|odst)\b))(?!.*\blegendary\b)(?=.*\b((special|limited) edition|green|translucent)\b)(?=.*\b(consoles?|systems?|bundle)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Microsoft, Jun 2020 (1TB, 45,000 units)
+- id: xbox-one-x-cyberpunk-2077
+  category: console
+  name: Xbox One X Cyberpunk 2077 Limited Edition Console 1TB
+  ebay_query: "xbox one x cyberpunk 2077 limited edition console"
+  match: '^(?=.*\bxbox ?one x\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bcyberpunk\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?tb)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Sony, Dec 2014 (grey, 12,300 numbered units)
+- id: ps4-20th-anniversary
+  category: console
+  name: PlayStation 4 20th Anniversary Edition Console
+  ebay_query: "ps4 20th anniversary edition console"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*(\b(ps4|playstation ?4)\b(?: \S+){0,3} 20th anniversary\b|\b20th anniversary\b(?: \S+){0,3} (ps4|playstation ?4)\b))(?=.*\b(consoles?|systems?|bundle|\d+ ?gb|cuh ?\d{4}\w?)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|dualshock|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Sony, Aug 2018 (translucent blue, 2TB, 50,000 units)
+- id: ps4-pro-500-million
+  category: console
+  name: PlayStation 4 Pro 500 Million Limited Edition Console 2TB
+  ebay_query: "ps4 pro 500 million limited edition console"
+  match: '^(?=.*\b(ps4|playstation ?4) pro\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b500 million\b)(?=.*\b(consoles?|systems?|bundle|\d+ ?tb|cuh ?\d{4}\w?)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|dualshock|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Nintendo, Dec 1999 (blue and yellow Pikachu Nintendo 64; "Hey You, Pikachu!" is a game)
+- id: n64-pikachu
+  category: console
+  name: Nintendo 64 Pikachu Edition Console
+  ebay_query: "nintendo 64 pikachu edition console"
+  match: '^(?!(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\borange\b)(?=.*\b(n64|nintendo 64)\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*(?<!you )\bpikachu\b)(?=.*\b(consoles?|systems?|bundle|nus ?101|edition|blue|yellow|orange)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Panasonic, Dec 2001 (GameCube with DVD player, SL-GC10)
+- id: gamecube-panasonic-q
+  category: console
+  name: Panasonic Q GameCube Console SL-GC10
+  ebay_query: "panasonic q gamecube"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(panasonic q|sl ?gc ?10)\b)(?!(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(remotes?|cables?)\b)(?=.*\b(game ?cube|consoles?|systems?|sl ?gc ?10)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Pokemon Center, 2003
+- id: gba-sp-groudon
+  category: console
+  name: Game Boy Advance SP Groudon Edition
+  ebay_query: "game boy advance sp groudon"
+  match: '^(?=.*(\b(game ?boy advance|gba) sp\b|\bags ?[01]01\b))(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bgroudon\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Pokemon Center, 2003
+- id: gba-sp-kyogre
+  category: console
+  name: Game Boy Advance SP Kyogre Edition
+  ebay_query: "game boy advance sp kyogre"
+  match: '^(?=.*(\b(game ?boy advance|gba) sp\b|\bags ?[01]01\b))(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bkyogre\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Pokemon Center, 2004
+- id: gba-sp-pikachu
+  category: console
+  name: Game Boy Advance SP Pikachu Edition
+  ebay_query: "game boy advance sp pikachu edition"
+  match: '^(?=.*(\b(game ?boy advance|gba) sp\b|\bags ?[01]01\b))(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bpikachu\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Pokemon Center, 2008 (black, Dialga and Palkia)
+- id: ds-lite-dialga-palkia
+  category: console
+  name: Nintendo DS Lite Dialga Palkia Edition
+  ebay_query: "ds lite dialga palkia edition"
+  match: '^(?=.*(\bds ?lite\b|\busg ?001\b))(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(dialga|palkia)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Pokemon Center, 2006 (yellow Pikachu DS Lite)
+- id: ds-lite-pikachu
+  category: console
+  name: Nintendo DS Lite Pikachu Edition
+  ebay_query: "ds lite pikachu edition"
+  match: '^(?=.*(\bds ?lite\b|\busg ?001\b))(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bpikachu\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Nintendo, Feb 2015 (the game is "Majora's Mask 3D"; the console is not)
+- id: new-3ds-xl-majoras-mask
+  category: console
+  name: New Nintendo 3DS XL Majora's Mask Limited Edition
+  ebay_query: "new 3ds xl majora's mask edition"
+  match: '^(?=.*\b3ds ?(xl|ll)\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*(\bmajora\W?s mask\b(?! 3d\b)|\bmajora\W?s mask 3d (limited |special )?edition\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Nintendo, Dec 2011 (original 3DS, black with Triforce)
+- id: 3ds-zelda-25th-anniversary
+  category: console
+  name: Nintendo 3DS Zelda 25th Anniversary Edition
+  ebay_query: "3ds zelda 25th anniversary edition"
+  match: '^(?=.*\b3ds\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bzelda\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b25th anniversary\b)(?!.*\b(cds?|symphony|soundtrack)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Nintendo, Sep 2016 (New 3DS XL; the 2012 PAL 3DS XL Pikachu is a different, cheaper model)
+- id: new-3ds-xl-pikachu-yellow
+  category: console
+  name: New Nintendo 3DS XL Pikachu Yellow Edition
+  ebay_query: "new 3ds xl pikachu yellow edition"
+  match: '^(?=.*\bnew (nintendo )?3ds ?(xl|ll)\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bpikachu\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Nintendo, Sep 2013 (black Deluxe Set, Hyrule crest GamePad)
+- id: wii-u-zelda-wind-waker
+  category: console
+  name: Wii U Deluxe Zelda Wind Waker HD Limited Edition Console
+  ebay_query: "wii u zelda wind waker edition console"
+  match: '^(?=.*\bwii ?u\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bwind waker\b)(?=.*\b(edition|limited)\b)(?=.*\b(consoles?|systems?|bundle|deluxe|\d+ ?gb)\b)(?=.*\b(consoles?|systems?|bundle|deluxe|\d+ ?gb)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Sega, 1999 (Japan, pink and skeleton Hello Kitty Dreamcast)
+- id: dreamcast-hello-kitty
+  category: console
+  name: Sega Dreamcast Hello Kitty Edition Console
+  ebay_query: "dreamcast hello kitty console"
+  match: '^(?!(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bblue\b)(?=.*\bdreamcast\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bhello kitty\b)(?!(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(keyboards?|vmus?|visual memory)\b)(?=.*\b(consoles?|systems?|bundle|hkt ?\d+)\b)(?=.*\b(consoles?|systems?|bundle)\b|(?!.*\b(controllers?|gamepads?)\b)).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Microsoft announcement, August 26, 2026. Console release: November 13, 2026.
+- id: xbox-series-x25-25th-anniversary
+  category: console
+  name: Xbox Series X25 25th Anniversary Limited Edition Console (Release November 13, 2026)
+  ebay_query: "xbox series x25 limited edition console"
+  source_url: "https://news.xbox.com/en-us/2026/08/26/pre-orders-begin-today-xbox-25th-anniversary-collection/"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bxbox (series )?x25\b)(?=.*\bxbox (series )?x25\b)(?=.*\b(consoles?|systems?|bundle)\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Publisher-confirmed hardware; reference below.
+
+- id: ps5-ghost-yotei-gold
+  category: console
+  name: "PlayStation 5 Ghost of Yotei Gold Limited Edition Console"
+  ebay_query: "ps5 ghost of yotei gold limited edition console"
+  source_url: "https://blog.playstation.com/2025/07/10/first-look-ps5-ghost-of-yotei-limited-edition-console-designs/"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(ps5|playstation ?5)\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bghost of y[oō]tei\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bgold\b)(?=.*\b(ps5|playstation ?5)\b)(?!.*\bpro\b)(?=.*\bghost of y[oō]tei\b)(?=.*\bgold\b)(?=.*\b(consoles?|systems?|bundle)\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?|joy ?cons?)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Publisher-confirmed hardware; reference below.
+
+- id: ps5-ghost-yotei-black
+  category: console
+  name: "PlayStation 5 Ghost of Yotei Black Limited Edition Console"
+  ebay_query: "ps5 ghost of yotei black limited edition console"
+  source_url: "https://blog.playstation.com/2025/07/10/first-look-ps5-ghost-of-yotei-limited-edition-console-designs/"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(ps5|playstation ?5)\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bghost of y[oō]tei\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bblack\b)(?=.*\b(ps5|playstation ?5)\b)(?!.*\bpro\b)(?=.*\bghost of y[oō]tei\b)(?=.*\bblack\b)(?=.*\b(consoles?|systems?|bundle)\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?|joy ?cons?)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Publisher-confirmed hardware; reference below.
+
+- id: switch-lite-hyrule
+  category: console
+  name: "Nintendo Switch Lite Hyrule Edition Console"
+  ebay_query: "switch lite hyrule edition console"
+  source_url: "https://www.nintendo.com/us/store/products/nintendo-switch-lite-hyrule-edition-12-months-nso-121164/"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bswitch lite\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bhyrule\b)(?=.*\bswitch lite\b)(?=.*\bhyrule\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?|joy ?cons?)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Publisher-confirmed hardware; reference below.
+
+- id: switch-lite-zacian-zamazenta
+  category: console
+  name: "Nintendo Switch Lite Zacian and Zamazenta Edition Console"
+  ebay_query: "switch lite zacian and zamazenta edition console"
+  source_url: "https://www.nintendo.com/ph/hardware/switch/modal/lineup_lite.html?width=960"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bswitch lite\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(zacian|zamazenta)\b)(?=.*\bswitch lite\b)(?=.*\b(zacian|zamazenta)\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?|joy ?cons?)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Publisher-confirmed hardware; reference below.
+
+- id: switch-lite-dialga-palkia
+  category: console
+  name: "Nintendo Switch Lite Dialga and Palkia Edition Console"
+  ebay_query: "switch lite dialga and palkia edition console"
+  source_url: "https://www.nintendo.com/us/store/products/nintendo-switch-lite-dialga-palkia-edition/"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bswitch lite\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(dialga|palkia)\b)(?=.*\bswitch lite\b)(?=.*\b(dialga|palkia)\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?|joy ?cons?)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Publisher-confirmed hardware; reference below.
+
+- id: switch-lite-isabelle-aloha
+  category: console
+  name: "Nintendo Switch Lite Isabelle Aloha Edition Console"
+  ebay_query: "switch lite isabelle aloha edition console"
+  source_url: "https://www.nintendo.com/my/hardware/detail/switch-lite/index.html"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bswitch lite\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bisabelle(?:''s| s)? aloha\b)(?=.*\bswitch lite\b)(?=.*(?=.*\bisabelle\b).*\baloha\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?|joy ?cons?)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Publisher-confirmed hardware; reference below.
+
+- id: switch-lite-timmy-tommy-aloha
+  category: console
+  name: "Nintendo Switch Lite Timmy and Tommy Aloha Edition Console"
+  ebay_query: "switch lite timmy and tommy aloha edition console"
+  source_url: "https://www.nintendo.com/my/hardware/detail/switch-lite/index.html"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bswitch lite\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\btimmy (?:and )?tommy(?:''s| s)? aloha\b)(?=.*\bswitch lite\b)(?=.*(?=.*\btimmy\b)(?=.*\btommy\b).*\baloha\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?|joy ?cons?)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Distinct factory colorway; collector reference below.
+- id: n64-pikachu-orange
+  category: console
+  name: "Nintendo 64 Pikachu Orange Edition Console"
+  ebay_query: "nintendo 64 pikachu orange console"
+  source_url: "https://consolevariations.com/collectibles/nintendo-64-pikachu-orange-console"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\b(n64|nintendo 64)\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bpikachu\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\borange\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?)\b)(?=.*\b(n64|nintendo 64)\b)(?=.*\bpikachu\b)(?=.*\borange\b)(?=.*\b(consoles?|systems?|edition)\b).*'
+  exclude: *collectible_excludes
+  max_price: null
+
+# Distinct factory colorway; collector reference below.
+- id: dreamcast-hello-kitty-blue
+  category: console
+  name: "Sega Dreamcast Hello Kitty Blue Edition Console"
+  ebay_query: "dreamcast hello kitty blue console"
+  source_url: "https://consolevariations.com/collectibles/sega-dreamcast-hello-kitty-blue-console"
+  match: '^(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bdreamcast\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bhello kitty\b)(?=(?:(?!\b(with|and|plus|includes|including)\b|\+).)*\bblue\b)(?!(?:(?!\b(with|plus|includes|including)\b|\+).)*\b(controllers?|gamepads?)\b)(?=.*\bdreamcast\b)(?=.*\bhello kitty\b)(?=.*\bblue\b)(?=.*\b(consoles?|systems?|edition)\b).*'
+  exclude: *collectible_excludes
+  max_price: null

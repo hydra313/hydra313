@@ -1,0 +1,23 @@
+{% set form_id = "f-" ~ r.table ~ "-" ~ r.id %}
+<tr id="catalog-{{ r.table }}-{{ r.id }}">
+  <td data-label="Name" class="title">{{ r.name }}{% if r.custom %} <span class="badge">custom</span>{% endif %}{% if r.generated %} <span class="badge">from product</span>{% endif %}<br><small class="muted">{{ r.id }}</small>{% if r.reference %}<br><a class="catalog-reference" href="{{ r.reference }}" target="_blank" rel="noopener noreferrer">Edition reference ↗</a>{% endif %}</td>
+  {% if r.table != 'platform' %}<td data-label="Category">{{ r.category|upper if r.category in ['gpu', 'cpu'] else r.category|capitalize }}</td>{% endif %}
+  <td data-label="Enabled"><label class="check"><input type="checkbox" name="enabled" value="true" form="{{ form_id }}"{% if r.enabled %} checked{% endif %}> On</label></td>
+  {% if r.table == 'product' %}
+  <td data-label="Max price $"><input type="number" name="max_price" min="0" step="0.01" form="{{ form_id }}" value="{{ r.fields.max_price.value }}" placeholder="{{ r.fields.max_price.placeholder }}" aria-label="Max price for {{ r.name }}"></td>
+  {% elif r.table == 'bulk' %}
+  <td data-label="Repair per unit $"><input type="number" name="repair_cost" min="0" step="0.01" form="{{ form_id }}" value="{{ r.fields.repair_cost.value }}" placeholder="{{ r.fields.repair_cost.placeholder }}" aria-label="Repair cost per unit for {{ r.name }}"></td>
+  <td data-label="Success rate"><input type="number" name="success_rate" min="0" max="1" step="0.01" form="{{ form_id }}" value="{{ r.fields.success_rate.value }}" placeholder="{{ r.fields.success_rate.placeholder }}" aria-label="Success rate for {{ r.name }}"></td>
+  {% endif %}
+  <td data-label="Market value">
+    {% for label, m in r.markets %}
+    <div>{{ label }}: {% if m %}{{ m.value|money }} <span class="badge{% if m.low %} low{% endif %}">{{ m.badge }}</span>{% else %}—{% endif %}</div>
+    {% endfor %}
+  </td>
+  <td class="actions">
+    <form id="{{ form_id }}" hx-post="/catalog/{{ r.table }}/{{ r.id|urlencode }}" hx-include="closest tr" hx-target="closest tr" hx-swap="outerHTML">
+      <button type="submit">Save</button>
+    </form>
+    {% if r.error %}<p class="error" role="alert">{{ r.error }}</p>{% endif %}
+  </td>
+</tr>

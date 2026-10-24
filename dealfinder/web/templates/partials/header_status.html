@@ -1,0 +1,22 @@
+{# Keep polling while idle too, so scheduler runs and browser imports appear live. #}
+<div id="header-status" class="status" hx-get="/header/status" hx-trigger="every {{ '3s' if refreshing else '10s' }}" hx-swap="outerHTML">
+  <div class="refresh-feedback"><span id="refresh-status" aria-live="polite">{{ refresh_status }}</span>
+    <span class="muted">{% if paused %}Automatic checks paused{% else %}Automatic checks every {{ refresh_minutes }} min{% if next_check %} · Next check in {{ next_check }}{% endif %}{% endif %}</span>
+    {% if progress_query %}<span class="muted">Searching: {{ progress_query }}</span>{% endif %}
+    {% if ebay_helper_status %}<a href="/sources/ebay">{{ ebay_helper_status }}</a>{% endif %}</div>
+  <ul class="runs" aria-label="Last successful run per site">
+    {% for r in last_success %}
+    <li><span class="src">{{ r.name }}</span> <span title="{{ r.at }}">{{ r.ago }}</span></li>
+    {% endfor %}
+  </ul>
+  {% if banners %}
+  <details class="source-notices">
+    <summary><span class="notice-dot" aria-hidden="true"></span>Source status <span class="notice-count">{{ banners|length }} {{ 'notice' if banners|length == 1 else 'notices' }}</span><span class="notice-toggle">View details <span aria-hidden="true">⌄</span></span></summary>
+  <div class="banner" role="status">
+    <ul>
+      {% for b in banners %}<li class="{{ b.level }}">{{ b.text }}{% if b.link %} <a href="{{ b.link }}">{{ b.link_text }}</a>{% endif %}{% if b.listings %} (see {{ 'listing' if b.listings|length == 1 else 'listings' }} {% for id in b.listings %}<a href="/listing/{{ id }}">#{{ id }}</a>{% if not loop.last %}, {% endif %}{% endfor %}){% endif %}</li>{% endfor %}
+    </ul>
+  </div>
+  </details>
+  {% endif %}
+</div>

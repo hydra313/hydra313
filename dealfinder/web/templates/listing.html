@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Listing · Dealfinder{% endblock %}
+{% block content %}
+<article class="detail">
+  <h1>{{ d.title }}{% if d.find %} <span class="find" title="Photo find">💎</span>{% endif %}{% if d.target %} <span class="target" title="Target hit">🎯</span>{% endif %}</h1>
+  <p class="meta">
+    {{ kind }} · {{ d.product }} · {{ d.site }} · time left {{ d.time_left }}{% if ended %} (ended){% endif %}{% if dismissed %} · dismissed{% endif %}
+    {% if d.url %} · <a href="{{ d.url }}" target="_blank" rel="noopener">Open listing</a>{% endif %}
+  </p>
+  {% if d.snapshot_at %}<p class="meta">HiBid browser snapshot: {{ d.snapshot_at }}.
+    {% if snapshot_expired %}<strong>Expired: refresh and reimport before using this price.</strong>{% endif %}
+    Shipping and buyer premium may be estimates. <a href="/sources/hibid">Refresh browser import</a></p>{% endif %}
+  {% if d.image %}<img class="lead" src="{{ d.image }}" alt="" loading="lazy">{% endif %}
+
+  <section>
+    <h2>Cost</h2>
+    <div class="detail-comparison"><div><small>Current price</small><strong>{{ d.price|money }}</strong></div><div><small>Average eBay sold{{ ' · lot estimate' if row.kind != 'single' else '' }}</small>{% include "partials/sold_value.html" %}</div><div>{% include "partials/deal_rating.html" %}</div></div>
+    <dl class="facts">
+      {% if d.total_cost is not none %}
+      <dt>Total cost</dt><dd>{{ d.total_cost|money }}</dd>
+      <dt>Breakdown</dt><dd>{{ d.breakdown }}</dd>
+      {% else %}
+      <dt>Total cost</dt><dd>Not scored yet (quantity unknown).</dd>
+      {% endif %}
+      {% if d.quantity is not none %}<dt>{{ 'Games' if game else 'Quantity' }}</dt><dd>{{ d.quantity }}</dd>{% endif %}
+      {% if d.per_unit is not none %}<dt>Cost per {{ 'game' if game else 'unit' }}</dt><dd>{{ d.per_unit|money }}</dd>{% endif %}
+      {% if d.condition %}<dt>Condition</dt><dd>{{ d.condition|replace('_', ' ')|capitalize }}</dd>{% endif %}
+      {% if d.repair_cost is defined and d.repair_cost is not none %}
+      <dt>Repair per unit</dt><dd>{{ d.repair_cost|money }}</dd>
+      <dt>Success rate</dt><dd>{{ '%.0f'|format(d.success_rate * 100) }}%</dd>
+      {% endif %}
+      <dt>Expected profit</dt><dd>{% if d.profit is not none %}{{ d.profit|money }}{% else %}—{% endif %}</dd>
+      {% if d.discount is not none %}<dt>Discount</dt><dd>{{ '%.0f'|format(d.discount * 100) }}%</dd>{% endif %}
+    </dl>
+  </section>
+
+  <section id="sold-comps">
+    <h2>{% if value_basis == 'per_game' %}Market value per game{% elif value_basis == 'used' and row.kind != 'single' %}Working used value per unit{% else %}Market value{% endif %}</h2>
+    {% if d.market %}
+    <p>{{ d.market.value|money }} <span class="badge{% if d.market.low %} low{% endif %}">{{ d.market.badge }}</span></p>
+    {% else %}
+    <p class="muted">No market value yet.</p>
+    {% endif %}
+    {% if comps %}
+    <div class="table-wrap"><table class="deals comps">
+      <thead><tr><th>Comp</th><th>Price</th><th>Sold</th><th>Condition</th></tr></thead>
+      <tbody>
+        {% for c in comps %}
+        <tr>
+          <td data-label="Comp" class="title">{% if c.url %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.title }}</a>{% else %}{{ c.title }}{% endif %}</td>
+          <td data-label="Price" class="num">{{ c.price|money }}</td>
+          <td data-label="Sold">{{ c.sold_date or '—' }}</td>
+          <td data-label="Condition">{{ c.condition or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Photo scan</h2>
+    {% if scan %}
+    <p class="meta">
+      {{ {'ok': 'Completed', 'failed': 'Failed', 'refused': 'Declined'}.get(scan.status, scan.status|capitalize) }}{% if scan.scanned_at %} · {{ scan.scanned_at.astimezone().strftime('%Y-%m-%d %H:%M') }}{% endif %} · cost {{ scan.cost|money }}{% if scan.model %} · {{ scan.model }}{% endif %}
+      {% if scan.unit_count_estimate is not none %} · about {{ scan.unit_count_estimate }} units{% endif %}
+      {% if scan.identified_value is not none %} · identified value {{ scan.identified_value|money }}{% endif %}
+      {% if scan.rare %} · 💎 rare find{% endif %}{% if scan.lot_find %} · 💎 lot find{% endif %}
+    </p>
+    {% if scan.error %}<p class="error">{{ scan.error }}</p>{% endif %}
+    <div class="scan">
+      {% if scan.photos %}
+      <div class="photos">
+        {% for p in scan.photos %}
+        <figure id="photo-{{ p.index }}">
+          <a href="{{ p.url }}" target="_blank" rel="noopener"><img src="{{ p.url }}" alt="Photo {{ p.index + 1 }}" loading="lazy"></a>
+          <figcaption>Photo {{ p.index + 1 }}</figcaption>
+        </figure>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if scan.found %}
+      <div class="table-wrap"><table class="deals items">
+        <thead><tr><th>Item</th><th>Platform</th><th>Completeness</th><th>Quantity</th><th>Confidence</th><th>Value</th><th>Photo</th></tr></thead>
+        <tbody>
+          {% for it in scan.found %}
+          <tr>
+            <td data-label="Item" class="title">{{ it.title }}{% if it.edition %} <span class="muted">({{ it.edition }})</span>{% endif %}</td>
+            <td data-label="Platform">{{ it.platform }}</td>
+            <td data-label="Completeness">{{ 'Complete in box' if it.completeness == 'cib' else it.completeness|capitalize }}</td>
+            <td data-label="Quantity" class="num">{{ it.quantity if it.quantity is not none else '—' }}</td>
+            <td data-label="Confidence"><span class="badge{% if it.confidence == 'low' %} low{% endif %}">{{ it.confidence|capitalize }}</span></td>
+            <td data-label="Value" class="num">{% if it.value is not none %}{{ it.value|money }}{% if it.value_low %} <span class="badge low">Low confidence</span>{% endif %}{% else %}—{% endif %}</td>
+            <td data-label="Photo">{% if it.photo is not none %}<a href="#photo-{{ it.photo }}">Photo {{ it.photo + 1 }}</a>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% elif scan.status == 'ok' %}
+      <p class="muted">No items identified.</p>
+      {% endif %}
+    </div>
+    {% elif can_scan %}
+      {% if scanner_available %}
+      <div id="scan-action">
+        <button type="button" hx-post="/listing/{{ d.id }}/scan" hx-target="#scan-action" hx-swap="innerHTML">Scan this lot</button>
+        <span class="muted">Ignores the on/off switch and the price filter; the daily and monthly caps still apply.</span>
+      </div>
+      {% else %}
+      <p class="muted">Photo scanning is unavailable: ANTHROPIC_API_KEY is not set.</p>
+      {% endif %}
+    {% else %}
+    <p class="muted">Not scanned.</p>
+    {% endif %}
+  </section>
+
+  {% if not dismissed %}
+  <p><button type="button" hx-post="/listing/{{ d.id }}/dismiss" hx-target="this" hx-swap="outerHTML">Dismiss</button></p>
+  {% endif %}
+</article>
+{% endblock %}

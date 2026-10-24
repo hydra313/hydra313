@@ -1,0 +1,24 @@
+{% for d in lots %}
+<tr id="listing-{{ d.id }}" class="deal-{{ d.rating.tone }}">
+  <td class="img">{% if d.image %}<img src="{{ d.image }}" alt="" loading="lazy" width="64" height="64">{% endif %}</td>
+  <td data-label="Title" class="title">
+    <a href="/listing/{{ d.id }}">{{ d.title }}</a>
+    {% if d.find %}<span class="find" title="Photo find">💎</span>{% endif %}
+    {% if d.snapshot_at %}<span class="badge low" title="Captured {{ d.snapshot_at }}">Browser snapshot</span>{% endif %}
+  </td>
+  <td data-label="Platform">{{ d.product }}</td>
+  <td data-label="Games" class="num">{{ d.quantity if d.quantity is not none else '?' }}</td>
+  <td data-label="Current lot price" class="num"><strong>{{ d.price|money }}</strong>{% if d.total_cost is not none %}<small class="comparison-note cost" title="{{ d.breakdown }}">{{ d.total_cost|money }} total</small>{% endif %}{% if d.per_unit is defined and d.per_unit is not none %}<small class="comparison-note">{{ d.per_unit|money }} per unit</small>{% endif %}</td>
+  <td data-label="Average eBay sold" class="num">{% include "partials/sold_value.html" %}</td>
+  <td data-label="Expected profit" class="num">{% if d.profit is not none %}{{ d.profit|money }}{% else %}—{% endif %}{% if d.margin is defined and d.margin is not none %}<small class="comparison-note">{{ "%.1f"|format(d.margin) }}% return on cost</small>{% endif %}</td>
+  <td data-label="Deal rating">{% include "partials/deal_rating.html" %}</td>
+  <td data-label="Site">{{ d.site }}</td>
+  <td data-label="Time left">{{ d.time_left }}</td>
+  <td class="actions">
+    {% if d.url %}<a href="{{ d.url }}" target="_blank" rel="noopener">Open</a>{% endif %}
+    <button type="button" hx-post="/listing/{{ d.id }}/dismiss" hx-target="closest tr" hx-swap="outerHTML">Dismiss</button>
+  </td>
+</tr>
+{% else %}
+<tr class="empty"><td colspan="11">No game lots match these filters yet.</td></tr>
+{% endfor %}

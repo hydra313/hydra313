@@ -1,0 +1,47 @@
+{
+  "href": "https://api.ebay.com/buy/browse/v1/item_summary/search?q=rtx+4070&limit=200",
+  "total": 3,
+  "limit": 200,
+  "offset": 0,
+  "itemSummaries": [
+    {
+      "itemId": "v1|110000000001|0",
+      "title": "NVIDIA GeForce RTX 4070 Founders Edition 12GB",
+      "price": {"value": "250.00", "currency": "USD"},
+      "currentBidPrice": {"value": "312.50", "currency": "USD"},
+      "buyingOptions": ["AUCTION"],
+      "itemWebUrl": "https://www.ebay.com/itm/110000000001",
+      "image": {"imageUrl": "https://i.ebayimg.com/images/g/aaa/s-l225.jpg"},
+      "additionalImages": [
+        {"imageUrl": "https://i.ebayimg.com/images/g/bbb/s-l225.jpg"},
+        {"imageUrl": "https://i.ebayimg.com/images/g/ccc/s-l225.jpg"}
+      ],
+      "conditionId": "3000",
+      "shippingOptions": [
+        {"shippingCostType": "FIXED", "shippingCost": {"value": "12.99", "currency": "USD"}}
+      ],
+      "itemEndDate": "2026-10-25T18:30:00.000Z",
+      "bidCount": 7
+    },
+    {
+      "itemId": "v1|110000000002|0",
+      "title": "Sony PlayStation 5 Console Disc Edition",
+      "price": {"value": "399.99", "currency": "USD"},
+      "buyingOptions": ["FIXED_PRICE", "BEST_OFFER"],
+      "itemWebUrl": "https://www.ebay.com/itm/110000000002",
+      "image": {"imageUrl": "https://i.ebayimg.com/images/g/ddd/s-l225.jpg"},
+      "conditionId": "1000",
+      "shippingOptions": [
+        {"shippingCostType": "CALCULATED"}
+      ]
+    },
+    {
+      "itemId": "v1|110000000003|0",
+      "title": "Broken listing without a price",
+      "buyingOptions": ["FIXED_PRICE"],
+      "itemWebUrl": "https://www.ebay.com/itm/110000000003",
+      "image": {"imageUrl": "https://i.ebayimg.com/images/g/eee/s-l225.jpg"},
+      "conditionId": "3000"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "kind": "game",
+      "platform": "Nintendo 64",
+      "title": "The Legend of Zelda: Ocarina of Time",
+      "edition": "Collector's Edition",
+      "completeness": "loose",
+      "quantity": 1,
+      "confidence": "high",
+      "photo_index": 0
+    },
+    {
+      "kind": "controller",
+      "platform": "Nintendo 64",
+      "title": "Nintendo 64 Controller",
+      "edition": null,
+      "completeness": "unknown",
+      "quantity": 2,
+      "confidence": "medium",
+      "photo_index": 1
+    }
+  ],
+  "unit_count_estimate": 3,
+  "notes": "Two controllers and one cartridge visible."
+}

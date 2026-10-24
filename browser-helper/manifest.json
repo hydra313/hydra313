@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Dealfinder Browser Helper",
+  "version": "1.2.0",
+  "description": "Automatically collect visible eBay and HiBid search listings for your local Dealfinder app.",
+  "minimum_chrome_version": "120",
+  "permissions": ["alarms", "storage"],
+  "host_permissions": ["https://www.ebay.com/*", "https://hibid.com/*", "http://127.0.0.1:8000/*"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_title": "Open Dealfinder connections"},
+  "content_scripts": [
+    {"matches": ["https://www.ebay.com/sch/*"], "js": ["capture.js"], "run_at": "document_idle"},
+    {"matches": ["https://hibid.com/lots*"], "js": ["capture-hibid.js"], "run_at": "document_idle"},
+    {"matches": ["http://127.0.0.1:8000/sources/ebay*", "http://127.0.0.1:8000/sources/hibid*", "http://127.0.0.1:8000/connections*"], "js": ["connect.js"], "run_at": "document_idle"}
+  ]
+}

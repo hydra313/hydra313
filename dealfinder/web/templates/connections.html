@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Connections · Dealfinder{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">CONNECT ONCE, KEEP DISCOVERING</span><h1>Connections</h1><p>Manage automatic searches and the channel that receives your deal alerts.</p></div><span class="heading-icon" aria-hidden="true">↻</span></div>
+<section class="connection-setup">
+  <h2>Browser search helper</h2>
+  <p>Connect eBay and HiBid once. The helper rotates catalog searches in one background tab every 30 seconds, collecting listings without manual imports. Keep this PC, Dealfinder and your browser running.</p>
+  <p id="helper-connection" role="status">Install or update the helper, then reload this page in Chrome or Edge.</p>
+  <div class="row"><button class="primary" data-connect-site="all" data-helper-token="{{ helper_token }}">Connect both sites</button><button data-stop-site="all">Stop all browser searches</button></div>
+  <details><summary>Install or update the helper · version 1.2</summary>
+    <ol class="setup-steps">
+      <li><a href="/sources/ebay/helper.zip">Download the helper</a> and extract it into your existing helper folder.</li>
+      <li>Open <code>edge://extensions</code> or <code>chrome://extensions</code>, enable Developer mode, then choose Load unpacked and select that folder. If already installed, click its Reload button and approve the new HiBid permission.</li>
+      <li>Reload this page in that browser and click Connect both sites.</li>
+    </ol>
+    <p>Version 1.1 only reads eBay; update to 1.2 to enable HiBid. No browser cookies, passwords, bids or purchases are read or submitted.</p>
+  </details>
+</section>
+<div class="connection-grid">
+  <section class="connection-card">
+    <span class="eyebrow">LISTINGS + SOLD COMPARISONS</span><h2>eBay</h2>
+    <p>Keyless Buy It Now listings and matching dated sold results. If eBay asks for sign-in, sign in in its own tab.</p>
+    <p class="connection-state">{{ 'Needs attention' if ebay_helper.error else 'Last capture: ' + ebay_helper.captured_at if ebay_helper.captured_at else 'No capture yet' }}</p>
+    {% if ebay_helper.error %}<p class="error">{{ ebay_helper.error }}</p>{% endif %}
+    <div class="row"><button data-connect-site="ebay" data-helper-token="{{ helper_token }}">Connect eBay</button><button data-stop-site="ebay">Stop eBay</button><a href="https://www.ebay.com/signin/" target="_blank" rel="noopener noreferrer">Sign in to eBay ↗</a></div>
+    <a href="/?source=ebay&amp;show_all=true">View listings</a>
+  </section>
+  <section class="connection-card">
+    <span class="eyebrow">AUTOMATIC AUCTION SEARCH</span><h2>HiBid</h2>
+    <p>Searches GPUs, CPUs, consoles, controllers and game lots automatically. Only USD lots with shipping and a closing countdown are eligible.</p>
+    <p class="connection-state">{{ 'Needs attention' if hibid_helper.error else 'Last capture: ' + hibid_helper.captured_at if hibid_helper.captured_at else 'No automatic capture yet' }}</p>
+    {% if hibid_helper.error %}<p class="error">{{ hibid_helper.error }}</p>{% endif %}
+    <div class="row"><button data-connect-site="hibid" data-helper-token="{{ helper_token }}"{% if hibid_mode != 'browser' %} disabled{% endif %}>Connect HiBid</button><button data-stop-site="hibid">Stop HiBid</button><a href="https://hibid.com/login" target="_blank" rel="noopener noreferrer">Sign in to HiBid ↗</a></div>
+    <p class="muted">If verification appears, this site's searches stop and its tab stays open. Finish verification there and reconnect. The other site keeps running.</p>
+    <a href="/?source=hibid&amp;show_all=true">View listings</a>
+  </section>
+  <section class="connection-card">
+    <span class="eyebrow">PUBLIC SEARCH</span><h2>ShopGoodwill</h2>
+    <p>Automatic search is already enabled. No account connection is required to discover listings. Sign in on ShopGoodwill when you want to bid.</p>
+    <div class="row"><a href="/?source=shopgoodwill&amp;show_all=true">View listings</a><a href="https://shopgoodwill.com/signin" target="_blank" rel="noopener noreferrer">Sign in to ShopGoodwill ↗</a></div>
+  </section>
+  <section class="connection-card">
+    <span class="eyebrow">AUTOMATIC DEAL ALERTS</span><h2>Discord</h2>
+    <p class="connection-state">{{ 'Channel connected' if discord_connected else 'No channel connected' }}</p>
+    <p>Send alerts to a channel in your server. Discord channel webhooks deliver these alerts without signing this app in to your personal account.</p>
+    <details{% if not discord_connected %} open{% endif %}><summary>{{ 'Change channel' if discord_connected else 'Connect Discord' }}</summary>
+      <ol><li>Open your Discord channel settings → Integrations → Webhooks.</li><li>Create a webhook, choose the destination channel and click Copy Webhook URL. This requires Manage Webhooks permission.</li><li>Paste it below and click Connect Discord. You only need to do this once.</li></ol>
+      <form class="import-form" hx-post="/connections/discord" hx-target="#discord-result" hx-disabled-elt="find button">
+        <label>Discord webhook URL<input type="password" name="webhook_url" autocomplete="off" placeholder="https://discord.com/api/webhooks/…" required></label>
+        <p class="muted">Saved with Windows encryption for your user account. It is never shown again or saved in the listings database.</p>
+        <button type="submit">Connect Discord</button>
+      </form>
+    </details>
+    {% if discord_connected %}<div class="row"><button hx-post="/connections/discord/test" hx-target="#discord-result" hx-disabled-elt="this">Send test message</button><button hx-post="/connections/discord/disconnect" hx-target="#discord-result">Disconnect Discord</button></div>{% endif %}
+    <div id="discord-result" role="status"></div>
+    <form class="import-form" hx-post="/connections/discord/preferences" hx-target="#alert-result">
+      <h3>Alert types</h3>
+      {% for id,label in [('resale_deal','Single-item deals'),('hardware_lot_deal','Hardware lot deals'),('game_lot_deal','Game lot deals'),('target_hit','Target price hits'),('photo_find','Photo finds')] %}
+      <label class="check"><input type="checkbox" name="{{ id }}"{% if notify_reasons.get(id) %} checked{% endif %}>{{ label }}</label>{% endfor %}
+      <button type="submit">Save alert preferences</button><div id="alert-result" role="status"></div>
+    </form>
+  </section>
+</div>
+<script src="/static/connections.js"></script>
+{% endblock %}

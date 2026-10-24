@@ -1,0 +1,14 @@
+- id: rtx-4070-ti-super
+  category: gpu
+  name: GeForce RTX 4070 Ti Super
+  ebay_query: "rtx 4070 ti super"
+  match: '\b(rtx\s*)?4070\s*ti\s*super\b'
+  exclude: []
+  max_price: null
+- id: rx-7900-xtx
+  category: gpu
+  name: Radeon RX 7900 XTX
+  ebay_query: "rx 7900 xtx"
+  match: '\b(rx\s*)?7900\s*xtx\b'
+  exclude: ["water\\s*block"]
+  max_price: 700

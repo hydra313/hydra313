@@ -1,0 +1,449 @@
+# Single-item CPUs (spec 5.1). Patterns run on normalize()d titles.
+
+- id: i5-12400
+  category: cpu
+  name: Intel Core i5-12400
+  ebay_query: "i5 12400"
+  match: '\b12400\b(?! ?(kf?|ks|f)\b)'
+  exclude: []
+  max_price: null
+
+- id: i5-12400f
+  category: cpu
+  name: Intel Core i5-12400F
+  ebay_query: "i5 12400f"
+  match: '\b12400 ?f\b'
+  exclude: []
+  max_price: null
+
+- id: i5-12600k
+  category: cpu
+  name: Intel Core i5-12600K
+  ebay_query: "i5 12600k"
+  match: '\b12600 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: i5-12600kf
+  category: cpu
+  name: Intel Core i5-12600KF
+  ebay_query: "i5 12600kf"
+  match: '\b12600 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: i5-13400
+  category: cpu
+  name: Intel Core i5-13400
+  ebay_query: "i5 13400"
+  match: '\b13400\b(?! ?(kf?|ks|f)\b)'
+  exclude: []
+  max_price: null
+
+- id: i5-13400f
+  category: cpu
+  name: Intel Core i5-13400F
+  ebay_query: "i5 13400f"
+  match: '\b13400 ?f\b'
+  exclude: []
+  max_price: null
+
+- id: i5-13600k
+  category: cpu
+  name: Intel Core i5-13600K
+  ebay_query: "i5 13600k"
+  match: '\b13600 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: i5-13600kf
+  category: cpu
+  name: Intel Core i5-13600KF
+  ebay_query: "i5 13600kf"
+  match: '\b13600 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: i5-14400
+  category: cpu
+  name: Intel Core i5-14400
+  ebay_query: "i5 14400"
+  match: '\b14400\b(?! ?(kf?|ks|f)\b)'
+  exclude: []
+  max_price: null
+
+- id: i5-14400f
+  category: cpu
+  name: Intel Core i5-14400F
+  ebay_query: "i5 14400f"
+  match: '\b14400 ?f\b'
+  exclude: []
+  max_price: null
+
+- id: i5-14600k
+  category: cpu
+  name: Intel Core i5-14600K
+  ebay_query: "i5 14600k"
+  match: '\b14600 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: i5-14600kf
+  category: cpu
+  name: Intel Core i5-14600KF
+  ebay_query: "i5 14600kf"
+  match: '\b14600 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: i7-12700
+  category: cpu
+  name: Intel Core i7-12700
+  ebay_query: "i7 12700"
+  match: '\b12700\b(?! ?(kf?|ks|f)\b)'
+  exclude: []
+  max_price: null
+
+- id: i7-12700k
+  category: cpu
+  name: Intel Core i7-12700K
+  ebay_query: "i7 12700k"
+  match: '\b12700 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: i7-12700kf
+  category: cpu
+  name: Intel Core i7-12700KF
+  ebay_query: "i7 12700kf"
+  match: '\b12700 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: i7-13700
+  category: cpu
+  name: Intel Core i7-13700
+  ebay_query: "i7 13700"
+  match: '\b13700\b(?! ?(kf?|ks|f)\b)'
+  exclude: []
+  max_price: null
+
+- id: i7-13700k
+  category: cpu
+  name: Intel Core i7-13700K
+  ebay_query: "i7 13700k"
+  match: '\b13700 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: i7-13700kf
+  category: cpu
+  name: Intel Core i7-13700KF
+  ebay_query: "i7 13700kf"
+  match: '\b13700 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: i7-14700
+  category: cpu
+  name: Intel Core i7-14700
+  ebay_query: "i7 14700"
+  match: '\b14700\b(?! ?(kf?|ks|f)\b)'
+  exclude: []
+  max_price: null
+
+- id: i7-14700k
+  category: cpu
+  name: Intel Core i7-14700K
+  ebay_query: "i7 14700k"
+  match: '\b14700 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: i7-14700kf
+  category: cpu
+  name: Intel Core i7-14700KF
+  ebay_query: "i7 14700kf"
+  match: '\b14700 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: i9-12900k
+  category: cpu
+  name: Intel Core i9-12900K
+  ebay_query: "i9 12900k"
+  match: '\b12900 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: i9-12900kf
+  category: cpu
+  name: Intel Core i9-12900KF
+  ebay_query: "i9 12900kf"
+  match: '\b12900 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: i9-12900ks
+  category: cpu
+  name: Intel Core i9-12900KS
+  ebay_query: "i9 12900ks"
+  match: '\b12900 ?ks\b'
+  exclude: []
+  max_price: null
+
+- id: i9-13900k
+  category: cpu
+  name: Intel Core i9-13900K
+  ebay_query: "i9 13900k"
+  match: '\b13900 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: i9-13900kf
+  category: cpu
+  name: Intel Core i9-13900KF
+  ebay_query: "i9 13900kf"
+  match: '\b13900 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: i9-13900ks
+  category: cpu
+  name: Intel Core i9-13900KS
+  ebay_query: "i9 13900ks"
+  match: '\b13900 ?ks\b'
+  exclude: []
+  max_price: null
+
+- id: i9-14900k
+  category: cpu
+  name: Intel Core i9-14900K
+  ebay_query: "i9 14900k"
+  match: '\b14900 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: i9-14900kf
+  category: cpu
+  name: Intel Core i9-14900KF
+  ebay_query: "i9 14900kf"
+  match: '\b14900 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: i9-14900ks
+  category: cpu
+  name: Intel Core i9-14900KS
+  ebay_query: "i9 14900ks"
+  match: '\b14900 ?ks\b'
+  exclude: []
+  max_price: null
+
+- id: core-ultra-5-245k
+  category: cpu
+  name: Intel Core Ultra 5 245K
+  ebay_query: "core ultra 5 245k"
+  match: '\b245 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: core-ultra-5-245kf
+  category: cpu
+  name: Intel Core Ultra 5 245KF
+  ebay_query: "core ultra 5 245kf"
+  match: '\b245 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: core-ultra-7-265k
+  category: cpu
+  name: Intel Core Ultra 7 265K
+  ebay_query: "core ultra 7 265k"
+  match: '\b265 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: core-ultra-7-265kf
+  category: cpu
+  name: Intel Core Ultra 7 265KF
+  ebay_query: "core ultra 7 265kf"
+  match: '\b265 ?kf\b'
+  exclude: []
+  max_price: null
+
+- id: core-ultra-9-285k
+  category: cpu
+  name: Intel Core Ultra 9 285K
+  ebay_query: "core ultra 9 285k"
+  match: '\b285 ?k\b'
+  exclude: []
+  max_price: null
+
+- id: ryzen-7600
+  category: cpu
+  name: AMD Ryzen 5 7600
+  ebay_query: "ryzen 5 7600"
+  match: '(?<!rx )(?<!radeon )\b7600\b(?! ?(x3d|x|xtx?|gre)\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-7600x
+  category: cpu
+  name: AMD Ryzen 5 7600X
+  ebay_query: "ryzen 5 7600x"
+  match: '(?<!rx )(?<!radeon )\b7600 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-7700
+  category: cpu
+  name: AMD Ryzen 7 7700
+  ebay_query: "ryzen 7 7700"
+  match: '(?<!rx )(?<!radeon )\b7700\b(?! ?(x3d|x|xtx?|gre)\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-7700x
+  category: cpu
+  name: AMD Ryzen 7 7700X
+  ebay_query: "ryzen 7 7700x"
+  match: '(?<!rx )(?<!radeon )\b7700 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-7800x3d
+  category: cpu
+  name: AMD Ryzen 7 7800X3D
+  ebay_query: "ryzen 7 7800x3d"
+  match: '(?<!rx )(?<!radeon )\b7800 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-7900
+  category: cpu
+  name: AMD Ryzen 9 7900
+  ebay_query: "ryzen 9 7900"
+  match: '(?<!rx )(?<!radeon )\b7900\b(?! ?(x3d|x|xtx?|gre)\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-7900x
+  category: cpu
+  name: AMD Ryzen 9 7900X
+  ebay_query: "ryzen 9 7900x"
+  match: '(?<!rx )(?<!radeon )\b7900 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-7900x3d
+  category: cpu
+  name: AMD Ryzen 9 7900X3D
+  ebay_query: "ryzen 9 7900x3d"
+  match: '(?<!rx )(?<!radeon )\b7900 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-7950x
+  category: cpu
+  name: AMD Ryzen 9 7950X
+  ebay_query: "ryzen 9 7950x"
+  match: '(?<!rx )(?<!radeon )\b7950 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-7950x3d
+  category: cpu
+  name: AMD Ryzen 9 7950X3D
+  ebay_query: "ryzen 9 7950x3d"
+  match: '(?<!rx )(?<!radeon )\b7950 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-9600
+  category: cpu
+  name: AMD Ryzen 5 9600
+  ebay_query: "ryzen 5 9600"
+  match: '(?<!rx )(?<!radeon )\b9600\b(?! ?(x3d|x|xtx?|gre)\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-9600x
+  category: cpu
+  name: AMD Ryzen 5 9600X
+  ebay_query: "ryzen 5 9600x"
+  match: '(?<!rx )(?<!radeon )\b9600 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-9700x
+  category: cpu
+  name: AMD Ryzen 7 9700X
+  ebay_query: "ryzen 7 9700x"
+  match: '(?<!rx )(?<!radeon )\b9700 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-9800x3d
+  category: cpu
+  name: AMD Ryzen 7 9800X3D
+  ebay_query: "ryzen 7 9800x3d"
+  match: '(?<!rx )(?<!radeon )\b9800 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-9900x
+  category: cpu
+  name: AMD Ryzen 9 9900X
+  ebay_query: "ryzen 9 9900x"
+  match: '(?<!rx )(?<!radeon )\b9900 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-9900x3d
+  category: cpu
+  name: AMD Ryzen 9 9900X3D
+  ebay_query: "ryzen 9 9900x3d"
+  match: '(?<!rx )(?<!radeon )\b9900 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-9950x
+  category: cpu
+  name: AMD Ryzen 9 9950X
+  ebay_query: "ryzen 9 9950x"
+  match: '(?<!rx )(?<!radeon )\b9950 ?x\b(?! ?3d\b)(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-9950x3d
+  category: cpu
+  name: AMD Ryzen 9 9950X3D
+  ebay_query: "ryzen 9 9950x3d"
+  match: '(?<!rx )(?<!radeon )\b9950 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-5600x3d
+  category: cpu
+  name: AMD Ryzen 5 5600X3D
+  ebay_query: "ryzen 5 5600x3d"
+  match: '(?<!rx )(?<!radeon )\b5600 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-5700x3d
+  category: cpu
+  name: AMD Ryzen 7 5700X3D
+  ebay_query: "ryzen 7 5700x3d"
+  match: '(?<!rx )(?<!radeon )\b5700 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null
+
+- id: ryzen-5800x3d
+  category: cpu
+  name: AMD Ryzen 7 5800X3D
+  ebay_query: "ryzen 7 5800x3d"
+  match: '(?<!rx )(?<!radeon )\b5800 ?x ?3d\b(?!.*\b(\d+ ?gb?|gddr\d)\b)'
+  exclude: ['\b\d+ ?gb?\b', '\bgddr\d']
+  max_price: null

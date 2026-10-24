@@ -1,0 +1,7 @@
+- id: ryzen-7-7800x3d
+  category: cpu
+  name: AMD Ryzen 7 7800X3D
+  ebay_query: "ryzen 7 7800x3d"
+  match: '\b7800\s*x3d\b'
+  exclude: []
+  max_price: null

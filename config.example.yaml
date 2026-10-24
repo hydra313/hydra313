@@ -1,0 +1,147 @@
+# Copy to config.yaml in the folder you run `python -m dealfinder` from.
+# Every value below is the built-in default; delete what you don't change.
+# Unknown keys are rejected at startup so typos show up.
+# Secrets (API keys, webhook URL) are NOT read from this file: use environment variables.
+
+# --- storage / scheduling ---
+db_path: dealfinder.db          # SQLite file, created in the folder you run from
+catalog_dir: catalog            # seed catalog folder (YAML files)
+refresh_minutes: 2              # continuous checks while the app runs; overlapping runs are skipped
+ebay_full_pass_hours: 3         # how often eBay gets a full (not incremental) search pass
+
+# --- scoring ---
+sell_fee_rate: 0.1325           # fraction of the resale price lost to eBay fees
+sell_shipping:                  # what you expect to pay to ship a resold item, per category
+  gpu: 20
+  cpu: 8
+  console: 30
+  controller: 10
+buy_shipping_estimate:          # assumed inbound shipping when a listing doesn't say, per category
+  gpu: 20
+  cpu: 8
+  console: 30
+  controller: 10
+lot_ship_base: 8                # game lots: base shipping estimate (USD)
+lot_ship_per_game: 0.40         # game lots: extra shipping per game (USD)
+min_profit: 30                  # single items: minimum expected profit (USD)
+min_lot_profit: 50              # lots: minimum expected profit (USD)
+min_discount: 0.20              # minimum discount versus market value (0.20 = 20%)
+min_hardware_lot: 3             # smallest for-parts hardware lot worth considering (units)
+min_game_lot: 5                 # smallest game lot worth considering (games)
+rare_item_threshold: 50         # photo scans: an identified item worth at least this (USD) counts as a rare find
+tax_rate: 0                     # sales tax added to your cost (0.07 = 7%)
+market_ttl_hours: 24            # how long a market value is cached
+item_price_ttl_days: 30         # how long a photo-identified item's price is cached
+min_comps: 5                    # sold comps needed to trust a market value
+min_item_comps: 3               # sold comps needed to price a photo-identified item
+repair_defaults:                # for-parts lots: [repair cost per unit in USD, repair success rate]
+  console: [25, 0.60]
+  controller: [8, 0.70]
+  gpu: [40, 0.40]
+  cpu: [10, 0.30]
+
+# --- per-source fees ---
+buyer_premium_pct:              # buyer's premium added to the bid, as a fraction
+  ebay: 0.0
+  shopgoodwill: 0.0
+  hibid: 0.15
+handling_fee:                   # flat handling fee added per order (USD)
+  ebay: 0.0
+  shopgoodwill: 5.0
+  hibid: 0.0
+
+# --- search ---
+hibid_mode: browser             # browser page import; api = legacy adapter; off = disable
+hibid_snapshot_minutes: 30      # imported prices expire; integer 1-120 minutes
+broad_queries:                  # automatic source queries; HiBid browser mode uses these as search links
+  shopgoodwill:
+    - rtx
+    - geforce
+    - ryzen
+    - intel core
+    - ps5
+    - xbox series
+    - switch oled
+    - dualsense
+    - limited edition controller
+    - console lot
+    - controller lot
+    - video game lot
+    - games lot
+    - limited edition console
+    - special edition console
+    - halo xbox 360
+    - playstation
+    - xbox
+    - nintendo
+    - game boy
+    - psp
+    - vita
+    - dreamcast
+    - sega
+    - gamecube
+    - n64
+    - snes
+    - wii
+    - 3ds
+    - 2ds
+    - ds lite
+    - neo geo
+    - pc engine
+    - wonderswan
+    - atari
+  hibid:
+    - rtx
+    - geforce
+    - ryzen
+    - intel core
+    - ps5
+    - xbox series
+    - switch oled
+    - dualsense
+    - limited edition controller
+    - console lot
+    - controller lot
+    - video game lot
+    - games lot
+    - limited edition console
+    - special edition console
+    - halo xbox 360
+    - playstation
+    - xbox
+    - nintendo
+    - game boy
+    - psp
+    - vita
+    - dreamcast
+    - sega
+    - gamecube
+    - n64
+    - snes
+    - wii
+    - 3ds
+    - 2ds
+    - ds lite
+    - neo geo
+    - pc engine
+    - wonderswan
+    - atari
+
+# --- photo scanning (off until you switch it on in the dashboard header) ---
+vision_model: claude-opus-5-5   # model used to read lot photos
+vision_prices:                  # USD per million tokens: [input, output]; used to compute spend
+  claude-opus-5-5: [4.00, 20.00]
+  claude-opus-5: [5.00, 25.00]    # server-side fallback models; a model missing here is
+  claude-opus-4-8: [5.00, 25.00]  # priced at the highest rate, and at least [10, 50]
+scan_cost_ceiling: 0.50         # worst-case cost of one scan incl. a fallback-model retry (USD); a scan only starts if spend + this fits under the caps
+initial_daily_cap: 5.0          # starting daily spend cap (USD); once you edit it in the header, the saved value wins
+initial_monthly_cap: 50.0       # starting monthly spend cap (USD); once you edit it in the header, the saved value wins
+initial_max_scan_price: 300.0   # lots costing more than this (USD) are not scanned automatically; header edits win
+
+# --- Discord notifications (needs DISCORD_WEBHOOK_URL) ---
+notify_reasons:                 # which kinds of finds send an alert
+  photo_find: true
+  target_hit: true
+  hardware_lot_deal: true
+  game_lot_deal: true
+  resale_deal: false

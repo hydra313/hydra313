@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"400","swap":true},{"code":"[45]..","swap":false,"error":true}]}'>
+  <title>{% block title %}Dealfinder{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v=7">
+  <script src="/static/htmx.min.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="Dealfinder home"><span class="brand-mark" aria-hidden="true">d<span></span></span>Dealfinder<span class="brand-period">.</span></a>
+    <p class="nav-label">WORKSPACE</p>
+    <nav aria-label="Main navigation">
+      {% set current = request.url.path %}
+      {% for href, label, symbol in [('/', 'Deals', '◈'), ('/lots/hardware', 'Bulk lots', '▦'), ('/lots/games', 'Game lots', '◫'), ('/catalog', 'Catalog', '≡'), ('/connections', 'Connections', '↻'), ('/sources/ebay', 'eBay browser', '↗'), ('/sources/hibid', 'HiBid search', '↗')] %}
+      <a href="{{ href }}"{% if current == href %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ symbol }}</span>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="sidebar-footer"><span class="local-dot" aria-hidden="true"></span><div><strong>Local workspace</strong><span>Running on your machine</span></div></div>
+  </aside>
+  <div class="workspace">
+    <header class="top">
+      <div class="workspace-label"><span class="eyebrow">AUCTION INTELLIGENCE</span><span class="workspace-private">Personal workspace</span></div>
+      {% include "partials/header_controls.html" %}
+    </header>
+    <main id="main-content">
+      {% block content %}{% endblock %}
+      <footer class="page-footer">Find the opportunity. Check the details.<span>Dealfinder · Local edition</span></footer>
+    </main>
+  </div>
+</body>
+</html>
