@@ -1,5 +1,5 @@
 {% for d in deals %}
-<tr id="listing-{{ d.id }}">
+<tr id="listing-{{ d.id }}" class="deal-{{ d.rating.tone }}">
   <td class="img">{% if d.image %}<img src="{{ d.image }}" alt="" loading="lazy" width="64" height="64">{% endif %}</td>
   <td data-label="Title" class="title">
     {% if d.url %}<a href="{{ d.url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}
@@ -7,13 +7,13 @@
     {% if d.new %}<span class="badge new">NEW</span>{% endif %}
     {% if d.snapshot_at %}<span class="badge low" title="Captured {{ d.snapshot_at }}">Browser snapshot</span>{% endif %}
   </td>
+  <td data-label="Current price" class="num"><strong>{{ d.price|money }}</strong>{% if d.total_cost is not none %}<small class="comparison-note cost" title="{{ d.breakdown }}">{{ d.total_cost|money }} total</small>{% endif %}{% if d.per_unit is defined and d.per_unit is not none %}<small class="comparison-note">{{ d.per_unit|money }} per unit</small>{% endif %}</td>
+  <td data-label="Average eBay sold" class="num">{% include "partials/sold_value.html" %}</td>
+  <td data-label="Profit" class="num">{% if d.profit is not none %}{{ d.profit|money }}{% else %}—{% endif %}</td>
+  <td data-label="Deal rating">{% include "partials/deal_rating.html" %}</td>
   <td data-label="Product">{{ d.product }}</td>
   <td data-label="Condition">{{ d.condition|replace('_', ' ')|capitalize }}</td>
   <td data-label="Site">{{ d.site }}</td>
-  <td data-label="Total cost" class="num">{% if d.total_cost is not none %}<span class="cost" title="{{ d.breakdown }}">{{ d.total_cost|money }}</span>{% else %}—{% endif %}</td>
-  <td data-label="Market value" class="num">{% if d.market %}{{ d.market.value|money }} <span class="badge{% if d.market.low %} low{% endif %}">{{ d.market.badge }}</span>{% else %}—{% endif %}</td>
-  <td data-label="Profit" class="num">{% if d.profit is not none %}{{ d.profit|money }}{% else %}—{% endif %}</td>
-  <td data-label="Discount" class="num">{% if d.discount is not none %}{{ '%.0f'|format(d.discount * 100) }}%{% else %}—{% endif %}</td>
   <td data-label="Time left">{{ d.time_left }}</td>
   <td class="actions">
     <a href="/listing/{{ d.id }}">Details</a>

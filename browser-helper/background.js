@@ -36,11 +36,14 @@ async function tick() {
     const job = await api("next", state.token);
     if (job.paused) return;
     const url = new URL(job.url);
-    if (url.origin !== "https://www.ebay.com" || url.pathname !== "/sch/i.html" || url.searchParams.get("LH_BIN") !== "1") {
+    const kind = job.kind || "active";
+    const parameter = kind === "sold" ? "LH_Sold" : "LH_BIN";
+    if (!["active","sold"].includes(kind) || url.origin !== "https://www.ebay.com"
+        || url.pathname !== "/sch/i.html" || url.searchParams.get(parameter) !== "1") {
       await stop("Unexpected search URL from Dealfinder."); return;
     }
     const tab = await chrome.tabs.create({url: "about:blank", active: false});
-    await chrome.storage.local.set({pending: {tabId: tab.id, query: job.query, url: job.url, started: Date.now()}});
+    await chrome.storage.local.set({pending: {tabId: tab.id, query: job.query, kind, url: job.url, started: Date.now()}});
     await chrome.tabs.update(tab.id, {url: job.url});
     await chrome.action.setBadgeText({text: "ON"});
   } catch (error) {
@@ -67,13 +70,14 @@ async function handle(message, sender) {
     const state = await chrome.storage.local.get(["pending", "token", "enabled"]);
     if (!state.enabled || !state.pending || sender.tab?.id !== state.pending.tabId
         || url.origin !== "https://www.ebay.com" || url.pathname !== "/sch/i.html"
-        || url.searchParams.get("_nkw") !== state.pending.query || url.searchParams.get("LH_BIN") !== "1") {
+        || url.searchParams.get("_nkw") !== state.pending.query
+        || url.searchParams.get(state.pending.kind === "sold" ? "LH_Sold" : "LH_BIN") !== "1") {
       return {error:"Not the active helper search"};
     }
     if (message.type === "ready") return {ok:true};
     if (message.error) { await stop(String(message.error).slice(0,200)); return {ok:false}; }
     try {
-      await api("results", state.token, {query: state.pending.query, html: message.html,
+      await api("results", state.token, {query: state.pending.query, kind:state.pending.kind, html: message.html,
                                        captured_at: message.captured_at});
       await chrome.storage.local.set({pending: null, lastError: ""});
       try { await chrome.tabs.remove(state.pending.tabId); } catch {}

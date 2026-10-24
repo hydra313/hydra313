@@ -42,7 +42,7 @@ def _listing(card, captured_at: datetime) -> Listing | None:
     # Unknown closing times cannot safely represent auctions. The helper searches BIN only.
     if (not re.search(r"\bbuy it now\b|\bor best offer\b", text, re.I)
             or re.search(r"\b\d[\d,]*\s+bids?\b", text, re.I)
-            or re.search(r"\b(sold|ended|local pickup only)\b", text, re.I)):
+            or re.search(r"\b(sold|ended|pickup only)\b", text, re.I)):
         return None
     raw_price = _text(card.css_first(".s-card__price, .s-item__price"))
     money = USD.fullmatch(raw_price)
@@ -75,7 +75,8 @@ def _listing(card, captured_at: datetime) -> Listing | None:
         title += " (for parts)"
         condition_id = "7000"
     else:
-        condition_id = "1000" if re.search(r"\bbrand new\b", conditions, re.I) else "3000"
+        condition_id = ("1000" if re.search(r"\bbrand new\b", conditions, re.I) else
+                        "1500" if re.search(r"\bopen box\b|\bnew \(other\)", conditions, re.I) else "3000")
     images = []
     for image in card.css("img"):
         url = image.attributes.get("src", "")

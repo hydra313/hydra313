@@ -1194,3 +1194,49 @@ def test_unhandled_refresh_failure_is_visible(cfg, fake):
         app.state.runner.thread.join(5)
         status = c.get('/header/status').text
         assert 'Refresh failed' in status and '&lt;failure&gt;' in status
+
+@pytest.mark.parametrize('price,profit,tone,label', [(580,200,'good','Good deal'),(830,10,'average','Average'),(880,-20,'overpriced','At limit')])
+def test_sold_average_and_deal_colors_render_next_to_current_price(client, conn, price, profit, tone, label):
+    lid=seed(conn,'rating-'+tone,price=price,profit=profit)
+    mv=MarketValue('rtx-4090','used',1000,8,'sold_average',False,now_utc())
+    db.save_market_value(conn,mv,[])
+    html=client.get('/').text
+    row=row_html(html,lid)
+    assert f'class="deal-{tone}"' in row
+    assert label in row and '$1,000.00' in row and 'sold average' in row
+    assert 'Current price' in html and 'Average eBay sold' in html
+    detail=client.get(f'/listing/{lid}').text
+    assert label in detail and 'id="sold-comps"' in detail
+
+
+def test_stale_and_asking_values_do_not_color_listings(client, conn):
+    lid=seed(conn,'rating-unknown',price=100,profit=500)
+    for method,at in [('active_bin',now_utc()),('sold',now_utc()),('sold_average',now_utc()-timedelta(days=2))]:
+        db.save_market_value(conn,MarketValue('rtx-4090','used',1000,8,method,False,at),[])
+        row=row_html(client.get('/').text,lid)
+        assert 'class="deal-unknown"' in row
+        assert 'rating-good' not in row and 'below sold average' not in row
+
+
+def test_helper_alternates_sold_evidence_without_skipping_active_catalog_queries(client, conn):
+    seed(conn,'needs-sold-evidence')
+    headers={'X-Dealfinder-Token':client.app.state.browser_token}
+    jobs=[client.post('/browser/ebay/next',headers=headers).json() for _ in range(4)]
+    assert [job['kind'] for job in jobs]==['active','sold','active','sold']
+    assert jobs[0]['query'] != jobs[2]['query']
+    assert 'LH_Sold=1' in jobs[1]['url'] and jobs[1]['query']=='rtx 4090'
+
+
+def test_sold_helper_capture_saves_comps_and_starts_repricing(client, fake, conn):
+    at=now_utc()
+    day=(at-timedelta(days=1)).strftime('%b %d, %Y')
+    html=f'<li class="s-card"><a class="s-card__link" href="https://www.ebay.com/itm/123456789123"></a><div class="s-card__title">RTX 4090</div><div class="s-card__price">$900.00</div><div class="s-card__caption">Sold {day}</div><div class="s-card__subtitle">Pre-Owned</div></li>'
+    headers={'X-Dealfinder-Token':client.app.state.browser_token}
+    response=client.post('/browser/ebay/results',headers=headers,json={
+        'kind':'sold','query':'rtx 4090','html':html,'captured_at':at.isoformat()})
+    assert response.status_code==200 and response.json()['usable']==1
+    assert fake.started.wait(5)
+    client.app.state.runner.thread.join(5)
+    assert fake.imported==[]  # sold comps are evidence, not live offers
+    from dealfinder.sources.ebay_sold_browser import snapshots
+    assert snapshots(conn)['rtx 4090']['comps'][0]['price']==900

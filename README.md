@@ -87,8 +87,8 @@ This one-time browser installation is needed because direct eBay requests are
 blocked on some networks. It does not bypass verification or replay browser cookies.
 
 The helper rotates through enabled catalog queries, one search every 30 seconds,
-using a single background tab. It captures visible USD **Buy It Now** cards and
-imports matching records immediately. Keep the browser and app open. Sleep and
+using a single background tab. It alternates visible USD **Buy It Now** cards with
+sold-price searches for products actually on your dashboard. Keep the browser and app open. Sleep and
 browser throttling can delay checks. The header reports when the helper is not
 connected. A verification or parser failure stops the helper and leaves its tab
 open for you; complete verification and reconnect. **Stop browser helper** stops
@@ -99,9 +99,36 @@ They do not send alerts or initiate paid photo scans. Subsequent scheduled runs
 use the usual notification and photo-budget gates. Cached records retain their
 original observation time and expire under the normal stale-listing rule (two
 full eBay passes, six hours by default); reprocessing a cache is not a new capture.
-Auction search still uses the optional official API. Sold-price requests can
-remain blocked, so keyless listings may have no resale estimate. Installing the
-helper does not create sold-price comparisons.
+Auction search still uses the optional official API. Sold searches can require
+you to sign in to eBay in the helper's browser. It leaves that tab open for you
+and never reads credentials or solves verification. Direct sold-price requests
+can remain blocked; captured sold pages supply evidence locally without an API key.
+
+## Average sold value and deal colors
+
+Current price and **Average eBay sold** appear together on Deals, both lot pages,
+and listing details. The average uses matched, same-condition sales from the last
+90 days, includes known shipping, and removes IQR outliers. Duplicated browser
+records and undisclosed accepted-offer prices are excluded. Lot comparisons scale
+the per-unit average to the lot quantity. Click **View sold evidence** to inspect
+the retained comparable sales.
+
+- **Green / Good deal:** estimated profit meets the configured minimum and the
+  total purchase cost is at least the configured discount below the sold average
+  (defaults: $30 for singles, $50 for lots, and 20%).
+- **Yellow / Average:** estimated profit remains positive but misses those targets.
+- **Red / At limit · Pass:** estimated profit is zero or negative after resale
+  fees, shipping, and applicable repair assumptions. A low asking price alone does
+  not make a profitable deal.
+- **Gray / Unknown:** no reliable recent sold average, too few comps, unknown
+  quantity/cost, or stale data. Asking-price estimates and older median caches
+  never receive a sold-based traffic-light rating.
+
+The percentage compares **landed purchase cost**, including configured inbound
+shipping, taxes and buyer premiums, with the average sold value. Profit is a
+separate estimate after selling costs. Averages expire after `market_ttl_hours`
+(24 hours by default); older cached prices are labeled instead of colored.
+Existing median records are retained as legacy estimates until refreshed.
 
 The browser helper is in `browser-helper/`; its local capability token is stored
 in an ignored `*.browser-token` file beside the database. Never publish that file.

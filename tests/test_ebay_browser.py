@@ -31,7 +31,7 @@ def test_visible_active_cards_use_usd_price_condition_and_canonical_identity():
     assert item.source_id == "v1|366757299846|0"
     assert item.url == "https://www.ebay.com/itm/366757299846"
     assert item.price == 625 and item.shipping == 0
-    assert item.condition_id == "3000"  # Open Box is conservatively used
+    assert item.condition_id == "1500"  # same open-box/new condition group as sold matching
     assert item.observed_at == NOW and not item.is_auction
 
 
@@ -39,6 +39,7 @@ def test_visible_active_cards_use_usd_price_condition_and_canonical_identity():
     {"price":"C $625.00"}, {"price":"$500.00 to $625.00"},
     {"price":"$nan"}, {"price":"$0.00"}, {"host":"ebay.com.evil.test"},
     {"buying":"4 bids"}, {"shipping":"Local pickup only"},
+    {"shipping":"Pickup only: Over 60 mi from 49424"},
     {"title":"Shop on eBay"}, {"buying":"Sold Oct 23, 2026"},
 ])
 def test_ambiguous_prices_closed_auctions_pickup_and_parts_are_not_single_items(kwargs):

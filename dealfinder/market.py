@@ -234,6 +234,10 @@ class MarketService:
                 return None
             if any(re.search(p, title_norm) for p in _ITEM_EXCLUDES):
                 return None
+            if kind == "console" and not re.search(r"\b(consoles?|systems?)\b", title_norm):
+                return None
+            if kind == "controller" and not re.search(r"\b(controllers?|gamepads?|dualsense|dualshock|joy con)\b", title_norm):
+                return None
             # Words the game's own title uses ("System Shock") do not exclude a comp.
             if game and any(m.group(0) not in title_norm_item
                             for m in _GAME_EXCLUDES.finditer(title_norm)):
@@ -268,17 +272,19 @@ class MarketService:
         cached = db.get_market_value(self._conn, key, condition, table=table)
         if cached is not None:
             cached_ttl = ACTIVE_BIN_TTL if cached.method == "active_bin" else ttl
-            if now - cached.computed_at < cached_ttl:
+            newer = getattr(self._sold, "captured_after", lambda q, at: False)(query, cached.computed_at)
+            if cached.method != "sold" and not newer and now - cached.computed_at < cached_ttl:
                 return cached
         miss_key = (table, key, condition)
         missed_at = self._misses.get(miss_key)
-        if missed_at is not None and now - missed_at < ttl:
+        if (missed_at is not None and now - missed_at < ttl
+                and not getattr(self._sold, "captured_after", lambda q, at: False)(query, missed_at)):
             return None
 
         # A failed fetch returns the cached value, even a stale one, without
         # re-saving it, so the next run tries again.
         errored = False
-        method = "sold"
+        method = "sold_average"
         try:
             kept = self._select([(c, None) for c in self._fetch_sold(query)], value_of)
         except SourceError as e:
@@ -307,7 +313,7 @@ class MarketService:
         mv = MarketValue(
             key=key,
             condition=condition,
-            value=round(statistics.median(values), 2),
+            value=round(statistics.fmean(values) if method == "sold_average" else statistics.median(values), 2),
             comp_count=len(kept),
             method=method,
             low_confidence=method == "active_bin" or len(kept) < min_comps,
@@ -318,11 +324,13 @@ class MarketService:
         return mv
 
     def _fetch_sold(self, query: str) -> list[Comp]:
-        if self._sold_blocked is not None:
+        if self._sold_blocked is not None and not getattr(self._sold, "has_capture", lambda q: False)(query):
             raise self._sold_blocked
         if query not in self._sold_memo:
             try:
-                self._sold_memo[query] = self._sold.fetch(query)
+                self._sold_memo[query] = [comp for comp in self._sold.fetch(query)
+                    if comp.sold_date and 0 <= (self._clock().date() - comp.sold_date).days <= 90
+                    and comp.price > 0]
                 db.set_setting(self._conn, SOLD_ERROR_SETTING, "")
             except SourceError as e:
                 self._sold_memo[query] = e

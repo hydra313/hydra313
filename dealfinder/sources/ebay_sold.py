@@ -34,7 +34,7 @@ SELECTORS = {
         "shipping_words": ("delivery", "shipping"),
         "caption": [".s-card__caption"],
         "condition": ".s-card__subtitle",
-        "link": "a.su-link",
+        "link": "a.s-card__link, a.su-link",
     },
 }
 
@@ -110,6 +110,8 @@ def _parse_sold_date(item: Node, sel: dict) -> date | None:
 
 
 def _parse_item(item: Node, sel: dict) -> Comp | None:
+    if "best offer accepted" in _text(item).lower():
+        return None  # displayed asking price is not the undisclosed accepted sale price
     title = _clean_title(_text(item.css_first(sel["title"])))
     if not title or title.lower() == PLACEHOLDER_TITLE:
         return None

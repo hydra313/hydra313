@@ -63,3 +63,17 @@ test('expired pending search stops instead of accumulating tabs',async()=>{
  h.state.pending.started=Date.now()-100000; h.alarm(); await new Promise(setImmediate);
  assert.equal(h.state.enabled,false); assert.equal(h.opened.length,2);
 });
+
+test('sold jobs use sold search and preserve capture kind',async()=>{
+ const h=harness();
+ h.context.fetch=async(url,options)=>{
+  h.calls.push({url,options});
+  return {ok:true,json:async()=>url.endsWith('/next') ? {query:'rtx 4070',kind:'sold',url:'https://www.ebay.com/sch/i.html?_nkw=rtx+4070&LH_Sold=1'} : {ok:true}};
+ };
+ await h.message({type:'pair',token},local);
+ const sender={url:'https://www.ebay.com/sch/i.html?_nkw=rtx+4070&LH_Sold=1',tab:{id:17}};
+ assert.equal((await h.message({type:'ready'},sender)).ok,true);
+ await h.message({type:'capture',html:'<ul>sold</ul>',captured_at:new Date().toISOString()},sender);
+ assert.equal(JSON.parse(h.calls[1].options.body).kind,'sold');
+ assert.deepEqual(h.removed,[17]);
+});

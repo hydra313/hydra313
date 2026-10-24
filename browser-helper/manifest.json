@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Dealfinder eBay Browser Helper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Send visible eBay Buy It Now search cards to your local Dealfinder app. No API key required.",
   "minimum_chrome_version": "120",
   "permissions": ["alarms", "storage"],

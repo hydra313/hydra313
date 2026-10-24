@@ -1,5 +1,5 @@
 {% for d in lots %}
-<tr id="listing-{{ d.id }}">
+<tr id="listing-{{ d.id }}" class="deal-{{ d.rating.tone }}">
   <td class="img">{% if d.image %}<img src="{{ d.image }}" alt="" loading="lazy" width="64" height="64">{% endif %}</td>
   <td data-label="Title" class="title">
     <a href="/listing/{{ d.id }}">{{ d.title }}</a>
@@ -8,10 +8,10 @@
   </td>
   <td data-label="Platform">{{ d.product }}</td>
   <td data-label="Games" class="num">{{ d.quantity if d.quantity is not none else '?' }}</td>
-  <td data-label="Cost per game" class="num">{% if d.per_unit is not none %}<span class="cost" title="{{ d.total_cost|money }} total: {{ d.breakdown }}">{{ d.per_unit|money }}</span>{% else %}—{% endif %}</td>
-  <td data-label="Market per game" class="num">{% if d.market %}{{ d.market.value|money }} <span class="badge{% if d.market.low %} low{% endif %}">{{ d.market.badge }}</span>{% else %}—{% endif %}</td>
+  <td data-label="Current lot price" class="num"><strong>{{ d.price|money }}</strong>{% if d.total_cost is not none %}<small class="comparison-note cost" title="{{ d.breakdown }}">{{ d.total_cost|money }} total</small>{% endif %}{% if d.per_unit is defined and d.per_unit is not none %}<small class="comparison-note">{{ d.per_unit|money }} per unit</small>{% endif %}</td>
+  <td data-label="Average eBay sold" class="num">{% include "partials/sold_value.html" %}</td>
   <td data-label="Expected profit" class="num">{% if d.profit is not none %}{{ d.profit|money }}{% else %}—{% endif %}</td>
-  <td data-label="Discount" class="num">{% if d.discount is not none %}{{ '%.0f'|format(d.discount * 100) }}%{% else %}—{% endif %}</td>
+  <td data-label="Deal rating">{% include "partials/deal_rating.html" %}</td>
   <td data-label="Site">{{ d.site }}</td>
   <td data-label="Time left">{{ d.time_left }}</td>
   <td class="actions">

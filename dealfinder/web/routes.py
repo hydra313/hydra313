@@ -23,11 +23,14 @@ from dealfinder.budget import Budget
 from dealfinder.catalog import Catalog, load_catalog
 from dealfinder.config import Config
 from dealfinder.console_editions import edition_text
+from dealfinder.deal_rating import compare_deal
 from dealfinder.models import BulkProduct, MarketValue
 from dealfinder.market import SOLD_ERROR_SETTING
 from dealfinder.pipeline import SCAN_KINDS, stale_before, hibid_snapshot_before
 from dealfinder.pipeline import ebay_queries
 from dealfinder.sources import ebay_browser
+from dealfinder.sources import ebay_sold_browser
+from dealfinder.sources.ebay_sold import sold_url
 from dealfinder.sources.hibid_browser import (
     IMPORT_LOCK, MAX_PAGE_BYTES, parse_browser_page, save_snapshot, search_link, snapshot_status,
 )
@@ -338,11 +341,13 @@ def _market(mv: MarketValue | None) -> dict | None:
     """A stored value with its confidence badge."""
     if mv is None:
         return None
-    basis = "sold" if mv.method == "sold" else "listed"
+    basis = "sold" if mv.method in ("sold", "sold_average") else "listed"
     return {
         "value": mv.value,
         "badge": f"{mv.comp_count} {basis}" + (" · low" if mv.low_confidence else ""),
         "low": mv.low_confidence,
+        "method": mv.method,
+        "at": mv.computed_at,
     }
 
 
@@ -350,6 +355,7 @@ def _deal(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, names: dict[s
           new_since: datetime | None, now: datetime) -> dict:
     images = json.loads(row["image_urls"] or "[]")
     first_seen = _parse_time(row["first_seen"])
+    value = db.get_market_value(conn, row["key"], row["condition"]) if row["condition"] else None
     return {
         "id": row["id"],
         "title": row["title"],
@@ -359,6 +365,8 @@ def _deal(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, names: dict[s
         "condition": row["condition"] or "—",
         "site": SITE_NAMES.get(row["source"], row["source"]),
         "total_cost": row["total_cost"],
+        "price": row["price"],
+        "rating": compare_deal(value, row["total_cost"], row["profit"], 1, cfg, now),
         "breakdown": _breakdown(row, cfg) if row["total_cost"] is not None else "",
         "market": _value(conn, row),
         "profit": row["profit"],
@@ -456,6 +464,7 @@ def _lot(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, catalog: Catal
          now: datetime, find: bool) -> dict:
     images = json.loads(row["image_urls"] or "[]")
     key = _value_key(row, catalog)
+    value = db.get_market_value(conn, *key) if key else None
     lot = {
         "id": row["id"],
         "title": row["title"],
@@ -464,9 +473,11 @@ def _lot(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, catalog: Catal
         "site": SITE_NAMES.get(row["source"], row["source"]),
         "quantity": row["quantity"],
         "total_cost": row["total_cost"],
+        "price": row["price"],
+        "rating": compare_deal(value, row["total_cost"], row["profit"], row["quantity"], cfg, now, lot=True),
         "breakdown": _breakdown(row, cfg) if row["total_cost"] is not None else "",
         "per_unit": _per_unit(row),
-        "market": _market(db.get_market_value(conn, *key)) if key else None,
+        "market": _market(value),
         "profit": row["profit"],
         "discount": row["discount_pct"],
         "time_left": _time_left(row["end_time"], now),
@@ -686,8 +697,13 @@ def _import_ebay(runner, conn, html: str, captured_at: datetime) -> tuple[int, i
     return page.cards, len(page.listings), matched
 
 
-def _locked_ebay_import(request, conn, html, at):
+def _locked_ebay_import(request, conn, html, at, kind="active", query=""):
     with request.app.state.browser_lock:
+        if kind == "sold":
+            count = ebay_sold_browser.save_sold_capture(conn, query, html, at)
+            return count, count, 0
+        if kind != "active":
+            raise ValueError("Unknown import type")
         return _import_ebay(request.app.state.runner, conn, html, at)
 
 
@@ -696,10 +712,16 @@ async def ebay_manual_import(request: Request, conn: sqlite3.Connection = Depend
     if int(request.headers.get("content-length", "0")) > ebay_browser.MAX_PAGE_BYTES + 65536:
         raise HTTPException(413, "eBay import exceeds 2 MB")
     try:
-        async with request.form(max_files=0, max_fields=2, max_part_size=ebay_browser.MAX_PAGE_BYTES) as form:
+        async with request.form(max_files=0, max_fields=4, max_part_size=ebay_browser.MAX_PAGE_BYTES) as form:
             html = str(form.get("page_html", ""))
+            kind = str(form.get("capture_kind", "active"))
+            query = str(form.get("query", ""))
         cards, usable, matched = await run_in_threadpool(
-            _locked_ebay_import, request, conn, html, utc_now())
+            _locked_ebay_import, request, conn, html, utc_now(), kind, query)
+        if kind == "sold":
+            request.app.state.runner.start_refresh()
+            return HTMLResponse(f"Imported {usable} sold comparisons. Recalculating listing values…",
+                                headers={"HX-Trigger": "listings-updated"})
         return HTMLResponse(f"Imported: {cards} cards, {usable} usable listings, {matched} catalog matches.",
                             headers={"HX-Trigger": "listings-updated"})
     except ValueError as error:
@@ -713,21 +735,32 @@ def ebay_helper_next(request: Request, conn: sqlite3.Connection = Depends(get_co
     with request.app.state.browser_lock:
         if Budget(conn, cfg, local_now).paused():
             return {"paused": True, "reason": "Automatic checks paused"}
-        if cfg.ebay_client_id and cfg.ebay_client_secret:
-            return {"paused": True, "reason": "eBay API search is configured"}
-        queries = ebay_queries(load_catalog(cfg.catalog_dir, conn, cfg))
+        catalog = load_catalog(cfg.catalog_dir, conn, cfg)
+        queries = ebay_queries(catalog)
+        sold_queries = ebay_sold_browser.needed_queries(conn, catalog, cfg, utc_now())
+        api_mode = bool(cfg.ebay_client_id and cfg.ebay_client_secret)
+        if api_mode and not sold_queries:
+            return {"paused": True, "reason": "eBay API search configured; no sold captures needed"}
         if not queries:
             return {"paused": True, "reason": "No enabled catalog searches"}
         try:
             index = int(db.get_setting(conn, ebay_browser.ROTATION_KEY, "0"))
         except ValueError:
             index = 0
-        query = queries[index % len(queries)]
+        kind = "sold" if sold_queries and (api_mode or index % 2 == 1) else "active"
+        if kind == "sold":
+            query = sold_queries[(index // 2) % len(sold_queries)]
+            url = sold_url(query)
+        else:
+            active_index = int(db.get_setting(conn, "ebay_browser_active_rotation", "0"))
+            query = queries[active_index % len(queries)]
+            db.set_setting(conn, "ebay_browser_active_rotation", str(active_index + 1))
+            url = ebay_browser.search_link(query)
         db.set_setting(conn, ebay_browser.ROTATION_KEY, str(index + 1))
         status = {**ebay_browser.browser_status(conn), "connected_at": utc_now().isoformat(),
-                  "query": query, "error": "", "state": "searching"}
+                  "query": query, "kind": kind, "error": "", "state": "searching"}
         db.set_setting(conn, ebay_browser.STATUS_KEY, json.dumps(status))
-        return {"query": query, "url": ebay_browser.search_link(query),
+        return {"query": query, "url": url, "kind": kind,
                 "position": index % len(queries) + 1, "total": len(queries)}
 
 
@@ -743,12 +776,20 @@ def _save_ebay_capture(request, conn, data):
             html = data.get("html", "")
             if not isinstance(html, str):
                 raise ValueError("Expected rendered listing HTML")
-            cards, usable, matched = _import_ebay(request.app.state.runner, conn, html, at)
+            kind = data.get("kind", "active")
+            if kind not in ("active", "sold"):
+                raise ValueError("Unknown eBay capture kind")
+            if kind == "sold":
+                usable = ebay_sold_browser.save_sold_capture(conn, str(data.get("query", "")), html, at)
+                cards, matched = usable, 0
+            else:
+                cards, usable, matched = _import_ebay(request.app.state.runner, conn, html, at)
             status = {"state": "ready", "captured_at": at.isoformat(),
                       "connected_at": utc_now().isoformat(), "cards": cards,
-                      "usable": usable, "matched": matched, "query": str(data.get("query", ""))[:200]}
-            run = db.start_run(conn, "ebay", at)
-            db.finish_run(conn, run, "ok", usable, "Keyless browser capture", utc_now())
+                      "usable": usable, "matched": matched, "kind": kind, "query": str(data.get("query", ""))[:200]}
+            if kind == "active":
+                run = db.start_run(conn, "ebay", at)
+                db.finish_run(conn, run, "ok", usable, "Keyless browser capture", utc_now())
         db.set_setting(conn, ebay_browser.STATUS_KEY, json.dumps(status))
     return status
 
@@ -764,6 +805,8 @@ async def ebay_helper_results(request: Request, conn: sqlite3.Connection = Depen
         if not isinstance(data, dict):
             raise ValueError("Expected listing capture object")
         status = await run_in_threadpool(_save_ebay_capture, request, conn, data)
+        if data.get("kind") == "sold" and status.get("state") == "ready":
+            request.app.state.runner.start_refresh()
         return {"ok": True, **status}
     except (ValueError, TypeError) as error:
         return JSONResponse({"error": str(error)[:200]}, status_code=400)

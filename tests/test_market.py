@@ -123,7 +123,7 @@ def test_product_value_filters_variants_and_condition(conn):
     ])
     mv = make_service(conn, sold).product_value(PRODUCTS[0], "used")
     assert sold.queries == ["rtx 4070 ti"]
-    assert (mv.key, mv.condition, mv.method) == ("rtx-4070-ti", "used", "sold")
+    assert (mv.key, mv.condition, mv.method) == ("rtx-4070-ti", "used", "sold_average")
     assert mv.value == 620
     assert mv.comp_count == 3
     assert sorted(c.price for c in db.get_comps(conn, "rtx-4070-ti", "used")) == [600, 620, 640]
@@ -237,7 +237,7 @@ def test_bulk_value_regex_used_single_units(conn):
     ])
     mv = make_service(conn, sold).bulk_value(BULK[1])
     assert sold.queries == ["ps2 console"]
-    assert (mv.key, mv.condition, mv.method) == ("ps2-console", "used", "sold")
+    assert (mv.key, mv.condition, mv.method) == ("ps2-console", "used", "sold_average")
     assert (mv.value, mv.comp_count) == (70, 2)
 
 
@@ -251,7 +251,7 @@ def test_per_game_value(conn):
     ])
     mv = make_service(conn, sold).per_game_value(PLATFORMS[0])
     assert sold.queries == ["ps2 game lot"]
-    assert (mv.key, mv.condition, mv.method) == ("ps2", "per_game", "sold")
+    assert (mv.key, mv.condition, mv.method) == ("ps2", "per_game", "sold_average")
     assert (mv.value, mv.comp_count) == (4.5, 2)
     assert mv.low_confidence
     assert len(db.get_comps(conn, "ps2", "per_game")) == 2
@@ -280,7 +280,7 @@ def test_item_price_title_filter_and_30_day_ttl(conn):
     svc = make_service(conn, sold, clock=clock)
     mv = svc.item_price("SNES", "Chrono Trigger", "loose")
     assert sold.queries == ["SNES Chrono Trigger"]
-    assert (mv.key, mv.condition, mv.method) == ("snes|chrono trigger|game", "loose", "sold")
+    assert (mv.key, mv.condition, mv.method) == ("snes|chrono trigger|game", "loose", "sold_average")
     assert (mv.value, mv.comp_count) == (310, 3)
     assert not mv.low_confidence  # min 3 comps for photo items
     assert db.get_market_value(conn, "snes|chrono trigger|game", "loose",
@@ -320,7 +320,7 @@ def test_value_count_and_comps_agree_after_trimming(conn):
     sold = FakeSold([comp(f"RTX 4070 Ti unit {i}", v, "Used") for i, v in enumerate(raw)])
     mv = make_service(conn, sold).product_value(PRODUCTS[0], "used")
     assert iqr_median(raw) == (103.5, 8)
-    assert mv.value == iqr_median(raw)[0]
+    assert mv.value == 110.5  # arithmetic mean of the eight retained sales
     assert mv.comp_count == len(db.get_comps(conn, "rtx-4070-ti", "used")) == 8
 
 
@@ -391,7 +391,7 @@ def test_active_bin_value_expires_after_two_hours(conn):
     sold.comps = [comp("RTX 4070 Ti", 600, "Used")]
     mv = svc.product_value(PRODUCTS[0], "used")
     assert len(sold.queries) == 2
-    assert (mv.method, mv.value) == ("sold", 600)
+    assert (mv.method, mv.value) == ("sold_average", 600)
 
 
 def test_bulk_value_when_source_product_disabled(conn):
@@ -492,6 +492,7 @@ def test_item_price_cache_key_includes_kind(conn):
     console = svc.item_price("Xbox 360", "Halo 3", "loose", kind="console")
     assert (game.key, console.key) == ("xbox 360|halo 3|game", "xbox 360|halo 3|console")
     assert console.value > 100 and game.value < 10
+    assert console.comp_count == 3 and console.value == 180
     assert svc.item_price("Xbox 360", "Halo 3", "loose", kind="game") == game
     assert conn.execute("SELECT COUNT(*) FROM item_prices").fetchone()[0] == 2
 
@@ -554,3 +555,10 @@ def test_sold_block_stops_other_queries_for_the_run_and_recovers(conn):
     svc.begin_run()
     assert svc.product_value(PRODUCTS[0], "used").value == 400
     assert db.get_setting(conn, SOLD_ERROR_SETTING) == ""
+
+
+def test_sold_value_uses_outlier_filtered_mean_instead_of_median(conn):
+    sold = FakeSold([comp('RTX 4070 Ti', price, 'Used') for price in [100,100,100,150,200]])
+    mv = make_service(conn, sold).product_value(PRODUCTS[0], 'used')
+    assert mv.value == 130  # median would be 100; all five are inside IQR bounds
+    assert mv.method == 'sold_average' and not mv.low_confidence

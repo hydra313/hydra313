@@ -19,11 +19,12 @@
   {% include "partials/show_all.html" %}
 </form>
 <p class="muted">All active lots are shown by default, including unpriced lots and lots with an unknown quantity. Open a listing to review it or scan its photos.</p>
+{% include "partials/deal_legend.html" %}
 <div class="table-wrap"><table class="deals">
   <thead>
     <tr>
       <th><span class="sr-only">Image</span></th><th>Title</th><th>Platform</th><th>Games</th>
-      <th>Cost per game</th><th>Market per game</th><th>Expected profit</th><th>Discount</th>
+      <th>Current lot price</th><th>Average sold lot value</th><th>Est. profit</th><th>Deal rating</th>
       <th>Site</th><th>Time left</th><th><span class="sr-only">Actions</span></th>
     </tr>
   </thead>

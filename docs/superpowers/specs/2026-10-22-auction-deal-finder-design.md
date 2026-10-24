@@ -3,6 +3,13 @@
 Date: 2026-10-22
 Status: Approved in conversation, awaiting written-spec review
 
+User amendments (October 24, 2026): automatic checks now default to two minutes;
+keyless browser collection can supply active and sold evidence; display/scoring
+uses matched sold averages (arithmetic mean after IQR filtering), replacing the
+original median requirement. Green/yellow/red deal ratings account for landed
+cost and estimated profit; missing or weak evidence remains gray. See
+`docs/sold-values-validation-2026-10-24.md`.
+
 ## 1. Goal
 
 A personal, locally run web app that searches eBay, ShopGoodwill and HiBid

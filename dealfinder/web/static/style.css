@@ -241,3 +241,19 @@ kbd { padding: 2px 5px; border: 1px solid #344254; border-bottom-width: 2px; bor
 .setup-steps { padding-left: 1.5rem; line-height: 1.8; }
 .setup-steps li { margin-bottom: .75rem; }
 #helper-connection { overflow-wrap: anywhere; }
+
+/* Deal ratings include text labels as well as colors. */
+.comparison-note { display: block; font-size: 11px; font-weight: 400; color: var(--muted); white-space: normal; margin-top: 5px; }
+.deal-rating { display: inline-block; padding: 4px 8px; border: 1px solid transparent; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.rating-good { color: #a3f2c4; background: #15392b; border-color: #2a7450; }
+.rating-average { color: #ffe29b; background: #3d3117; border-color: #8c7032; }
+.rating-overpriced { color: #ffc0be; background: #431f28; border-color: #8d3c49; }
+.rating-unknown { color: #bcc7d6; background: #252e3d; border-color: #46536a; }
+.deal-good > td:first-child { box-shadow: inset 3px 0 #5dd68e; }
+.deal-average > td:first-child { box-shadow: inset 3px 0 #ecc865; }
+.deal-overpriced > td:first-child { box-shadow: inset 3px 0 #f08089; }
+.deal-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0 8px; }
+.detail-comparison { display: flex; flex-wrap: wrap; gap: 22px; padding: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 18px; }
+.detail-comparison > div { flex: 1 1 180px; }
+.detail-comparison strong, .detail-comparison small { display: block; }
+.detail-comparison strong { font-size: 22px; }

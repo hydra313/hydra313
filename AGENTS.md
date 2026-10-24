@@ -24,11 +24,30 @@ Deals are sent to Discord.
 - **Decisions made during the build, plus known minor issues:** `docs/superpowers/build-decisions.md`
 - **User-facing setup:** `README.md`
 
-## Current state (as of 2026-10-23)
+## Current state (as of 2026-10-24)
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 947 Python tests and 7 browser-helper workflow tests pass.
+- 977 Python tests and 8 browser-helper workflow tests pass.
+- Sold averages use the arithmetic mean after existing IQR filtering. New
+  `MarketValue.method = sold_average` distinguishes them from legacy `sold`
+  median caches; no schema reset or deletion is needed. Old medians and active
+  asking estimates are explicitly labeled and never get sold-based deal colors.
+- `deal_rating.py` supplies green (configured margin + discount), yellow (positive
+  margin below targets), red (zero/negative profit after costs), and gray
+  (missing/weak/stale/quantity-unknown). Percentages compare landed cost to the
+  sold average; lot values multiply unit averages by known quantities.
+- `ebay_sold_browser.py` stores factual dated sold snapshots in settings, dedupes
+  item IDs, excludes unknown accepted offers and dates outside 90 days, and feeds
+  the existing variant/condition matchers. Fresh snapshots override negative or
+  asking-price caches. An unrelated HTTP block must not hide local evidence.
+- Browser helper 1.1 alternates active searches and needed sold evidence. Active
+  query rotation has a separate index so alternating modes never skip half the
+  catalog. Sold-page sign-in is completed by the user; no login data is read.
+- A signed-in live sold capture read 242 cards and retained 197 dated records;
+  the standard used RTX 4070 match retained 59 after matching/outlier filtering.
+  Open-box cards use the existing new/open-box group, and generic `Pickup only`
+  cards are excluded, including the current distance-based shipping label.
 - Listing checks run every two minutes by default. The status block polls while
   idle (10 s) and running (3 s), shows source/query and counts, and refreshes rows
   incrementally. Runner reports completion and unexpected errors visibly.
@@ -53,7 +72,8 @@ Deals are sent to Discord.
   HiBid browser import is verified: 68 real cards, 3 usable USD lots, 1 catalog
   match. Direct HiBid API and eBay sold requests remain blocked. eBay Browse,
   Anthropic and Discord need credentials for live checks. Keyless active listings
-  do not repair blocked sold-price lookups or supply auction closing times.
+  do not supply auction closing times. Direct sold requests remain blocked;
+  signed-in browser captures can supply sold evidence locally.
   See `docs/live-validation-2026-10-23.md` for evidence and remaining limits.
 - HiBid defaults to manual browser capture with 30-minute expiry. See
   `docs/hibid-browser-import.md`; no database reset is needed for this change.
@@ -66,7 +86,7 @@ Deals are sent to Discord.
   Explicit Intel/AMD conflicts reject CPU matches, including hardware lots.
 - The UI uses dark surfaces throughout with mint accents. Scan budgets
   and source notices expand from the header. Desktop tables scroll within their
-  panels with sticky headers/actions; phone layouts use listing cards. All 70 web
+  panels with sticky headers/actions; phone layouts use listing cards. The web regression
   tests pass, with desktop and 390px-wide browser checks across the main pages.
 - Console coverage is 1,774 identities: 39 curated and 1,735 sourced from the
   dated `catalog/console_editions.json` snapshot. The audit accounts for all 3,734

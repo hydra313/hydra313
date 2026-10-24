@@ -14,6 +14,7 @@
 
   <section>
     <h2>Cost</h2>
+    <div class="detail-comparison"><div><small>Current price</small><strong>{{ d.price|money }}</strong></div><div><small>Average eBay sold{{ ' · lot estimate' if row.kind != 'single' else '' }}</small>{% include "partials/sold_value.html" %}</div><div>{% include "partials/deal_rating.html" %}</div></div>
     <dl class="facts">
       {% if d.total_cost is not none %}
       <dt>Total cost</dt><dd>{{ d.total_cost|money }}</dd>
@@ -33,7 +34,7 @@
     </dl>
   </section>
 
-  <section>
+  <section id="sold-comps">
     <h2>{% if value_basis == 'per_game' %}Market value per game{% elif value_basis == 'used' and row.kind != 'single' %}Working used value per unit{% else %}Market value{% endif %}</h2>
     {% if d.market %}
     <p>{{ d.market.value|money }} <span class="badge{% if d.market.low %} low{% endif %}">{{ d.market.badge }}</span></p>

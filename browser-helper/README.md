@@ -12,9 +12,12 @@ on verification, unreadable search cards, or an import failure. Complete any
 verification yourself in the tab it leaves open, then reconnect. App Pause
 pauses new searches. Stop browser helper disables the helper's own loop.
 
-Only visible USD Buy It Now search cards are collected. Auction closing times
-and sold-price comparisons are not supplied by this helper. A missing resale
-estimate is not evidence that an item is a deal. Confirm prices before buying.
+Visible USD Buy It Now cards and dated sold-search cards are collected. Missing
+sold evidence for live catalog matches alternates with new listing searches.
+Sold searches may require signing in to eBay yourself in this browser. Only sales
+from the last 90 days with disclosed prices are accepted. Auction closing times
+are not supplied. A missing resale estimate is not evidence of a bargain.
+Confirm current listing prices before buying.
 
 Permissions are limited to eBay and your local app, plus local storage and
 alarms. It reads no cookies, account pages, payment data or passwords; it places

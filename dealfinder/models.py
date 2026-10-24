@@ -93,7 +93,7 @@ class MarketValue:
     condition: str
     value: float
     comp_count: int
-    method: Literal["sold", "active_bin"]
+    method: Literal["sold", "sold_average", "active_bin"]
     low_confidence: bool
     computed_at: datetime
 
