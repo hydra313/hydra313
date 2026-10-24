@@ -19,6 +19,7 @@ dependencies = [
     "pillow",
     "anthropic>=2.1",
     "tzdata",
+    "playwright>=1.55,<2",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,7 @@ dev = ["pytest", "respx"]
 include = ["dealfinder*"]
 
 [tool.setuptools.package-data]
+"dealfinder" = ["collector_capture.js"]
 "dealfinder.web" = ["templates/*.html", "templates/partials/*.html", "static/*"]
 
 [tool.pytest.ini_options]

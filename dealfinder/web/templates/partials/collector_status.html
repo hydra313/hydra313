@@ -1,0 +1,5 @@
+<div id="collector-status" hx-get="/connections/scanner" hx-trigger="every 5s" hx-swap="outerHTML" role="status">
+  {% for site, state in collector.sites.items() %}
+  <p><strong>{{ 'eBay' if site == 'ebay' else 'HiBid' }}:</strong> {{ state.message }}{% if state.query %}<span class="muted"> · {{ state.query }}</span>{% endif %}</p>
+  {% endfor %}
+</div>

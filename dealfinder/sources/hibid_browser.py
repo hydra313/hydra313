@@ -238,7 +238,7 @@ class HiBidBrowserSource:
                 latest[listing.source_id] = listing
         if not latest:
             reason = "snapshot expired or no usable USD lots" if snapshots else "browser import needed"
-            raise SourceNeedsAttention(f"HiBid {reason}: connect the automatic browser helper on Connections.")
+            raise SourceNeedsAttention(f"HiBid {reason}: open Connections to start or reconnect automatic collection.")
         return list(latest.values())
 
     def photos(self, source_id: str, known: list[str]) -> list[str]:

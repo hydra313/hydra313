@@ -1,4 +1,4 @@
-param([switch]$NoBrowser)
+param([switch]$NoBrowser, [switch]$Browser)
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -64,5 +64,11 @@ try {
     $launchMutex.Dispose()
 }
 
-if (-not $NoBrowser) { Start-Process $dashboardUrl }
+if (-not $NoBrowser) {
+    if ($Browser) { Start-Process $dashboardUrl }
+    else {
+        . (Join-Path $PSScriptRoot 'Desktop-Window.ps1')
+        Start-ConsoleHawkWindow -ProjectRoot $projectRoot -Url $dashboardUrl
+    }
+}
 Write-Host $dashboardUrl

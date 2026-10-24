@@ -16,7 +16,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     cfg = load_config(CONFIG_PATH if CONFIG_PATH.exists() else None)
-    uvicorn.run(create_app(cfg), host="127.0.0.1", port=8000)
+    uvicorn.run(create_app(cfg, start_collector=True), host="127.0.0.1", port=8000)
 
 
 if __name__ == "__main__":

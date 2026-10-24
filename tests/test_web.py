@@ -1400,3 +1400,30 @@ def test_cached_non_console_items_cannot_use_console_comparisons(client,conn,tit
                          [Comp(title,1200,None,'https://www.ebay.com/itm/123456789012',None)])
     assert row_html(client.get('/?show_all=true').text,lid) is None
     assert db.get_market_value(conn,key,'used') is None
+
+
+def test_background_scanner_stops_extension_jobs_but_accepts_builtin_collector(client):
+    client.app.state.background_enabled = True
+    headers = {'X-Dealfinder-Token': client.app.state.browser_token}
+    for path in ['/browser/next','/browser/ebay/next','/browser/hibid/next']:
+        response=client.post(path,headers=headers,json={'sites':['ebay','hibid']})
+        assert response.status_code == 200 and response.json()['paused']
+    assert client.post('/browser/ebay/results',headers=headers,json={}).status_code == 409
+    assert client.post('/browser/next',headers={**headers,'X-ConsoleHawk-Collector':'background'},json={'sites':['ebay']}).json()['source']=='ebay'
+    assert client.post('/browser/next',headers={'X-ConsoleHawk-Collector':'background'},json={'sites':['ebay']}).status_code == 403
+
+
+def test_background_controls_validate_commands_and_keep_session_data_private(client):
+    client.app.state.background_enabled = True
+    page=client.get('/connections')
+    assert 'Background scanning' in page.text
+    assert 'Connect both sites' not in page.text
+    assert 'data-helper-token' not in page.text
+    assert client.post('/connections/scanner/ebay/signin').status_code == 200
+    assert client.app.state.collector.next_command() == ('signin','ebay')
+    assert client.post('/connections/scanner/hibid/resume').status_code == 200
+    assert client.app.state.collector.next_command() == ('resume','hibid')
+    assert client.post('/connections/scanner/unknown/signin').status_code == 400
+    assert client.post('/connections/scanner/ebay/execute').status_code == 400
+    assert client.app.state.browser_token not in client.get('/connections/scanner').text
+    assert client.app.state.browser_token not in page.text

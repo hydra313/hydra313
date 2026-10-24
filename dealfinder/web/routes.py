@@ -139,7 +139,7 @@ def _last_success(conn: sqlite3.Connection, now: datetime) -> list[dict]:
 
 
 def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
-             scan_error: tuple[int, str] | None) -> list[dict]:
+             scan_error: tuple[int, str] | None, background: bool = False) -> list[dict]:
     """Each banner has a level, a text and optionally the listing ids it concerns."""
     banners = []
     sold_error = db.get_setting(conn, SOLD_ERROR_SETTING)
@@ -156,8 +156,8 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
             banners.append({"level": "warn", "text": f"{site}: last run failed ({error})"})
         elif run["status"] == "needs_attention":
             banners.append({"level": "warn", "text": f"{site}: {run['error'] or 'needs attention'}"[:_ERROR_MAX],
-                            "link": "/sources/ebay" if run["source"] == "ebay" else None,
-                            "link_text": "Connect browser helper"})
+                            "link": "/connections" if background else "/sources/ebay" if run["source"] == "ebay" else None,
+                            "link_text": "Check background scanning" if background else "Connect browser helper"})
         elif run["status"] == "site_change":
             banners.append({"level": "warn",
                             "text": f"{site}: possible site change. The last run found"
@@ -169,7 +169,7 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
         text = (f"HiBid: {snapshot['count']} usable lots in the latest search. Automatic browser "
                 f"captures expire after {cfg.hibid_snapshot_minutes} minutes."
                 if state == "ready" else "HiBid needs your attention: "
-                + (helper.get('error') or "connect the browser helper for automatic searches; browser import is an optional fallback."))
+                + (helper.get('error') or ("check background scanning in Connections." if background else "connect the browser helper for automatic searches; browser import is an optional fallback.")))
         if helper.get('error'):
             text = 'HiBid automatic search needs attention: ' + str(helper['error'])[:200]
         banners.append({"level": "info" if state == "ready" and not helper.get('error') else "warn", "text": text,
@@ -190,13 +190,13 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
         banners.append({"level": "warn", "text": error[:_ERROR_MAX], "listings": [listing_id]})
     if not (cfg.ebay_client_id and cfg.ebay_client_secret):
         banners.append({"level": "info",
-                        "text": "eBay keyless mode uses your browser helper for Buy It Now listings.",
-                        "link": "/sources/ebay", "link_text": "eBay browser setup"})
+                        "text": ("eBay auction, Buy It Now and sold searches run in the background." if background else "eBay keyless mode uses your browser helper for Buy It Now listings."),
+                        "link": "/connections" if background else "/sources/ebay", "link_text": "Background scanner" if background else "eBay browser setup"})
         helper = ebay_browser.browser_status(conn)
         if helper.get("error"):
-            banners.append({"level": "warn", "text": "eBay browser helper: " + str(helper["error"])[:_ERROR_MAX],
-                            "link": "/sources/ebay", "link_text": "View helper status"})
-    if not cfg.anthropic_api_key:
+            banners.append({"level": "warn", "text": ("eBay background search: " if background else "eBay browser helper: ") + str(helper["error"])[:_ERROR_MAX],
+                            "link": "/connections" if background else "/sources/ebay", "link_text": "View scanner status" if background else "View helper status"})
+    if not background and not cfg.anthropic_api_key:
         banners.append({"level": "info",
                         "text": "ANTHROPIC_API_KEY not set: photo scanning is unavailable."})
     if not cfg.discord_webhook_url:
@@ -235,15 +235,27 @@ def _header(request: Request, conn: sqlite3.Connection, caps_error: str | None =
     keyless = not (cfg.ebay_client_id and cfg.ebay_client_secret)
     helper = ebay_browser.browser_status(conn) if keyless else {}
     helper_at = _parse_time(helper.get("connected_at"))
+    background = request.app.state.background_enabled
+    collector = request.app.state.collector.snapshot() if background else None
+    ebay_scan = collector["sites"]["ebay"] if collector else {}
+    if background:
+        states = collector["sites"].values()
+        detail = ("needs attention" if any(s["state"] == "needs_attention" for s in states)
+                  else "sign-in in progress" if any(s["state"] == "signing_in" for s in states)
+                  else "paused" if budget.paused() else "running")
+        scanner_label = "Background scanner: " + detail
+    else:
+        scanner_label = ("eBay helper: " + ("needs attention" if helper.get("error") else
+                         "connected" if helper_at and now - helper_at < timedelta(minutes=2) else
+                         "not connected; cached results only")) if keyless else ""
     return {
         "refreshing": refreshing,
         "refresh_status": refresh_status or status,
         "refresh_minutes": cfg.refresh_minutes,
         "next_check": f"{max(1, math.ceil((next_run - now).total_seconds() / 60))} min" if next_run else None,
         "progress_query": progress.get("query", "") if refreshing else "",
-        "ebay_helper_status": ("eBay helper: " + ("needs attention" if helper.get("error") else
-                               "connected" if helper_at and now - helper_at < timedelta(minutes=2) else
-                               "not connected; cached results only")) if keyless else "",
+        "ebay_helper_status": scanner_label,
+        "scanner_link": "/connections" if background else "/sources/ebay",
         "scan_enabled": budget.scan_enabled(),
         "paused": budget.paused(),
         "spent_today": budget.spent_today(),
@@ -251,7 +263,7 @@ def _header(request: Request, conn: sqlite3.Connection, caps_error: str | None =
         "caps": budget.caps(),
         "caps_error": caps_error,
         "last_success": _last_success(conn, now),
-        "banners": _banners(conn, cfg, now, request.app.state.runner.scan_error),
+        "banners": _banners(conn, cfg, now, request.app.state.runner.scan_error, background),
     }
 
 
@@ -688,10 +700,30 @@ def connections_page(request: Request, conn: sqlite3.Connection = Depends(get_co
                notify_reasons=cfg.notify_reasons, item_scope=db.get_setting(conn,"discord_item_scope","all"),
                subscription_count=len(subscriptions.subscriptions(conn)),
                hibid_mode=cfg.hibid_mode, message='')
+    ctx.update(background_enabled=request.app.state.background_enabled,
+               collector=request.app.state.collector.snapshot())
     response=_render(request,'connections.html',ctx)
     response.headers['Cache-Control']='no-store'
     response.headers['Referrer-Policy']='no-referrer'
     return response
+
+
+@router.get('/connections/scanner', response_class=HTMLResponse)
+def scanner_status(request: Request):
+    return _render(request, 'partials/collector_status.html',
+                   {'collector': request.app.state.collector.snapshot()})
+
+
+@router.post('/connections/scanner/{site}/{action}', response_class=HTMLResponse)
+def scanner_command(request: Request, site: str, action: str):
+    if not request.app.state.background_enabled:
+        raise HTTPException(400, 'Built-in scanning is not enabled')
+    try:
+        request.app.state.collector.command(action, site)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+    return HTMLResponse('Opening the sign-in window. After signing in, click Resume scanning.'
+                        if action == 'signin' else 'Resuming background scanning. No browser tab is needed.')
 
 
 @router.post('/connections/discord', response_class=HTMLResponse)

@@ -14,7 +14,7 @@ import anthropic
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -247,6 +247,7 @@ def create_app(
     *,
     build_pipeline: PipelineFactory | None = None,
     start_scheduler: bool = True,
+    start_collector: bool = False,
 ) -> FastAPI:
     from dealfinder.web.routes import router
 
@@ -269,9 +270,12 @@ def create_app(
                               next_run_time=datetime.now())
             scheduler.start()
         app.state.scheduler = scheduler
+        if start_collector:
+            app.state.collector.start()
         try:
             yield
         finally:
+            app.state.collector.close()
             if scheduler is not None:
                 scheduler.shutdown(wait=False)
             runner.close()
@@ -289,6 +293,11 @@ def create_app(
         token_path.write_text(helper_token, encoding="utf-8")
     app.state.browser_token = helper_token
     app.state.browser_lock = threading.Lock()
+    from dealfinder.collector import BackgroundCollector
+    app.state.background_enabled = start_collector
+    app.state.collector = BackgroundCollector("http://127.0.0.1:8000",
+                                             Path(cfg.db_path).resolve().parent / ".collector-profile",
+                                             helper_token)
 
     @app.middleware("http")
     async def csrf_guard(request: Request, call_next):
@@ -298,6 +307,11 @@ def create_app(
             if (_local_port(request.headers.get("host", "")) is None
                     or not secrets.compare_digest(token, app.state.browser_token)):
                 return PlainTextResponse("Forbidden", status_code=403)
+            if (app.state.background_enabled
+                    and request.headers.get("x-consolehawk-collector") != "background"):
+                if request.url.path.endswith("/next"):
+                    return JSONResponse({"paused": True, "reason": "Built-in background scanning is enabled"})
+                return JSONResponse({"error": "Built-in background scanning is enabled"}, status_code=409)
             return await call_next(request)
         if not request_allowed(request.method, request.headers):
             return PlainTextResponse("Forbidden", status_code=403)

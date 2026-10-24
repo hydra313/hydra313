@@ -24,6 +24,26 @@ user’s request. Listing photos remain visible. Selected deals are sent to Disc
 
 ## Current state (as of 2026-10-24)
 
+Newest runtime: `python -m dealfinder` now calls `create_app(...,
+start_collector=True)`. `collector.py` owns separate persistent Edge profiles per
+site and runs public card captures headlessly on a daemon worker. Connections has
+Sign in / Resume scanning controls; headed windows open only on that user action.
+The worker never reads login forms or automates verification. A blocked site pauses
+while the other continues. `/browser/*` retains its local capability check; normal
+extension calls now return paused (or reject results) when background mode is on.
+Only the built-in worker sends `X-ConsoleHawk-Collector: background`. Keep that
+header on local HTTP only, never third-party navigation. No localhost token in logs.
+Never publish `.collector-profile/` or `.desktop-profile/`: these are private
+browser profiles. Do not share a normal Chrome/Edge user profile. Preserve sandboxing.
+Desktop launcher defaults to an app window; `-Browser` opts into a tab, `-NoBrowser`
+starts only the server. Windows collector requires installed Microsoft Edge.
+Tests explicitly opt into browser smoke tests via `CONSOLEHAWK_BROWSER_SMOKE=1`;
+normal `create_app` tests do not launch collectors. Live HiBid background capture
+produced 22 usable records. User chose to sign in to eBay later; eBay is paused in
+its dedicated sign-in window. Do not claim live background eBay capture is verified.
+This supersedes the old required-extension instructions below.
+
+
 Latest user scope: game lots are removed from the product. `load_catalog()` retains
 platform records for masking/console-family boundaries but forces them disabled,
 even over old DB overrides. Raw `load_seed()` and legacy pure valuation/scan helpers
@@ -63,7 +83,7 @@ pending because Windows UI automation could not verify its current tab URL.
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 1066 Python tests and 12 browser-helper workflow tests pass.
+- 1,086 Python tests pass; 4 optional real-browser capture checks also pass.
 - Public app name is ConsoleHawk. The UI uses olive armor green and warm visor
   orange, with an original SVG hawk mark and favicon. Keep deal-rating semantic
   colors distinct. Internal module, DB filenames, pairing headers and alarm IDs

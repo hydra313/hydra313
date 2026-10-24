@@ -2,6 +2,14 @@
 {% block title %}Connections · ConsoleHawk{% endblock %}
 {% block content %}
 <div class="page-heading"><div><span class="eyebrow">CONNECT ONCE, KEEP DISCOVERING</span><h1>Connections</h1><p>Manage automatic searches and the channel that receives your deal alerts.</p></div><span class="heading-icon" aria-hidden="true">↻</span></div>
+{% if background_enabled %}
+<section class="connection-setup">
+  <h2>Background scanning</h2>
+  <p>eBay and HiBid searches run inside ConsoleHawk, without an extension or tabs in your browser. Your sign-in stays in a separate local profile for each site.</p>
+  {% include "partials/collector_status.html" %}
+  <p class="muted">If a site needs your attention, click Sign in below, finish in the site window, then click Resume scanning. Only that site's scanning pauses. Keep this PC and ConsoleHawk running.</p>
+</section>
+{% else %}
 <section class="connection-setup">
   <h2>Browser search helper</h2>
   <p>Connect eBay and HiBid once. The helper rotates catalog searches in one background tab every 30 seconds, collecting listings without manual imports. Keep this PC, ConsoleHawk and your browser running.</p>
@@ -16,22 +24,37 @@
     <p>Version 1.3 collects auctions and Buy It Now results. No browser cookies, passwords, bids or purchases are read or submitted.</p>
   </details>
 </section>
+{% endif %}
 <div class="connection-grid">
   <section class="connection-card">
     <span class="eyebrow">LISTINGS + SOLD COMPARISONS</span><h2>eBay</h2>
-    <p>Keyless auction and Buy It Now listings and matching dated sold results. If eBay asks for sign-in, sign in in its own tab.</p>
+    <p>Keyless auction and Buy It Now listings and matching dated sold results. Sign in only when requested; your session is remembered on this PC.</p>
+    {% if not background_enabled %}
     <p class="connection-state">{{ 'Needs attention' if ebay_helper.error else 'Last capture: ' + ebay_helper.captured_at if ebay_helper.captured_at else 'No capture yet' }}</p>
     {% if ebay_helper.error %}<p class="error">{{ ebay_helper.error }}</p>{% endif %}
+    {% endif %}
+    {% if background_enabled %}
+    <div class="row"><button hx-post="/connections/scanner/ebay/signin" hx-target="#ebay-scanner-result" hx-disabled-elt="this">Sign in to eBay</button><button hx-post="/connections/scanner/ebay/resume" hx-target="#ebay-scanner-result" hx-disabled-elt="this">Resume scanning</button></div>
+    <p id="ebay-scanner-result" role="status"></p>
+    {% else %}
     <div class="row"><button data-connect-site="ebay" data-helper-token="{{ helper_token }}">Connect eBay</button><button data-stop-site="ebay">Stop eBay</button><a href="https://www.ebay.com/signin/" target="_blank" rel="noopener noreferrer">Sign in to eBay ↗</a></div>
+    {% endif %}
     <a href="/?source=ebay&amp;show_all=true">View listings</a>
   </section>
   <section class="connection-card">
     <span class="eyebrow">AUTOMATIC AUCTION SEARCH</span><h2>HiBid</h2>
     <p>Searches GPUs, CPUs, consoles and controllers automatically. Only USD lots with shipping and a closing countdown are eligible.</p>
+    {% if not background_enabled %}
     <p class="connection-state">{{ 'Needs attention' if hibid_helper.error else 'Last capture: ' + hibid_helper.captured_at if hibid_helper.captured_at else 'No automatic capture yet' }}</p>
     {% if hibid_helper.error %}<p class="error">{{ hibid_helper.error }}</p>{% endif %}
+    {% endif %}
+    {% if background_enabled %}
+    <div class="row"><button hx-post="/connections/scanner/hibid/signin" hx-target="#hibid-scanner-result" hx-disabled-elt="this">Sign in to HiBid</button><button hx-post="/connections/scanner/hibid/resume" hx-target="#hibid-scanner-result" hx-disabled-elt="this">Resume scanning</button></div>
+    <p id="hibid-scanner-result" role="status"></p>
+    {% else %}
     <div class="row"><button data-connect-site="hibid" data-helper-token="{{ helper_token }}"{% if hibid_mode != 'browser' %} disabled{% endif %}>Connect HiBid</button><button data-stop-site="hibid">Stop HiBid</button><a href="https://hibid.com/login" target="_blank" rel="noopener noreferrer">Sign in to HiBid ↗</a></div>
-    <p class="muted">If verification appears, this site's searches stop and its tab stays open. Finish verification there and reconnect. The other site keeps running.</p>
+    {% endif %}
+    <p class="muted">If verification appears, this site pauses until you reconnect. The other site keeps running.</p>
     <a href="/?source=hibid&amp;show_all=true">View listings</a>
   </section>
   <section class="connection-card">
@@ -64,5 +87,5 @@
     </form>
   </section>
 </div>
-<script src="/static/connections.js"></script>
+{% if not background_enabled %}<script src="/static/connections.js"></script>{% endif %}
 {% endblock %}

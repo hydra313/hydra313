@@ -3,7 +3,7 @@
   <div class="refresh-feedback"><span id="refresh-status" aria-live="polite">{{ refresh_status }}</span>
     <span class="muted">{% if paused %}Automatic checks paused{% else %}Automatic checks every {{ refresh_minutes }} min{% if next_check %} · Next check in {{ next_check }}{% endif %}{% endif %}</span>
     {% if progress_query %}<span class="muted">Searching: {{ progress_query }}</span>{% endif %}
-    {% if ebay_helper_status %}<a href="/sources/ebay">{{ ebay_helper_status }}</a>{% endif %}</div>
+    {% if ebay_helper_status %}<a href="{{ scanner_link|default('/sources/ebay') }}">{{ ebay_helper_status }}</a>{% endif %}</div>
   <ul class="runs" aria-label="Last successful run per site">
     {% for r in last_success %}
     <li><span class="src">{{ r.name }}</span> <span title="{{ r.at }}">{{ r.ago }}</span></li>

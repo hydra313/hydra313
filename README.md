@@ -54,17 +54,16 @@ overlap. The header shows the active source/query, new and updated listing count
 completion or failure, and the next scheduled check. Pause stops automatic checks;
 Refresh now starts a manual check. The PC must be awake and the app must be running.
 
-The sidebar opens each workspace. **Scan budgets** in the header expands the
-spending controls; **Source status** expands connection notices and errors.
+The sidebar opens each workspace. **Source status** expands connection notices and errors.
 Wide tables keep their headers and listing actions visible while scrolling.
 On a phone, listings appear as individual cards.
 
 On Windows, after installation, double-click **Start-ConsoleHawk.cmd** in the
 project folder. It starts the app in the background, waits for the dashboard,
-and opens your browser. Double-clicking again opens the running app. Keep the
+and opens a separate app window without tabs or an address bar. Double-clicking again opens the running app. Keep the
 launcher with the project and its `.venv` folder; a Windows shortcut can point
 to it from anywhere. Startup errors appear in the launcher window, with app
-logs saved in `logs/`. The app keeps running after you close the browser.
+logs saved in `logs/`. The scanner keeps running after you close the dashboard window. Microsoft Edge must be installed on Windows; Chrome is a fallback for the dashboard. Use `Start-ConsoleHawk.cmd -Browser` only if you prefer a normal browser tab.
 
 The default view shows only good deals supported by recent matching eBay sold
 averages. Missing or weak evidence, small margins and negative profit stay hidden.
@@ -76,40 +75,46 @@ and freshness), without resetting the page or filters.
 
 Keep your existing `dealfinder.db`; this update does not require a reset.
 
-## eBay without API keys
+## Built-in background scanning (no extension)
 
-Open **Connections** in the sidebar. Download and extract the helper, load its
-folder with **Load unpacked** on Chrome or Edge's Extensions page (Developer mode),
-then reopen the setup page in that same browser and click **Connect and start**.
-This one-time browser installation is needed because direct eBay requests are
-blocked on some networks. It does not bypass verification or replay browser cookies.
+ConsoleHawk starts its collector automatically. On Windows it uses installed
+Microsoft Edge in headless mode with a separate local profile for each site.
+It never attaches to your normal browser or opens ordinary search tabs. No API
+key is required. Keep the PC awake and ConsoleHawk running; the dashboard window
+can be closed. On other platforms install the Playwright Chromium browser with
+`python -m playwright install chromium`.
 
-The helper rotates through enabled catalog queries, one search every 30 seconds,
-using a single background tab. Searches alternate across GPUs, CPUs, consoles,
-controllers and both lot categories, giving each category an early turn.
-It collects visible USD **auctions and Buy It Now** cards, interleaved with
-sold-price searches for products actually on your dashboard. Keep the browser and ConsoleHawk open. Sleep and
-browser throttling can delay checks. The header reports when the helper is not
-connected. A verification or parser failure stops the helper and leaves its tab
-open for you; complete verification and reconnect. **Stop browser helper** stops
-its loop, and the header's Pause stops new automatic searches too.
+Open **Connections** to see each site's live scanner state. If eBay or HiBid needs
+sign-in or verification, click **Sign in** for that site, finish in the separate
+site window yourself, then click **Resume scanning**. That window closes and
+searches resume invisibly. Sessions are remembered; repeated login is needed only
+if a site expires or rejects its session. A blocked site pauses without opening
+pop-ups, while the other site continues. Background sessions can still be blocked
+by a site after sign-in; the app reports this and does not bypass verification.
 
-Imports contain only listing fields, not account details, cookies or passwords.
-They do not send alerts or initiate paid photo scans. Subsequent scheduled runs
-use notification preferences and deduplication. Cached records retain their
-original observation time and expire under the normal stale-listing rule (two
-full eBay passes, six hours by default); reprocessing a cache is not a new capture.
-Auction searches use ending-time order to capture visible closing countdowns;
-cards with an unknown closing time are excluded. Full pages queue further pages,
-up to five pages per query. Search text and console filters queue both formats
-without blocking the dashboard. Sold searches can require
-you to sign in to eBay in the helper's browser. It leaves that tab open for you
-and never reads credentials or solves verification. Direct sold-price requests
-can remain blocked; captured sold pages supply evidence locally without an API key.
+The collector rotates one search every 30 seconds, alternating sources and eBay
+active/sold searches. It collects USD auctions with visible closing countdowns
+and Buy It Now listings, and dated sold comparisons for actual catalog matches.
+Full eBay pages queue bounded pagination (up to five pages per query). Query
+rotation, site loading and sign-in requirements mean coverage is gradual.
+App **Pause** suspends new search jobs. Current searches may finish.
+
+Only public listing-card fields enter the database. Password fields and account
+pages are never captured. Browser-managed sessions stay inside the ignored
+`.collector-profile/` folder; the dashboard profile is `.desktop-profile/`.
+Treat both as private. Never publish either profile or the ignored
+`*.browser-token`/`*.credentials` files. The collector does not bid or buy.
+
+Existing browser extensions receive a paused response and cannot start new jobs
+while built-in collection is enabled. They are no longer required. The older
+helper implementation remains available for legacy/custom deployments.
+Imports do not send alerts; scheduled refreshes retain your notification
+preferences and deduplication. Cached observation times are preserved and normal
+freshness rules still apply. Sold prices are never invented when evidence is missing.
 
 ## Average sold value and deal colors
 
-Current price and **Average eBay sold** appear together on Deals, both lot pages,
+Current price and **Average eBay sold** appear together on Deals, hardware lots,
 and listing details. The average uses matched, same-condition sales from the last
 90 days, includes known shipping, and removes IQR outliers. Duplicated browser
 records and undisclosed accepted-offer prices are excluded. Lot comparisons scale
@@ -133,34 +138,15 @@ separate estimate after selling costs. Averages expire after `market_ttl_hours`
 (24 hours by default); older cached prices are labeled instead of colored.
 Existing median records are retained as legacy estimates until refreshed.
 
-The browser helper is in `browser-helper/`; its local capability token is stored
-in an ignored `*.browser-token` file beside the database. Never publish that file.
-The helper can access eBay search pages and `127.0.0.1:8000`, and sends captures only
-to the local app. It does not place bids or buy items. A manual import form is
-available on the same setup page; reload eBay before copying its results.
-
-For JavaScript workflow checks, run `node --test tests/browser_helper.test.cjs`.
-
 ## Connections and automatic HiBid search
 
-Open **Connections** in the sidebar. Browser helper **1.3** supports both eBay and
-HiBid. Existing users should replace the helper files, reload the extension, allow
-its HiBid permission, reload Connections in that browser, and click **Connect both
-sites**. You can start or stop either site independently. ShopGoodwill already
-searches public listings automatically and needs no account connection.
-
-The helper rotates searches automatically in one background tab every 30 seconds.
-No per-search copying or importing is needed. Keep the app and browser running.
-If a site requests sign-in or verification, its collection stops and keeps its tab
-open for you; the other enabled site continues. Complete verification yourself,
-then reconnect that site. App Pause suspends new searches on both sites.
-
-Only USD HiBid lots with shipping, a payable bid and a closing countdown are
-accepted. Captures expire after 30 minutes and are never renewed just by
-reprocessing them. Shipping costs and premiums remain estimates. Browser capture
-itself starts no paid scans or alerts; scheduled refreshes retain all budget and
-notification gates. Manual import remains available as a fallback. The legacy API
-is still blocked; no browser session tokens or cookies are replayed.
+Open **Connections** to sign in to eBay or HiBid and resume their background
+scans. ShopGoodwill searches public listings directly and needs no discovery
+account. HiBid only accepts USD lots with shipping, a payable bid and a closing
+countdown. Captures expire after 30 minutes; reprocessing does not renew them.
+Shipping costs and premiums remain estimates. The legacy direct HiBid API is
+still blocked. Background search uses rendered public cards, not session-token
+replay against an undocumented API.
 
 For **Discord**, expand Connect Discord, copy a channel webhook from Discord's
 channel settings → Integrations → Webhooks, and paste it into the password field.

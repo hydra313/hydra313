@@ -146,7 +146,7 @@ class EbayBrowserSource:
             " AND NOT (kind = 'game_lot' OR (kind = 'scan_only' AND category IS NULL))"
             " AND julianday(last_seen) >= julianday(?)", (cutoff.isoformat(),)).fetchall()
         if not rows:
-            raise SourceNeedsAttention("Connect the eBay browser helper to collect keyless listings.")
+            raise SourceNeedsAttention("Open Connections to start or reconnect automatic eBay collection.")
         return [Listing(
             source="ebay", source_id=r["source_id"], title=r["title"], url=r["url"],
             price=r["price"], shipping=r["shipping"], shipping_offered=bool(r["shipping_offered"]),
