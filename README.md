@@ -87,7 +87,9 @@ This one-time browser installation is needed because direct eBay requests are
 blocked on some networks. It does not bypass verification or replay browser cookies.
 
 The helper rotates through enabled catalog queries, one search every 30 seconds,
-using a single background tab. It alternates visible USD **Buy It Now** cards with
+using a single background tab. Searches alternate across GPUs, CPUs, consoles,
+controllers and both lot categories, giving each category an early turn.
+It alternates visible USD **Buy It Now** cards with
 sold-price searches for products actually on your dashboard. Keep the browser and app open. Sleep and
 browser throttling can delay checks. The header reports when the helper is not
 connected. A verification or parser failure stops the helper and leaves its tab

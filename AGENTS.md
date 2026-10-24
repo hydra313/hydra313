@@ -28,7 +28,10 @@ Deals are sent to Discord.
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 977 Python tests and 8 browser-helper workflow tests pass.
+- 982 Python tests and 8 browser-helper workflow tests pass.
+- Category controls submit lowercase database values and normalize old capitalized
+  links. eBay discovery queries alternate between GPUs, CPUs, consoles, controllers
+  and both lot categories so the larger GPU catalog cannot delay all other searches.
 - Sold averages use the arithmetic mean after existing IQR filtering. New
   `MarketValue.method = sold_average` distinguishes them from legacy `sold`
   median caches; no schema reset or deletion is needed. Old medians and active

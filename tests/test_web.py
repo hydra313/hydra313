@@ -169,6 +169,23 @@ def test_filters_query_params(client, conn):
     assert row_html(partial.text, gpu) is not None
 
 
+@pytest.mark.parametrize("category,label,key", [
+    ("gpu", "GPU", "rtx-4090"), ("cpu", "CPU", "i5-12400"),
+    ("console", "Console", "ps5-spider-man-2"),
+    ("controller", "Controller", "dualsense-30th-anniversary"),
+])
+def test_category_dropdown_values_and_old_capitalized_links_work(client, conn, category, label, key):
+    lid = seed(conn, "category-"+category, category=category, key=key)
+    page = LexborHTMLParser(client.get('/').text)
+    option = next(n for n in page.css('select[name="category"] option') if n.text() == label)
+    assert option.attributes['value'] == category
+    for value in (option.attributes['value'], label, ' '+label+' '):
+        response = client.get('/', params={'category':value})
+        assert row_html(response.text,lid) is not None
+        selected = LexborHTMLParser(response.text).css_first('select[name="category"] option[selected]')
+        assert selected.attributes['value'] == category
+
+
 def test_new_badge_uses_previous_visit(client, conn):
     previous = now_utc() - timedelta(hours=2)
     db.set_setting(conn, "last_visit", previous.isoformat())

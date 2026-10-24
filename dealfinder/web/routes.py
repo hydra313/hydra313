@@ -402,7 +402,7 @@ def deals(request: Request, category: str | None = None, source: str | None = No
         new_since = _parse_time(previous)
         db.set_setting(conn, NEW_SINCE, previous or "")
     filters = {
-        "category": category or None,
+        "category": category.strip().casefold() if category and category.strip() else None,
         "source": source or None,
         "ending_within_h": _hours(ending_within_h),
         "new_only": new_only,

@@ -216,10 +216,22 @@ def sent_payloads(route):
 
 def test_ebay_queries():
     assert ebay_queries(CATALOG) == [
-        "rtx 4090", "rtx 4070",
-        "ps2-console q lot", "xbox-360-console q lot",
-        "snes game lot", "ps2 game lot", "nes game lot", "xbox-360 game lot",
+        "rtx 4090", "ps2-console q lot", "snes game lot",
+        "rtx 4070", "xbox-360-console q lot", "ps2 game lot",
+        "nes game lot", "xbox-360 game lot",
     ]
+
+
+def test_search_rotation_starts_with_every_category_before_second_gpu():
+    products = [Product(f"gpu-{i}", "gpu", f"GPU {i}", f"gpu {i}", "gpu") for i in range(40)]
+    products += [Product(c, c, c, c+" query", c) for c in ("cpu", "console", "controller")]
+    catalog = Catalog(products=products, bulk=[_bulk("console-lot", "console", "console")],
+                      platforms=[_plat("ps2", "ps2")])
+    queries = ebay_queries(catalog)
+    assert queries[:6] == ["gpu 0", "cpu query", "console query", "controller query",
+                           "console-lot q lot", "ps2 game lot"]
+    assert queries[6] == "gpu 1"
+    assert len(queries) == len(set(queries)) == 45
 
 
 def test_rotation_slice_near_equal_chunks():

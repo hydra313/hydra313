@@ -7,7 +7,7 @@
     <select name="category">
       <option value="">All</option>
       {% for c in categories %}
-      <option value="{{ c|upper if c in ['gpu', 'cpu'] else c|capitalize }}"{% if filters.category == c %} selected{% endif %}>{{ c|upper if c in ['gpu', 'cpu'] else c|capitalize }}</option>
+      <option value="{{ c }}"{% if filters.category == c %} selected{% endif %}>{{ c|upper if c in ['gpu', 'cpu'] else c|capitalize }}</option>
       {% endfor %}
     </select>
   </label>

@@ -8,6 +8,7 @@ import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
+from itertools import zip_longest
 
 from dealfinder import db
 from dealfinder.budget import Budget
@@ -52,11 +53,16 @@ class RefreshReport:
 
 
 def ebay_queries(catalog: Catalog) -> list[str]:
-    queries = [p.discovery_query or p.ebay_query for p in catalog.enabled_products()]
-    queries += [f"{b.ebay_query} lot" for b in catalog.enabled_bulk()
-                if b.source_product_id is None]
-    queries += [p.ebay_lot_query for p in catalog.enabled_platforms()]
-    return list(dict.fromkeys(queries))
+    """Give each category an early turn, even when one catalog is much larger."""
+    groups = {category: [] for category in ("gpu", "cpu", "console", "controller")}
+    for product in catalog.enabled_products():
+        groups[product.category].append(product.discovery_query or product.ebay_query)
+    groups["hardware_lot"] = [f"{b.ebay_query} lot" for b in catalog.enabled_bulk()
+                              if b.source_product_id is None]
+    groups["game_lot"] = [p.ebay_lot_query for p in catalog.enabled_platforms()]
+    unique_groups = [list(dict.fromkeys(queries)) for queries in groups.values()]
+    interleaved = (query for row in zip_longest(*unique_groups) for query in row if query is not None)
+    return list(dict.fromkeys(interleaved))
 
 
 def rotation_slice(queries: list[str], index: int, slices: int) -> list[str]:
