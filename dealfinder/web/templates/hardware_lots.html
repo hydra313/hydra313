@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Bulk lots · dealfinder{% endblock %}
+{% block title %}Bulk lots · Dealfinder{% endblock %}
 {% block content %}
 <div class="page-heading"><div><span class="eyebrow">REPAIR &amp; RESELL</span><h1>Bulk hardware lots</h1><p>Find value in the parts. See the potential in the lot.</p></div><span class="heading-icon" aria-hidden="true">▦</span></div>
 <form class="filters" hx-get="/lots/hardware" hx-target="#lot-rows" hx-trigger="change, submit, listings-updated from:body" hx-push-url="true">
   <label class="check"><input type="checkbox" name="photo_finds_only" value="1"{% if filters.photo_finds_only %} checked{% endif %}> 💎 Photo finds only</label>
   {% include "partials/show_all.html" %}
 </form>
-<p class="muted">Show all listings includes unpriced lots and lots with an unknown quantity, so you can open them for a photo scan.</p>
+<p class="muted">All active lots are shown by default, including unpriced lots and lots with an unknown quantity. Open a listing to review it or scan its photos.</p>
 <div class="table-wrap"><table class="deals">
   <thead>
     <tr>
-      <th><span class="sr-only">Image</span></th><th>Title</th><th>Product</th><th>Qty</th>
+      <th><span class="sr-only">Image</span></th><th>Title</th><th>Product</th><th>Quantity</th>
       <th>Cost per unit</th><th>Working value</th><th>Expected profit</th><th>Repair per unit</th>
       <th>Success rate</th><th>Site</th><th>Time left</th><th><span class="sr-only">Actions</span></th>
     </tr>

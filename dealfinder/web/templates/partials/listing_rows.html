@@ -8,7 +8,7 @@
     {% if d.snapshot_at %}<span class="badge low" title="Captured {{ d.snapshot_at }}">Browser snapshot</span>{% endif %}
   </td>
   <td data-label="Product">{{ d.product }}</td>
-  <td data-label="Condition">{{ d.condition }}</td>
+  <td data-label="Condition">{{ d.condition|replace('_', ' ')|capitalize }}</td>
   <td data-label="Site">{{ d.site }}</td>
   <td data-label="Total cost" class="num">{% if d.total_cost is not none %}<span class="cost" title="{{ d.breakdown }}">{{ d.total_cost|money }}</span>{% else %}—{% endif %}</td>
   <td data-label="Market value" class="num">{% if d.market %}{{ d.market.value|money }} <span class="badge{% if d.market.low %} low{% endif %}">{{ d.market.badge }}</span>{% else %}—{% endif %}</td>
@@ -22,5 +22,5 @@
   </td>
 </tr>
 {% else %}
-<tr class="empty"><td colspan="11">No deals match these filters yet.</td></tr>
+<tr class="empty"><td colspan="11">No listings match these filters yet.</td></tr>
 {% endfor %}

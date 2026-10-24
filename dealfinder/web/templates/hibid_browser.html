@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}HiBid browser import · dealfinder{% endblock %}
+{% block title %}HiBid browser import · Dealfinder{% endblock %}
 {% block content %}
 <div class="page-heading"><div><span class="eyebrow">BRING YOUR FINDS IN</span><h1>HiBid browser import</h1><p>From your browser to your watchlist.</p></div><span class="heading-icon" aria-hidden="true">↗</span></div>
 <p>Search HiBid in your normal browser, then bring its results here. Imports use the
@@ -9,11 +9,11 @@
 {% endif %}
 <section class="import-status" aria-label="HiBid snapshot status">
   {% if snapshot.state == 'missing' %}
-  <h2>Browser needs attention</h2><p>No search page imported yet.</p>
+  <h2>Browser needs attention</h2><p>No search page has been imported yet.</p>
   {% else %}
   <h2>{{ 'Ready · browser snapshot' if snapshot.state == 'ready' else 'Browser needs attention · snapshot expired' }}</h2>
   <p>Last page: {{ snapshot.captured_at.astimezone().strftime('%Y-%m-%d %H:%M') }} ·
-    {{ snapshot.cards }} cards read · {{ snapshot.count }} usable USD lots · {{ snapshot.matched }} catalog {{ 'match' if snapshot.matched == 1 else 'matches' }}.</p>
+    {{ snapshot.cards }} {{ 'card' if snapshot.cards == 1 else 'cards' }} read · {{ snapshot.count }} usable USD {{ 'lot' if snapshot.count == 1 else 'lots' }} · {{ snapshot.matched }} catalog {{ 'match' if snapshot.matched == 1 else 'matches' }}.</p>
   <p>Prices expire at {{ snapshot.expires.astimezone().strftime('%Y-%m-%d %H:%M') }}.
     Expired prices are hidden from results and excluded from alerts and scans.</p>
   {% if snapshot.skipped %}<ul>{% for reason, count in snapshot.skipped.items() %}<li>{{ count }} skipped: {{ reason }}</li>{% endfor %}</ul>{% endif %}

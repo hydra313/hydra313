@@ -1,9 +1,9 @@
 <form id="custom-{{ kind }}" class="custom" hx-post="/catalog/custom/{{ kind }}" hx-target="this" hx-swap="outerHTML">
   <h3>{{ 'Custom product' if kind == 'product' else 'Custom bulk product' }}</h3>
-  <label>Id <input name="id" required pattern="[a-z0-9][a-z0-9\-]*" placeholder="my-gpu-oc" value="{{ v.id or '' }}"></label>
+  <label>ID <input name="id" required pattern="[a-z0-9][a-z0-9\-]*" placeholder="my-gpu-oc" value="{{ v.id or '' }}"></label>
   <label>Category
     <select name="category">
-      {% for c in categories %}<option value="{{ c }}"{% if v.category == c %} selected{% endif %}>{{ c }}</option>{% endfor %}
+      {% for c in categories %}<option value="{{ c|upper if c in ['gpu', 'cpu'] else c|capitalize }}"{% if v.category == c %} selected{% endif %}>{{ c|upper if c in ['gpu', 'cpu'] else c|capitalize }}</option>{% endfor %}
     </select>
   </label>
   <label>Name <input name="name" required value="{{ v.name or '' }}"></label>

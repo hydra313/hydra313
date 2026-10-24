@@ -130,7 +130,7 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
     if sold_error:
         banners.append({"level": "warn", "text": "eBay sold-price lookup failed: "
                         + sold_error[:_ERROR_MAX] + ". Market values may be unavailable"
-                        " or cached. Use Show all listings to inspect unpriced items."})
+                        " or cached. Unpriced items remain visible in Show all listings mode."})
     for run in db.latest_runs(conn):
         if run["source"] == "hibid" and cfg.hibid_mode != "api":
             continue  # browser mode reports its snapshot state, not a historical API error
@@ -140,7 +140,7 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
             banners.append({"level": "warn", "text": f"{site}: last run failed ({error})"})
         elif run["status"] == "site_change":
             banners.append({"level": "warn",
-                            "text": f"{site}: probable site change, the last run found"
+                            "text": f"{site}: possible site change. The last run found"
                                     " no listings"})
     if cfg.hibid_mode == "browser":
         snapshot = snapshot_status(conn, cfg, now)
@@ -339,7 +339,7 @@ def _hours(value: str | None) -> float | None:
 @router.get("/", response_class=HTMLResponse)
 def deals(request: Request, category: str | None = None, source: str | None = None,
           ending_within_h: str | None = None, new_only: bool = False,
-          target_only: bool = False, show_all: bool = False,
+          target_only: bool = False, show_all: bool = True,
           conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()
@@ -442,7 +442,7 @@ def _lot(conn: sqlite3.Connection, cfg: Config, row: sqlite3.Row, catalog: Catal
 
 
 @router.get("/lots/hardware", response_class=HTMLResponse)
-def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bool = False,
+def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bool = True,
                   conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()
@@ -464,7 +464,7 @@ def hardware_lots(request: Request, photo_finds_only: bool = False, show_all: bo
 @router.get("/lots/games", response_class=HTMLResponse)
 def game_lots(request: Request, platform: str | None = None,
               ending_within_h: str | None = None, photo_finds_only: bool = False,
-              show_all: bool = False,
+              show_all: bool = True,
               conn: sqlite3.Connection = Depends(get_conn)):
     cfg = request.app.state.cfg
     now = utc_now()

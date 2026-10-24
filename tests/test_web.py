@@ -123,7 +123,7 @@ def row_html(html, listing_id):
 # --- deals page ----------------------------------------------------------------
 
 
-def test_deals_page_lists_deals(client, conn):
+def test_deals_page_lists_all_active_listings_by_default(client, conn):
     plain = seed(conn, "a1", title="RTX 4090 Founders")
     hit = seed(conn, "a2", title="RTX 4090 cheap", target=True)
     gone = seed(conn, "a3", title="RTX 4090 dismissed")
@@ -141,7 +141,8 @@ def test_deals_page_lists_deals(client, conn):
     assert "🎯" in row_html(html, hit)
     assert "🎯" not in row_html(html, plain)
     assert row_html(html, gone) is None
-    assert row_html(html, no_deal) is None
+    assert row_html(html, no_deal) is not None
+    assert row_html(client.get('/?show_all=false').text, no_deal) is None
     assert "$520.00" in row_html(html, plain)  # total cost
 
 
@@ -617,12 +618,12 @@ def test_listing_detail_shows_comps_and_scan_items(client, conn):
     items = re.search(r'<table class="deals items".*?</table>', html, re.DOTALL).group(0)
     silent = re.search(r"<tr>(?:(?!</tr>).)*Silent Hill 2.*?</tr>", items, re.DOTALL).group(0)
     assert 'href="#photo-2"' in silent and "Photo 3" in silent
-    assert "cib" in silent and "high" in silent and "$80.00" in silent
+    assert "Complete in box" in silent and "High" in silent and "$80.00" in silent
     madden = re.search(r"<tr>(?:(?!</tr>).)*Madden 2004.*?</tr>", items, re.DOTALL).group(0)
     assert "#photo-1" not in madden  # its photo URL failed the guard
-    assert "$2.00" in madden and "low" in madden
+    assert "$2.00" in madden and "Low" in madden
     ico = re.search(r"<tr>(?:(?!</tr>).)*&lt;i&gt;Ico.*?</tr>", items, re.DOTALL).group(0)
-    assert "#photo" not in ico and "medium" in ico
+    assert "#photo" not in ico and "Medium" in ico
     kh = re.search(r"<tr>(?:(?!</tr>).)*Kingdom Hearts.*?</tr>", items, re.DOTALL).group(0)
     assert "#photo" not in kh  # index out of range
     assert "💎" in html
@@ -946,7 +947,7 @@ def test_show_all_exposes_unpriced_singles_but_keeps_other_filters(client, conn)
     conn.commit()
     dismissed = seed(conn, "dismissed-unpriced", deal=False)
     db.dismiss_listing(conn, dismissed)
-    assert row_html(client.get("/").text, listing_id) is None
+    assert row_html(client.get("/?show_all=false").text, listing_id) is None
     html = client.get("/", params={"show_all": "true"}).text
     assert row_html(html, listing_id) is not None
     assert row_html(html, dismissed) is None
@@ -966,11 +967,30 @@ def test_show_all_exposes_unknown_quantity_lots_for_manual_scan(client, conn):
     conn.commit()
     for path, included, excluded in (("/lots/hardware", hardware, games),
                                       ("/lots/games", games, hardware)):
-        assert row_html(client.get(path).text, included) is None
+        assert row_html(client.get(path, params={"show_all": "false"}).text, included) is None
         html = client.get(path, params={"show_all": "true"}).text
         assert row_html(html, included) is not None
         assert row_html(html, excluded) is None
         assert 'name="show_all" value="true" checked' in html
+
+
+@pytest.mark.parametrize("path,kind,key,category", [
+    ("/", "single", "rtx-4090", "gpu"),
+    ("/lots/hardware", "hardware_lot", "ps2-console", "console"),
+    ("/lots/games", "game_lot", "ps2", None),
+])
+def test_show_all_defaults_and_explicit_checkbox_values(client, conn, path, kind, key, category):
+    lid = (seed(conn, "default-all", deal=False) if kind == "single" else
+           seed_lot(conn, "default-all", kind=kind, key=key, category=category, deal=False))
+    for headers in ({}, HTMX):
+        assert row_html(client.get(path, headers=headers).text, lid) is not None
+        assert row_html(client.get(path + "?show_all=false", headers=headers).text, lid) is None
+        # A checked checkbox follows the hidden false value in the form submission.
+        assert row_html(client.get(path + "?show_all=false&show_all=true", headers=headers).text,
+                        lid) is not None
+    html = LexborHTMLParser(client.get(path).text)
+    assert html.css_first('input[type="hidden"][name="show_all"]').attributes['value'] == 'false'
+    assert 'checked' in html.css_first('input[type="checkbox"][name="show_all"]').attributes
 
 
 def test_sold_lookup_failure_is_visible_and_escaped(client, conn):

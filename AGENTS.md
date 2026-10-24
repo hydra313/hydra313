@@ -28,7 +28,7 @@ Deals are sent to Discord.
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 863 tests pass with no warnings.
+- 866 tests pass with no warnings.
 - **The first live run is complete for ShopGoodwill search and detail photos.**
   Explicit price bounds and normalized image paths fixed real adapter failures.
   HiBid browser import is verified: 68 real cards, 3 usable USD lots, 1 catalog
@@ -40,12 +40,13 @@ Deals are sent to Discord.
 - Windows users can double-click `Start-Dealfinder.cmd` after installation.
   It starts a hidden server, waits for readiness and opens the dashboard; repeated
   launches reuse the server. Logs go in the ignored `logs/` folder.
-- The dashboard can show unpriced listings and unknown-quantity lots with
-  **Show all listings**. Refresh completion updates the current filtered rows.
+- **Show all listings** is on by default on Deals and both lot pages, including
+  unpriced listings and unknown-quantity lots. Unchecking it submits an explicit
+  false value. Refresh completion updates the current filtered rows.
   Explicit Intel/AMD conflicts reject CPU matches, including hardware lots.
-- The UI uses a dark sidebar, light workspace and teal accents. Scan budgets
+- The UI uses dark surfaces throughout with mint accents. Scan budgets
   and source notices expand from the header. Desktop tables scroll within their
-  panels with sticky headers/actions; phone layouts use listing cards. All 66 web
+  panels with sticky headers/actions; phone layouts use listing cards. All 69 web
   tests pass, with desktop and 390px-wide browser checks across the main pages.
 
 ## Commands

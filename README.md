@@ -57,11 +57,12 @@ launcher with the project and its `.venv` folder; a Windows shortcut can point
 to it from anywhere. Startup errors appear in the launcher window, with app
 logs saved in `logs/`. The app keeps running after you close the browser.
 
-Use **Show all listings** on Deals, Bulk lots or Game lots to inspect results that
-have no market value or do not meet the deal thresholds. It also exposes lots
-whose quantity is unknown, so you can open them for a manual photo scan. Missing
-market values are not evidence of a bargain. Completed refreshes update the rows
-automatically while keeping the current filters.
+**Show all listings** is on by default on Deals, Bulk lots, and Game lots. This
+includes results with no market value, listings below the deal thresholds, and
+lots whose quantity is unknown. Uncheck it to show only deal and target matches.
+Missing market values are not evidence of a bargain. Ended, dismissed, and stale
+listings stay hidden. Completed refreshes update the rows automatically while
+keeping the current filters. The dashboard uses dark mode throughout.
 
 The database, `dealfinder.db`, is created in the folder you run from. If you
 ran a pre-release build of this project, delete the old `dealfinder.db` first,

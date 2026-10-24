@@ -1,8 +1,8 @@
 {% set form_id = "f-" ~ r.table ~ "-" ~ r.id %}
 <tr id="catalog-{{ r.table }}-{{ r.id }}">
   <td data-label="Name" class="title">{{ r.name }}{% if r.custom %} <span class="badge">custom</span>{% endif %}{% if r.generated %} <span class="badge">from product</span>{% endif %}<br><small class="muted">{{ r.id }}</small></td>
-  {% if r.table != 'platform' %}<td data-label="Category">{{ r.category }}</td>{% endif %}
-  <td data-label="Enabled"><label class="check"><input type="checkbox" name="enabled" value="true" form="{{ form_id }}"{% if r.enabled %} checked{% endif %}> on</label></td>
+  {% if r.table != 'platform' %}<td data-label="Category">{{ r.category|upper if r.category in ['gpu', 'cpu'] else r.category|capitalize }}</td>{% endif %}
+  <td data-label="Enabled"><label class="check"><input type="checkbox" name="enabled" value="true" form="{{ form_id }}"{% if r.enabled %} checked{% endif %}> On</label></td>
   {% if r.table == 'product' %}
   <td data-label="Max price $"><input type="number" name="max_price" min="0" step="0.01" form="{{ form_id }}" value="{{ r.fields.max_price.value }}" placeholder="{{ r.fields.max_price.placeholder }}" aria-label="Max price for {{ r.name }}"></td>
   {% elif r.table == 'bulk' %}

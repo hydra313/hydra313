@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Deals · dealfinder{% endblock %}
+{% block title %}Deals · Dealfinder{% endblock %}
 {% block content %}
 <div class="page-heading"><div><span class="eyebrow">YOUR WATCHLIST</span><h1>Deals</h1><p>A closer look at your next opportunity.</p></div><span class="heading-icon" aria-hidden="true">◈</span></div>
 <form class="filters" hx-get="/" hx-target="#deal-rows" hx-trigger="change, submit, listings-updated from:body" hx-push-url="true">
@@ -7,7 +7,7 @@
     <select name="category">
       <option value="">All</option>
       {% for c in categories %}
-      <option value="{{ c }}"{% if filters.category == c %} selected{% endif %}>{{ c }}</option>
+      <option value="{{ c|upper if c in ['gpu', 'cpu'] else c|capitalize }}"{% if filters.category == c %} selected{% endif %}>{{ c|upper if c in ['gpu', 'cpu'] else c|capitalize }}</option>
       {% endfor %}
     </select>
   </label>
@@ -27,7 +27,7 @@
   <label class="check"><input type="checkbox" name="target_only" value="true"{% if filters.target_only %} checked{% endif %}> 🎯 Target hits only</label>
   {% include "partials/show_all.html" %}
 </form>
-<p class="muted">Show all listings includes items without a deal estimate. A missing market value does not mean an item is a bargain.</p>
+<p class="muted">All active listings are shown by default, including items without a deal estimate. A missing market value does not mean an item is a bargain.</p>
 <div class="table-wrap"><table class="deals">
   <thead>
     <tr>

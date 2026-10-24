@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Listing · dealfinder{% endblock %}
+{% block title %}Listing · Dealfinder{% endblock %}
 {% block content %}
 <article class="detail">
   <h1>{{ d.title }}{% if d.find %} <span class="find" title="Photo find">💎</span>{% endif %}{% if d.target %} <span class="target" title="Target hit">🎯</span>{% endif %}</h1>
@@ -19,11 +19,11 @@
       <dt>Total cost</dt><dd>{{ d.total_cost|money }}</dd>
       <dt>Breakdown</dt><dd>{{ d.breakdown }}</dd>
       {% else %}
-      <dt>Total cost</dt><dd>not scored yet (quantity unknown)</dd>
+      <dt>Total cost</dt><dd>Not scored yet (quantity unknown).</dd>
       {% endif %}
       {% if d.quantity is not none %}<dt>{{ 'Games' if game else 'Quantity' }}</dt><dd>{{ d.quantity }}</dd>{% endif %}
       {% if d.per_unit is not none %}<dt>Cost per {{ 'game' if game else 'unit' }}</dt><dd>{{ d.per_unit|money }}</dd>{% endif %}
-      {% if d.condition %}<dt>Condition</dt><dd>{{ d.condition }}</dd>{% endif %}
+      {% if d.condition %}<dt>Condition</dt><dd>{{ d.condition|replace('_', ' ')|capitalize }}</dd>{% endif %}
       {% if d.repair_cost is defined and d.repair_cost is not none %}
       <dt>Repair per unit</dt><dd>{{ d.repair_cost|money }}</dd>
       <dt>Success rate</dt><dd>{{ '%.0f'|format(d.success_rate * 100) }}%</dd>
@@ -61,7 +61,7 @@
     <h2>Photo scan</h2>
     {% if scan %}
     <p class="meta">
-      {{ scan.status }}{% if scan.scanned_at %} · {{ scan.scanned_at.astimezone().strftime('%Y-%m-%d %H:%M') }}{% endif %} · cost {{ scan.cost|money }}{% if scan.model %} · {{ scan.model }}{% endif %}
+      {{ {'ok': 'Completed', 'failed': 'Failed', 'refused': 'Declined'}.get(scan.status, scan.status|capitalize) }}{% if scan.scanned_at %} · {{ scan.scanned_at.astimezone().strftime('%Y-%m-%d %H:%M') }}{% endif %} · cost {{ scan.cost|money }}{% if scan.model %} · {{ scan.model }}{% endif %}
       {% if scan.unit_count_estimate is not none %} · about {{ scan.unit_count_estimate }} units{% endif %}
       {% if scan.identified_value is not none %} · identified value {{ scan.identified_value|money }}{% endif %}
       {% if scan.rare %} · 💎 rare find{% endif %}{% if scan.lot_find %} · 💎 lot find{% endif %}
@@ -80,16 +80,16 @@
       {% endif %}
       {% if scan.found %}
       <div class="table-wrap"><table class="deals items">
-        <thead><tr><th>Item</th><th>Platform</th><th>Completeness</th><th>Qty</th><th>Confidence</th><th>Value</th><th>Photo</th></tr></thead>
+        <thead><tr><th>Item</th><th>Platform</th><th>Completeness</th><th>Quantity</th><th>Confidence</th><th>Value</th><th>Photo</th></tr></thead>
         <tbody>
           {% for it in scan.found %}
           <tr>
             <td data-label="Item" class="title">{{ it.title }}{% if it.edition %} <span class="muted">({{ it.edition }})</span>{% endif %}</td>
             <td data-label="Platform">{{ it.platform }}</td>
-            <td data-label="Completeness">{{ it.completeness }}</td>
-            <td data-label="Qty" class="num">{{ it.quantity if it.quantity is not none else '—' }}</td>
-            <td data-label="Confidence"><span class="badge{% if it.confidence == 'low' %} low{% endif %}">{{ it.confidence }}</span></td>
-            <td data-label="Value" class="num">{% if it.value is not none %}{{ it.value|money }}{% if it.value_low %} <span class="badge low">low</span>{% endif %}{% else %}—{% endif %}</td>
+            <td data-label="Completeness">{{ 'Complete in box' if it.completeness == 'cib' else it.completeness|capitalize }}</td>
+            <td data-label="Quantity" class="num">{{ it.quantity if it.quantity is not none else '—' }}</td>
+            <td data-label="Confidence"><span class="badge{% if it.confidence == 'low' %} low{% endif %}">{{ it.confidence|capitalize }}</span></td>
+            <td data-label="Value" class="num">{% if it.value is not none %}{{ it.value|money }}{% if it.value_low %} <span class="badge low">Low confidence</span>{% endif %}{% else %}—{% endif %}</td>
             <td data-label="Photo">{% if it.photo is not none %}<a href="#photo-{{ it.photo }}">Photo {{ it.photo + 1 }}</a>{% else %}—{% endif %}</td>
           </tr>
           {% endfor %}
