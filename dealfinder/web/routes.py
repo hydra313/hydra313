@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 import json
+import io
 import logging
 import math
 import re
 import sqlite3
+import zipfile
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Query
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 
@@ -23,6 +26,8 @@ from dealfinder.console_editions import edition_text
 from dealfinder.models import BulkProduct, MarketValue
 from dealfinder.market import SOLD_ERROR_SETTING
 from dealfinder.pipeline import SCAN_KINDS, stale_before, hibid_snapshot_before
+from dealfinder.pipeline import ebay_queries
+from dealfinder.sources import ebay_browser
 from dealfinder.sources.hibid_browser import (
     IMPORT_LOCK, MAX_PAGE_BYTES, parse_browser_page, save_snapshot, search_link, snapshot_status,
 )
@@ -140,6 +145,10 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
         if run["status"] == "error":
             error = (run["error"] or "unknown error")[:_ERROR_MAX]
             banners.append({"level": "warn", "text": f"{site}: last run failed ({error})"})
+        elif run["status"] == "needs_attention":
+            banners.append({"level": "warn", "text": f"{site}: {run['error'] or 'needs attention'}"[:_ERROR_MAX],
+                            "link": "/sources/ebay" if run["source"] == "ebay" else None,
+                            "link_text": "Connect browser helper"})
         elif run["status"] == "site_change":
             banners.append({"level": "warn",
                             "text": f"{site}: possible site change. The last run found"
@@ -170,8 +179,12 @@ def _banners(conn: sqlite3.Connection, cfg: Config, now: datetime,
         banners.append({"level": "warn", "text": error[:_ERROR_MAX], "listings": [listing_id]})
     if not (cfg.ebay_client_id and cfg.ebay_client_secret):
         banners.append({"level": "info",
-                        "text": "eBay keys not set (EBAY_CLIENT_ID and EBAY_CLIENT_SECRET):"
-                                " eBay search is off."})
+                        "text": "eBay keyless mode uses your browser helper for Buy It Now listings.",
+                        "link": "/sources/ebay", "link_text": "eBay browser setup"})
+        helper = ebay_browser.browser_status(conn)
+        if helper.get("error"):
+            banners.append({"level": "warn", "text": "eBay browser helper: " + str(helper["error"])[:_ERROR_MAX],
+                            "link": "/sources/ebay", "link_text": "View helper status"})
     if not cfg.anthropic_api_key:
         banners.append({"level": "info",
                         "text": "ANTHROPIC_API_KEY not set: photo scanning is unavailable."})
@@ -187,9 +200,38 @@ def _header(request: Request, conn: sqlite3.Connection, caps_error: str | None =
     refreshing = request.app.state.runner.refresh_running
     budget = Budget(conn, cfg, local_now)
     now = utc_now()
+    runner = request.app.state.runner
+    progress = runner.progress
+    if refreshing:
+        site = SITE_NAMES.get(progress.get("source"), "sources")
+        detail = (f" {progress.get('query_number', 0)}/{progress.get('query_count', 0)}"
+                  if progress.get("query_count") else "")
+        status = (f"Refreshing… {progress.get('stage', 'Starting')} {site}{detail} · "
+                  f"{progress.get('new', 0)} new · {progress.get('updated', 0)} updated")
+    elif runner.refresh_error:
+        status = "Refresh failed: " + runner.refresh_error
+    elif runner.last_report is not None:
+        report = runner.last_report
+        failed = sum(s != "ok" for s, _ in report.per_source.values())
+        status = (f"Refresh complete · {report.new} new · {report.updated} updated · "
+                  f"{report.matched} catalog matches" + (f" · {failed} sources need attention" if failed else ""))
+    else:
+        status = "Ready to check for listings"
+    scheduler = getattr(request.app.state, "scheduler", None)
+    jobs = scheduler.get_jobs() if scheduler else []
+    next_run = jobs[0].next_run_time if jobs else None
+    keyless = not (cfg.ebay_client_id and cfg.ebay_client_secret)
+    helper = ebay_browser.browser_status(conn) if keyless else {}
+    helper_at = _parse_time(helper.get("connected_at"))
     return {
         "refreshing": refreshing,
-        "refresh_status": refresh_status or ("Refreshing…" if refreshing else ""),
+        "refresh_status": refresh_status or status,
+        "refresh_minutes": cfg.refresh_minutes,
+        "next_check": f"{max(1, math.ceil((next_run - now).total_seconds() / 60))} min" if next_run else None,
+        "progress_query": progress.get("query", "") if refreshing else "",
+        "ebay_helper_status": ("eBay helper: " + ("needs attention" if helper.get("error") else
+                               "connected" if helper_at and now - helper_at < timedelta(minutes=2) else
+                               "not connected; cached results only")) if keyless else "",
         "scan_enabled": budget.scan_enabled(),
         "paused": budget.paused(),
         "spent_today": budget.spent_today(),
@@ -211,14 +253,13 @@ def _status_response(request: Request, conn: sqlite3.Connection,
                      refresh_status: str | None = None):
     ctx = _header(request, conn, refresh_status=refresh_status)
     response = _render(request, "partials/header_status.html", ctx)
-    if not ctx["refreshing"]:
-        response.headers["HX-Trigger"] = "listings-updated"
+    response.headers["HX-Trigger"] = "listings-updated"
     return response
 
 
 @router.get("/header/status", response_class=HTMLResponse)
 def header_status(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
-    """Refresh status, last runs and banners; polls itself while a refresh runs."""
+    """Continuously poll status and update rows, including scheduler-started runs."""
     return _status_response(request, conn)
 
 
@@ -610,6 +651,122 @@ def scan_listing(request: Request, listing_id: int,
     return _render(request, "partials/scan_status.html",
                    {"error": False, "message": "Scanning… reload this page in a minute"
                                                " to see the results."})
+
+
+# --- Keyless eBay browser helper -----------------------------------------------
+
+
+@router.get("/sources/ebay", response_class=HTMLResponse)
+def ebay_browser_page(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    ctx = _header(request, conn)
+    ctx.update(helper=ebay_browser.browser_status(conn),
+               helper_token=request.app.state.browser_token,
+               api_mode=bool(request.app.state.cfg.ebay_client_id and request.app.state.cfg.ebay_client_secret))
+    response = _render(request, "ebay_browser.html", ctx)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
+@router.get("/sources/ebay/helper.zip")
+def ebay_helper_download():
+    buffer = io.BytesIO()
+    folder = Path(__file__).resolve().parents[2] / "browser-helper"
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for file in sorted(folder.iterdir()):
+            if file.is_file() and file.suffix in (".js", ".json", ".md"):
+                archive.writestr(file.name, file.read_bytes())
+    return Response(buffer.getvalue(), media_type="application/zip", headers={
+        "Content-Disposition": 'attachment; filename="dealfinder-browser-helper.zip"'})
+
+
+def _import_ebay(runner, conn, html: str, captured_at: datetime) -> tuple[int, int, int]:
+    page = ebay_browser.parse_active_page(html, captured_at)
+    matched = runner.build_pipeline(conn).import_listings(page.listings)
+    return page.cards, len(page.listings), matched
+
+
+def _locked_ebay_import(request, conn, html, at):
+    with request.app.state.browser_lock:
+        return _import_ebay(request.app.state.runner, conn, html, at)
+
+
+@router.post("/sources/ebay/import", response_class=HTMLResponse)
+async def ebay_manual_import(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    if int(request.headers.get("content-length", "0")) > ebay_browser.MAX_PAGE_BYTES + 65536:
+        raise HTTPException(413, "eBay import exceeds 2 MB")
+    try:
+        async with request.form(max_files=0, max_fields=2, max_part_size=ebay_browser.MAX_PAGE_BYTES) as form:
+            html = str(form.get("page_html", ""))
+        cards, usable, matched = await run_in_threadpool(
+            _locked_ebay_import, request, conn, html, utc_now())
+        return HTMLResponse(f"Imported: {cards} cards, {usable} usable listings, {matched} catalog matches.",
+                            headers={"HX-Trigger": "listings-updated"})
+    except ValueError as error:
+        return _render(request, "partials/scan_status.html",
+                       {"error": True, "message": f"Not imported: {error}"}, 400)
+
+
+@router.post("/browser/ebay/next")
+def ebay_helper_next(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    cfg = request.app.state.cfg
+    with request.app.state.browser_lock:
+        if Budget(conn, cfg, local_now).paused():
+            return {"paused": True, "reason": "Automatic checks paused"}
+        if cfg.ebay_client_id and cfg.ebay_client_secret:
+            return {"paused": True, "reason": "eBay API search is configured"}
+        queries = ebay_queries(load_catalog(cfg.catalog_dir, conn, cfg))
+        if not queries:
+            return {"paused": True, "reason": "No enabled catalog searches"}
+        try:
+            index = int(db.get_setting(conn, ebay_browser.ROTATION_KEY, "0"))
+        except ValueError:
+            index = 0
+        query = queries[index % len(queries)]
+        db.set_setting(conn, ebay_browser.ROTATION_KEY, str(index + 1))
+        status = {**ebay_browser.browser_status(conn), "connected_at": utc_now().isoformat(),
+                  "query": query, "error": "", "state": "searching"}
+        db.set_setting(conn, ebay_browser.STATUS_KEY, json.dumps(status))
+        return {"query": query, "url": ebay_browser.search_link(query),
+                "position": index % len(queries) + 1, "total": len(queries)}
+
+
+def _save_ebay_capture(request, conn, data):
+    at = datetime.fromisoformat(data.get("captured_at", ""))
+    if at.tzinfo is None or not -timedelta(seconds=30) <= utc_now() - at <= timedelta(minutes=2):
+        raise ValueError("Capture must be from the last two minutes")
+    with request.app.state.browser_lock:
+        if data.get("error"):
+            status = {"state": "needs_attention", "connected_at": utc_now().isoformat(),
+                      "error": str(data["error"])[:200], "query": str(data.get("query", ""))[:200]}
+        else:
+            html = data.get("html", "")
+            if not isinstance(html, str):
+                raise ValueError("Expected rendered listing HTML")
+            cards, usable, matched = _import_ebay(request.app.state.runner, conn, html, at)
+            status = {"state": "ready", "captured_at": at.isoformat(),
+                      "connected_at": utc_now().isoformat(), "cards": cards,
+                      "usable": usable, "matched": matched, "query": str(data.get("query", ""))[:200]}
+            run = db.start_run(conn, "ebay", at)
+            db.finish_run(conn, run, "ok", usable, "Keyless browser capture", utc_now())
+        db.set_setting(conn, ebay_browser.STATUS_KEY, json.dumps(status))
+    return status
+
+
+@router.post("/browser/ebay/results")
+async def ebay_helper_results(request: Request, conn: sqlite3.Connection = Depends(get_conn)):
+    if int(request.headers.get("content-length", "0")) > ebay_browser.MAX_PAGE_BYTES + 65536:
+        raise HTTPException(413, "eBay import exceeds 2 MB")
+    try:
+        if len(await request.body()) > ebay_browser.MAX_PAGE_BYTES + 65536:
+            raise HTTPException(413, "eBay import exceeds 2 MB")
+        data = await request.json()
+        if not isinstance(data, dict):
+            raise ValueError("Expected listing capture object")
+        status = await run_in_threadpool(_save_ebay_capture, request, conn, data)
+        return {"ok": True, **status}
+    except (ValueError, TypeError) as error:
+        return JSONResponse({"error": str(error)[:200]}, status_code=400)
 
 
 # --- HiBid browser-page imports ------------------------------------------------

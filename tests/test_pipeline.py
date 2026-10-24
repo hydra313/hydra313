@@ -231,6 +231,7 @@ def test_rotation_slice_near_equal_chunks():
 
 
 def test_ebay_rotation_covers_all_queries(conn, cfg):
+    cfg.refresh_minutes = 30  # exercise six equal slices over a three-hour pass
     ebay = FakeSource("ebay")
     p = make_pipeline(conn, cfg, {"ebay": ebay})
     for _ in range(6):  # ceil(3 h * 60 / 30 min) = 6 slices
@@ -238,6 +239,32 @@ def test_ebay_rotation_covers_all_queries(conn, cfg):
     assert sorted(ebay.queries) == sorted(ebay_queries(CATALOG))
     assert len(ebay.queries) == len(ebay_queries(CATALOG))
     assert db.get_setting(conn, "ebay_rotation_index") == "6"
+
+
+def test_short_refresh_interval_never_produces_empty_api_search_slices(conn, cfg):
+    cfg.refresh_minutes = 2
+    source = FakeSource("ebay")
+    pipeline = make_pipeline(conn, cfg, {"ebay": source})
+    for _ in range(len(ebay_queries(CATALOG))):
+        before = len(source.queries)
+        pipeline.refresh()
+        assert len(source.queries) > before
+    assert set(source.queries) == set(ebay_queries(CATALOG))
+
+
+def test_progress_counts_catalog_matches_and_does_not_claim_cached_rows_are_new(conn, cfg):
+    item = listing("progress", "RTX 4090", price=200)
+    item.observed_at = T0
+    source = FakeSource("ebay", [item, item])
+    source.browser_assisted = True
+    pipeline = make_pipeline(conn, cfg, {"ebay": source})
+    events = []
+    pipeline.progress = events.append
+    first = pipeline.refresh()
+    assert (first.new, first.updated, first.matched) == (1, 0, 1)
+    assert events[-1]["seen"] == 2 and events[-1]["new"] == 1
+    cached = pipeline.refresh()
+    assert (cached.new, cached.updated, cached.matched) == (0, 0, 1)
 
 
 # --- refresh -----------------------------------------------------------------

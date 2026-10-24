@@ -50,8 +50,10 @@ python -m dealfinder
 ```
 
 Then open http://127.0.0.1:8000. The first refresh starts immediately, and then
-one runs every 30 minutes (`refresh_minutes` in `config.yaml`). The header has
-a Pause button and a "Refresh now" button.
+one runs every 2 minutes (`refresh_minutes` in `config.yaml`). Refreshes never
+overlap. The header shows the active source/query, new and updated listing counts,
+completion or failure, and the next scheduled check. Pause stops automatic checks;
+Refresh now starts a manual check. The PC must be awake and the app must be running.
 
 The sidebar opens each workspace. **Scan budgets** in the header expands the
 spending controls; **Source status** expands connection notices and errors.
@@ -69,12 +71,45 @@ logs saved in `logs/`. The app keeps running after you close the browser.
 includes results with no market value, listings below the deal thresholds, and
 lots whose quantity is unknown. Uncheck it to show only deal and target matches.
 Missing market values are not evidence of a bargain. Ended, dismissed, and stale
-listings stay hidden. Completed refreshes update the rows automatically while
+listings stay hidden. Running and completed refreshes update the rows automatically while
 keeping the current filters. The dashboard uses dark mode throughout.
 
 The database, `dealfinder.db`, is created in the folder you run from. If you
 ran a pre-release build of this project, delete the old `dealfinder.db` first,
 because the schema changed during development.
+
+## eBay without API keys
+
+Open **eBay browser** in the sidebar. Download and extract the helper, load its
+folder with **Load unpacked** on Chrome or Edge's Extensions page (Developer mode),
+then reopen the setup page in that same browser and click **Connect and start**.
+This one-time browser installation is needed because direct eBay requests are
+blocked on some networks. It does not bypass verification or replay browser cookies.
+
+The helper rotates through enabled catalog queries, one search every 30 seconds,
+using a single background tab. It captures visible USD **Buy It Now** cards and
+imports matching records immediately. Keep the browser and app open. Sleep and
+browser throttling can delay checks. The header reports when the helper is not
+connected. A verification or parser failure stops the helper and leaves its tab
+open for you; complete verification and reconnect. **Stop browser helper** stops
+its loop, and the header's Pause stops new automatic searches too.
+
+Imports contain only listing fields, not account details, cookies or passwords.
+They do not send alerts or initiate paid photo scans. Subsequent scheduled runs
+use the usual notification and photo-budget gates. Cached records retain their
+original observation time and expire under the normal stale-listing rule (two
+full eBay passes, six hours by default); reprocessing a cache is not a new capture.
+Auction search still uses the optional official API. Sold-price requests can
+remain blocked, so keyless listings may have no resale estimate. Installing the
+helper does not create sold-price comparisons.
+
+The browser helper is in `browser-helper/`; its local capability token is stored
+in an ignored `*.browser-token` file beside the database. Never publish that file.
+The helper can access eBay search pages and `127.0.0.1:8000`, and sends captures only
+to the local app. It does not place bids or buy items. A manual import form is
+available on the same setup page; reload eBay before copying its results.
+
+For JavaScript workflow checks, run `node --test tests/browser_helper.test.cjs`.
 
 ## HiBid browser import
 
@@ -104,7 +139,7 @@ never from `config.yaml`.
 
 | Variable | Enables | Where to get it |
 | --- | --- | --- |
-| `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET` | eBay search | https://developer.ebay.com: join the developer program, create an app, and use the **production** keyset (App ID is the client ID, Cert ID is the client secret) |
+| `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET` | Official eBay API search, including auctions; keyless Buy It Now uses the browser helper | https://developer.ebay.com: join the developer program, create an app, and use the **production** keyset (App ID is the client ID, Cert ID is the client secret) |
 | `ANTHROPIC_API_KEY` | Photo scanning | https://console.anthropic.com |
 | `DISCORD_WEBHOOK_URL` | Discord alerts | In Discord: Server Settings, Integrations, Webhooks, New Webhook, Copy Webhook URL |
 

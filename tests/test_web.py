@@ -290,11 +290,11 @@ def test_scheduler_refreshes_at_startup_then_every_interval(cfg, fake):
     assert not app.state.scheduler.running
 
 
-def test_header_status_polls_only_while_refreshing(cfg, fake):
+def test_header_status_keeps_polling_between_automatic_refreshes(cfg, fake):
     fake.block = True
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
     with HtmxClient(app) as client:
-        assert 'hx-trigger="every 3s"' not in client.get("/header/status").text
+        assert 'hx-trigger="every 10s"' in client.get("/header/status").text
         started = client.post("/refresh").text
         assert 'hx-trigger="every 3s"' in started and 'id="header-status"' in started
         assert fake.started.wait(5)
@@ -303,7 +303,9 @@ def test_header_status_polls_only_while_refreshing(cfg, fake):
         assert 'hx-trigger="every 3s"' in client.get("/").text
         fake.release.set()
         app.state.runner.thread.join(5)
-        assert 'hx-trigger="every 3s"' not in client.get("/header/status").text
+        finished = client.get("/header/status").text
+        assert 'hx-trigger="every 10s"' in finished
+        assert "Refresh complete" in finished
 
 
 def test_polled_status_never_replaces_the_controls(client, conn, cfg):
@@ -382,7 +384,7 @@ def test_banner_missing_keys(cfg, fake):
     app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
     with HtmxClient(app) as client:
         banner = client.get("/").text
-    assert "EBAY_CLIENT_ID" in banner and "EBAY_CLIENT_SECRET" in banner
+    assert "eBay keyless mode" in banner and "/sources/ebay" in banner
     assert "ANTHROPIC_API_KEY" in banner
     assert "DISCORD_WEBHOOK_URL" in banner
 
@@ -441,12 +443,13 @@ def test_manual_scan_uses_fresh_connection_and_logs_errors(cfg, fake, caplog):
 
 def test_default_factory_wires_optional_features(cfg, conn):
     pipeline = default_pipeline_factory(cfg)(conn)
-    assert set(pipeline.sources) == {"shopgoodwill", "hibid"}
+    assert set(pipeline.sources) == {"ebay", "shopgoodwill", "hibid"}
+    assert pipeline.sources["ebay"].browser_assisted
     assert pipeline.scanner is None
     assert pipeline.notifier is None
 
     cfg.ebay_client_id = "id"
-    assert "ebay" not in default_pipeline_factory(cfg)(conn).sources
+    assert default_pipeline_factory(cfg)(conn).sources["ebay"].browser_assisted
     cfg.ebay_client_secret = "secret"
     cfg.anthropic_api_key = "sk-ant-test"
     cfg.discord_webhook_url = "https://discord.com/api/webhooks/1/TOKEN"
@@ -1029,7 +1032,7 @@ def test_refresh_completion_updates_rows_without_reloading(client, fake):
     runner.start_refresh()
     assert fake.started.wait(5)
     try:
-        assert "HX-Trigger" not in client.get("/header/status").headers
+        assert client.get("/header/status").headers["HX-Trigger"] == "listings-updated"
     finally:
         fake.release.set()
         runner.thread.join(5)
@@ -1119,3 +1122,75 @@ def test_expired_hibid_prices_hide_and_cannot_be_scanned(client, cfg, conn, fake
     assert "Scan this lot" not in client.get(f"/listing/{lot}").text
     assert "Not scanned" in client.post(f"/listing/{lot}/scan").text
     assert fake.scanned == []
+
+# Keyless helper requests have a narrow, local capability; normal CSRF stays enforced.
+def test_ebay_helper_token_is_required_and_cannot_authorize_other_routes(client):
+    assert client.post('/browser/ebay/next').status_code == 403
+    assert client.post('/browser/ebay/next', headers={'X-Dealfinder-Token':'wrong'}).status_code == 403
+    token = client.app.state.browser_token
+    headers = {'X-Dealfinder-Token':token, 'Origin':'chrome-extension://test'}
+    job = client.post('/browser/ebay/next', headers=headers)
+    assert job.status_code == 200 and job.json()['url'].startswith('https://www.ebay.com/sch/')
+    assert client.post('/controls/pause', data={'on':'true'}, headers=headers).status_code == 403
+    assert client.post('/browser/ebay/next', headers={**headers,'Host':'evil.test:8000'}).status_code == 403
+
+
+def test_ebay_helper_obeys_pause_and_api_mode(client, cfg, conn):
+    headers = {'X-Dealfinder-Token':client.app.state.browser_token}
+    Budget(conn, cfg, local_now).set_paused(True)
+    assert client.post('/browser/ebay/next', headers=headers).json()['paused']
+    Budget(conn, cfg, local_now).set_paused(False)
+    cfg.ebay_client_id = 'id'
+    cfg.ebay_client_secret = 'secret'
+    assert client.post('/browser/ebay/next', headers=headers).json()['paused']
+
+
+def test_ebay_helper_captures_visible_cards_without_paid_scans(client, fake, conn):
+    headers = {'X-Dealfinder-Token':client.app.state.browser_token}
+    html = '<li class="s-card"><a href="https://www.ebay.com/itm/366757299846"></a><div class="s-card__title">RTX 4070</div><div class="s-card__price">$625.00</div><div>Buy It Now</div></li>'
+    payload = {'html':html, 'query':'rtx 4070', 'captured_at':now_utc().isoformat()}
+    result = client.post('/browser/ebay/results', json=payload, headers=headers)
+    assert result.status_code == 200 and result.json()['usable'] == 1
+    assert fake.imported[0].source == 'ebay' and fake.imported[0].price == 625
+    assert not fake.scanned
+    assert db.latest_runs(conn)[0]['status'] == 'ok'
+    payload['captured_at'] = (now_utc() - timedelta(minutes=10)).isoformat()
+    assert client.post('/browser/ebay/results', json=payload, headers=headers).status_code == 400
+    assert len(fake.imported) == 1
+
+
+def test_ebay_helper_error_is_visible_and_escaped(client):
+    headers = {'X-Dealfinder-Token':client.app.state.browser_token}
+    result = client.post('/browser/ebay/results', headers=headers,
+                         json={'error':'Verification <needed>', 'captured_at':now_utc().isoformat()})
+    assert result.status_code == 200
+    assert 'Verification &lt;needed&gt;' in client.get('/header/status').text
+    assert 'Verification &lt;needed&gt;' in client.get('/sources/ebay').text
+
+
+def test_ebay_helper_download_contains_scoped_extension(client):
+    import io
+    import zipfile
+    response = client.get('/sources/ebay/helper.zip')
+    assert response.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        manifest = json.loads(archive.read('manifest.json'))
+        assert manifest['manifest_version'] == 3
+        assert set(manifest['permissions']) == {'storage','alarms'}
+        assert manifest['host_permissions'] == ['https://www.ebay.com/*', 'http://127.0.0.1:8000/*']
+        assert {'background.js','capture.js','connect.js'} <= set(archive.namelist())
+    setup = client.get('/sources/ebay')
+    assert setup.headers['Cache-Control'] == 'no-store'
+    assert 'Connect and start' in setup.text
+
+
+def test_unhandled_refresh_failure_is_visible(cfg, fake):
+    def fail():
+        raise RuntimeError('Unexpected <failure>')
+    fake.refresh = fail
+    app = create_app(cfg, build_pipeline=lambda c: fake, start_scheduler=False)
+    with HtmxClient(app) as c:
+        c.post('/refresh')
+        app.state.runner.thread.join(5)
+        status = c.get('/header/status').text
+        assert 'Refresh failed' in status and '&lt;failure&gt;' in status

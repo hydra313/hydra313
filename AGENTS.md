@@ -28,12 +28,32 @@ Deals are sent to Discord.
 
 - Branch `claude/auction-deal-scraper-9mgait` has PR #1 into `main`. `main`
   holds only the original spec commit.
-- 916 tests pass with no warnings.
+- 947 Python tests and 7 browser-helper workflow tests pass.
+- Listing checks run every two minutes by default. The status block polls while
+  idle (10 s) and running (3 s), shows source/query and counts, and refreshes rows
+  incrementally. Runner reports completion and unexpected errors visibly.
+- eBay without keys uses `sources/ebay_browser.py` and the optional Chrome/Edge
+  helper in `browser-helper/`. Real rendered search validation imported catalog
+  matches without API credentials. The helper needs one-time Load unpacked setup;
+  an installed-browser end-to-end run has not been verified by the agent.
+- The helper rotates one enabled catalog query every 30 seconds in one owned tab,
+  reads only rendered USD fixed-price cards (Buy It Now / or Best Offer), and stops
+  on verification or parsing/import failures. It never solves verification.
+  Other eBay tabs cannot submit captures. Pause suppresses new helper queries.
+- `/browser/ebay/*` endpoints require the local capability token, stored in an
+  ignored `*.browser-token` file beside SQLite. That token grants only those
+  ingestion endpoints; normal CSRF rules still apply elsewhere. Do not log or
+  commit the token. Setup HTML is no-store and no-referrer.
+- eBay cached records preserve observation times and cannot overwrite newer
+  captures. Reprocessing them does not count as a fresh price update. The normal
+  six-hour stale cutoff applies. Browser imports never initiate scans or alerts;
+  scheduled runs retain all existing notification and paid-scan budget gates.
 - **The first live run is complete for ShopGoodwill search and detail photos.**
   Explicit price bounds and normalized image paths fixed real adapter failures.
   HiBid browser import is verified: 68 real cards, 3 usable USD lots, 1 catalog
   match. Direct HiBid API and eBay sold requests remain blocked. eBay Browse,
-  Anthropic and Discord need credentials for live checks.
+  Anthropic and Discord need credentials for live checks. Keyless active listings
+  do not repair blocked sold-price lookups or supply auction closing times.
   See `docs/live-validation-2026-10-23.md` for evidence and remaining limits.
 - HiBid defaults to manual browser capture with 30-minute expiry. See
   `docs/hibid-browser-import.md`; no database reset is needed for this change.
@@ -81,7 +101,7 @@ settings go in `config.yaml`; copy `config.example.yaml`, and note that unknown
 keys raise an error.
 
 Secrets come only from environment variables. Each one is optional and
-disables only its own feature: `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`,
+disables only its own API feature: `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`,
 `ANTHROPIC_API_KEY` and `DISCORD_WEBHOOK_URL`.
 
 ## Architecture (data flow)

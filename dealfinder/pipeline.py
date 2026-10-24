@@ -46,6 +46,9 @@ class RefreshReport:
     per_source: dict[str, tuple[str, int]] = field(default_factory=dict)
     scanned: int = 0
     notified: int = 0
+    matched: int = 0
+    new: int = 0
+    updated: int = 0
 
 
 def ebay_queries(catalog: Catalog) -> list[str]:
@@ -94,7 +97,7 @@ def _row_listing(row: sqlite3.Row) -> Listing:
         end_time=datetime.fromisoformat(row["end_time"]) if row["end_time"] else None,
         bid_count=row["bid_count"],
         buyer_premium_pct=row["buyer_premium_pct"],
-        observed_at=(datetime.fromisoformat(row["last_seen"]) if row["source"] == "hibid"
+        observed_at=(datetime.fromisoformat(row["last_seen"]) if row["source"] in ("hibid", "ebay")
                      else None),
     )
 
@@ -149,11 +152,16 @@ class Pipeline:
         self.budget = budget
         self.notifier = notifier
         self.clock = clock
+        self.progress: Callable[[dict], None] = lambda event: None
+        self._report = RefreshReport()
+        self._counted: set[tuple[str, str]] = set()
 
     # --- refresh ------------------------------------------------------------
 
     def refresh(self) -> RefreshReport:
         report = RefreshReport()
+        self._report = report
+        self._counted = set()
         catalog = self.catalog_loader()
         self.market.begin_run()
         pending: dict[int, dict[Reason, list[str]]] = {}
@@ -171,12 +179,13 @@ class Pipeline:
                     report.notified += 1
 
         if self.scanner is not None:
+            self.progress({"stage": "Checking eligible photo scans"})
             report.scanned, photo_finds = self._auto_scan(catalog)
             report.notified += photo_finds
         return report
 
     def _queries(self, name: str, catalog: Catalog) -> list[str]:
-        if name == "hibid" and getattr(self.sources[name], "browser_assisted", False):
+        if getattr(self.sources[name], "browser_assisted", False):
             return [""]  # one pass over all captured queries; no network requests
         if name != "ebay":
             return list(self.cfg.broad_queries.get(name, []))
@@ -184,9 +193,10 @@ class Pipeline:
             index = int(db.get_setting(self.conn, ROTATION_SETTING, "0") or 0)
         except ValueError:
             index = 0
-        slices = math.ceil(self.cfg.ebay_full_pass_hours * 60 / self.cfg.refresh_minutes)
+        queries = ebay_queries(catalog)
+        slices = min(max(1, len(queries)), math.ceil(self.cfg.ebay_full_pass_hours * 60 / self.cfg.refresh_minutes))
         db.set_setting(self.conn, ROTATION_SETTING, str(index + 1))
-        return rotation_slice(ebay_queries(catalog), index, slices)
+        return rotation_slice(queries, index, slices)
 
     def _run_source(
         self,
@@ -200,17 +210,36 @@ class Pipeline:
         last_error: Exception | None = None
         try:
             queries = self._queries(name, catalog)
-            for query in queries:
+            for number, query in enumerate(queries, 1):
+                self.progress({"stage": "Searching", "source": name, "query": query,
+                               "query_number": number, "query_count": len(queries),
+                               "seen": seen})
                 listings = source.search(query)
                 seen += len(listings)
                 for listing in listings:
                     try:
-                        self._process(listing, catalog, pending)
+                        identity = (listing.source, listing.source_id)
+                        existing = self.conn.execute(
+                            "SELECT id, last_seen FROM listings WHERE source = ? AND source_id = ?", identity
+                        ).fetchone()
+                        matched = self._process(listing, catalog, pending)
+                        if matched is not None and identity not in self._counted:
+                            self._counted.add(identity)
+                            report = self._report
+                            report.matched += 1
+                            if existing and (listing.observed_at is None or listing.observed_at > datetime.fromisoformat(existing["last_seen"])):
+                                report.updated += 1
+                            elif not existing:
+                                report.new += 1
                     except Exception as e:  # noqa: BLE001 - one bad listing never stops a run
                         self.conn.rollback()
                         log.warning("%s listing %s skipped: %s", name, listing.source_id, e)
                         skipped += 1
                         last_error = e
+                self.progress({"source": name, "query": query,
+                               "query_number": number, "query_count": len(queries),
+                               "seen": seen, "matched": self._report.matched,
+                               "new": self._report.new, "updated": self._report.updated})
         except Exception as e:  # noqa: BLE001 - one failing source never stops the others
             log.warning("source %s failed: %s", name, e)
             status = "needs_attention" if isinstance(e, SourceNeedsAttention) else "error"
@@ -232,8 +261,8 @@ class Pipeline:
 
     def import_listings(self, listings: list[Listing]) -> int:
         """Score a browser snapshot immediately; imports do not scan or send alerts."""
-        if any(l.source != "hibid" or l.observed_at is None for l in listings):
-            raise ValueError("Only timestamped HiBid browser listings can be imported")
+        if any(l.source not in ("hibid", "ebay") or l.observed_at is None for l in listings):
+            raise ValueError("Only timestamped HiBid or eBay browser listings can be imported")
         catalog = self.catalog_loader()
         self.market.begin_run()
         return sum(self._process(listing, catalog, {}) is not None for listing in listings)

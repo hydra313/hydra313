@@ -32,7 +32,7 @@ class Config:
     # storage / scheduling
     db_path: str = "dealfinder.db"
     catalog_dir: Path = Path("catalog")
-    refresh_minutes: int = 30
+    refresh_minutes: int = 2
     ebay_full_pass_hours: int = 3
 
     # scoring
@@ -138,6 +138,8 @@ def load_config(path: Path | None = None, env: Mapping[str, str] | None = None) 
     env = os.environ if env is None else env
     for attr, var in _SECRET_ENV.items():
         setattr(cfg, attr, env.get(var) or None)
+    if type(cfg.refresh_minutes) is not int or not 1 <= cfg.refresh_minutes <= 1440:
+        raise ValueError("refresh_minutes must be an integer between 1 and 1440")
     if cfg.hibid_mode not in ("browser", "api", "off"):
         raise ValueError("hibid_mode must be browser, api or off")
     if (type(cfg.hibid_snapshot_minutes) is not int or cfg.hibid_snapshot_minutes <= 0

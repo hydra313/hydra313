@@ -6,3 +6,4 @@ dealfinder.db*
 config.yaml
 logs/
 .audit/
+*.browser-token

@@ -47,3 +47,14 @@ def test_broad_queries_include_collectible_consoles():
     for source in ("shopgoodwill", "hibid"):
         for q in ("limited edition console", "special edition console", "halo xbox 360"):
             assert q in cfg.broad_queries[source]
+
+@pytest.mark.parametrize('value', [0, -1, 1.5, True, 1441])
+def test_refresh_interval_must_be_positive_minutes(tmp_path, value):
+    p = tmp_path / 'config.yaml'
+    p.write_text(f'refresh_minutes: {str(value).lower()}\n')
+    with pytest.raises(ValueError, match='refresh_minutes'):
+        load_config(p, env={})
+
+
+def test_continuous_refresh_defaults_to_two_minutes():
+    assert load_config(None, env={}).refresh_minutes == 2

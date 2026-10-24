@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from dealfinder import db
 from dealfinder.models import Classified, Listing, Scored
 
@@ -66,9 +68,10 @@ def test_connect_creates_tables_and_pragmas(tmp_path):
     db.connect(tmp_path / "d.sqlite").close()  # idempotent
 
 
-def test_snapshot_time_is_preserved_and_old_prices_do_not_replace_new(tmp_path):
+@pytest.mark.parametrize("source", ["hibid", "ebay"])
+def test_snapshot_time_is_preserved_and_old_prices_do_not_replace_new(tmp_path, source):
     conn = db.connect(tmp_path / "snapshot.db")
-    listing = make_listing(source="hibid", end_time=T0 + timedelta(days=1))
+    listing = make_listing(source=source, end_time=T0 + timedelta(days=1))
     listing.observed_at = T0
     lid = add(conn, listing, now=T0 + timedelta(minutes=10))
     assert db.get_listing(conn, lid)["last_seen"] == T0.isoformat()

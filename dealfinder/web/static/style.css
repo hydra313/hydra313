@@ -234,3 +234,10 @@ kbd { padding: 2px 5px; border: 1px solid #344254; border-bottom-width: 2px; bor
   .skip-link { left: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+/* Continuous refresh feedback stays visible above source notices. */
+.refresh-feedback { display: flex; flex-direction: column; gap: .3rem; flex: 1 1 100%; min-width: 0; }
+#refresh-status { color: var(--text, #e8edf3); font-weight: 600; overflow-wrap: anywhere; }
+.refresh-feedback .muted { font-size: .78rem; }
+.setup-steps { padding-left: 1.5rem; line-height: 1.8; }
+.setup-steps li { margin-bottom: .75rem; }
+#helper-connection { overflow-wrap: anywhere; }

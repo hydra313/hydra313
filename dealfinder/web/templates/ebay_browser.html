@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}eBay browser · Dealfinder{% endblock %}
+{% block content %}
+<div class="page-heading"><div><span class="eyebrow">NO API KEY NEEDED</span><h1>eBay browser helper</h1><p>Keep finding listings while your browser is open.</p></div><span class="heading-icon" aria-hidden="true">↻</span></div>
+<section class="import-status">
+  <h2>{{ 'API search configured' if api_mode else 'Keyless Buy It Now listings' }}</h2>
+  <p>The helper reads visible USD search cards in one background eBay tab, then sends matching listings to this local app. It checks one catalog search every 30 seconds. Your PC, browser, and Dealfinder must stay running.</p>
+  {% if helper.captured_at %}<p>Last capture: {{ helper.captured_at }} · {{ helper.usable }} usable listings · {{ helper.matched }} catalog matches.</p>{% endif %}
+  {% if helper.error %}<p class="error">{{ helper.error }}</p>{% endif %}
+  <p>Auctions need an API connection. Keyless collection uses Buy It Now prices. Prices are snapshots; confirm the current listing before buying.</p>
+  <a href="/?source=ebay&amp;show_all=true">View eBay listings</a>
+</section>
+<h2>One-time setup in Chrome or Edge</h2>
+<ol class="setup-steps">
+  <li><a href="/sources/ebay/helper.zip">Download the browser helper</a> and extract the ZIP to a folder you will keep.</li>
+  <li>Open <code>chrome://extensions</code> or <code>edge://extensions</code>. Turn on <strong>Developer mode</strong>, choose <strong>Load unpacked</strong>, and select the extracted folder containing <code>manifest.json</code>.</li>
+  <li>Open this page in that same browser, reload it, then click <strong>Connect and start</strong> below.</li>
+</ol>
+<p>The helper can read eBay search pages and connect to Dealfinder at <code>127.0.0.1:8000</code>. It does not read cookies or passwords, place bids, buy items, or send data to other servers.</p>
+<div class="row">
+  <button id="connect-ebay-helper" class="primary" data-helper-token="{{ helper_token }}">Connect and start</button>
+  <button id="stop-ebay-helper">Stop browser helper</button>
+  <span id="helper-connection" role="status">Install the helper and reload this page to connect.</span>
+</div>
+<p>If eBay asks for verification, the helper stops and keeps its tab open. Complete verification there, then click Connect and start again. Pause in the header pauses automatic collection too.</p>
+<details><summary>Import a page manually</summary>
+  <p>Open an eBay Buy It Now search, copy its rendered results, and paste them below. Imports do not start paid photo scans or send alerts.</p>
+  <form class="import-form" hx-post="/sources/ebay/import" hx-target="#ebay-import-result">
+    <label>Copied eBay results or HTML<textarea id="ebay-page" name="page_html" rows="7"></textarea></label>
+    <button type="submit">Import eBay results</button><div id="ebay-import-result" role="status"></div>
+  </form>
+</details>
+<script src="/static/ebay-import.js"></script>
+{% endblock %}

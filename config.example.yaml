@@ -6,7 +6,7 @@
 # --- storage / scheduling ---
 db_path: dealfinder.db          # SQLite file, created in the folder you run from
 catalog_dir: catalog            # seed catalog folder (YAML files)
-refresh_minutes: 30             # how often all sources are refreshed
+refresh_minutes: 2              # continuous checks while the app runs; overlapping runs are skipped
 ebay_full_pass_hours: 3         # how often eBay gets a full (not incremental) search pass
 
 # --- scoring ---

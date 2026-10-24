@@ -272,8 +272,7 @@ def upsert_listing(
     row = conn.execute(
         f"INSERT INTO listings ({cols}) VALUES ({marks})"
         f" ON CONFLICT (source, source_id) DO UPDATE SET {updates}"
-        " WHERE listings.source != 'hibid'"
-        " OR julianday(excluded.last_seen) >= julianday(listings.last_seen)"
+        " WHERE julianday(excluded.last_seen) >= julianday(listings.last_seen)"
         " RETURNING id",
         values,
     ).fetchone()

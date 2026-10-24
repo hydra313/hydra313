@@ -1,6 +1,9 @@
-{# Polled while a refresh runs; holds no form, so polling never clobbers an input. #}
-<div id="header-status" class="status"{% if refreshing %} hx-get="/header/status" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
-  <span id="refresh-status" aria-live="polite">{{ refresh_status }}</span>
+{# Keep polling while idle too, so scheduler runs and browser imports appear live. #}
+<div id="header-status" class="status" hx-get="/header/status" hx-trigger="every {{ '3s' if refreshing else '10s' }}" hx-swap="outerHTML">
+  <div class="refresh-feedback"><span id="refresh-status" aria-live="polite">{{ refresh_status }}</span>
+    <span class="muted">{% if paused %}Automatic checks paused{% else %}Automatic checks every {{ refresh_minutes }} min{% if next_check %} · Next check in {{ next_check }}{% endif %}{% endif %}</span>
+    {% if progress_query %}<span class="muted">Searching: {{ progress_query }}</span>{% endif %}
+    {% if ebay_helper_status %}<a href="/sources/ebay">{{ ebay_helper_status }}</a>{% endif %}</div>
   <ul class="runs" aria-label="Last successful run per site">
     {% for r in last_success %}
     <li><span class="src">{{ r.name }}</span> <span title="{{ r.at }}">{{ r.ago }}</span></li>

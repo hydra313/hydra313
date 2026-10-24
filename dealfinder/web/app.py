@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import secrets
 import sqlite3
 import threading
 from collections.abc import Callable
@@ -26,6 +27,7 @@ from dealfinder.notify import Notifier
 from dealfinder.pipeline import Pipeline, SpendNotRecorded
 from dealfinder.sources.base import HttpClient, Source
 from dealfinder.sources.ebay import EbaySource
+from dealfinder.sources.ebay_browser import EbayBrowserSource
 from dealfinder.sources.ebay_sold import SoldFetcher
 from dealfinder.sources.hibid import HiBidSource
 from dealfinder.sources.hibid_browser import HiBidBrowserSource
@@ -111,9 +113,7 @@ class DefaultPipelineFactory:
         ebay = None
         if cfg.ebay_client_id and cfg.ebay_client_secret:
             ebay = EbaySource(http, cfg.ebay_client_id, cfg.ebay_client_secret, utc_now)
-        sources: dict[str, Source] = {}
-        if ebay is not None:
-            sources["ebay"] = ebay
+        sources: dict[str, Source] = {"ebay": ebay or EbayBrowserSource(conn, cfg, utc_now)}
         sources["shopgoodwill"] = ShopGoodwillSource(http)
         if cfg.hibid_mode == "browser":
             sources["hibid"] = HiBidBrowserSource(conn, cfg, utc_now)
@@ -149,6 +149,11 @@ class Runner:
         self.build_pipeline = build_pipeline
         self.conn = db.connect(cfg.db_path)
         self.pipeline = build_pipeline(self.conn)
+        self.progress: dict = {}
+        self.last_report = None
+        self.refresh_error: str | None = None
+        self.finished_at: datetime | None = None
+        self.pipeline.progress = self._progress
         self.lock = threading.Lock()
         self.thread: threading.Thread | None = None
         # The last manual scan's error and its listing, shown until a manual scan succeeds.
@@ -157,6 +162,9 @@ class Runner:
     @property
     def refresh_running(self) -> bool:
         return self.lock.locked()
+
+    def _progress(self, event: dict) -> None:
+        self.progress = {**self.progress, **event}
 
     def start_refresh(self) -> bool:
         """Start a refresh in the background; False when one is already running."""
@@ -191,11 +199,17 @@ class Runner:
             self.lock.release()
 
     def _refresh(self) -> None:
+        self.progress = {"stage": "Starting", "started_at": utc_now()}
+        self.refresh_error = None
         try:
             report = self.pipeline.refresh()
-        except Exception:  # noqa: BLE001 - a failed refresh must not kill the scheduler
+        except Exception as error:  # noqa: BLE001 - a failed refresh must not kill the scheduler
             log.exception("refresh failed")
+            self.refresh_error = f"{type(error).__name__}: {error}"[:200]
+            self.finished_at = utc_now()
             return
+        self.last_report = report
+        self.finished_at = utc_now()
         log.info("refresh done: %s, %d scanned, %d notified",
                  report.per_source, report.scanned, report.notified)
 
@@ -264,9 +278,24 @@ def create_app(
                 close()
 
     app = FastAPI(title="dealfinder", lifespan=lifespan)
+    # Local capability token: only the narrowly scoped helper endpoints accept it.
+    # Keep it out of SQLite, source archives, logs, and external requests.
+    token_path = Path(cfg.db_path).with_suffix(".browser-token")
+    helper_token = token_path.read_text(encoding="utf-8").strip() if token_path.exists() else ""
+    if len(helper_token) < 40:
+        helper_token = secrets.token_urlsafe(32)
+        token_path.write_text(helper_token, encoding="utf-8")
+    app.state.browser_token = helper_token
+    app.state.browser_lock = threading.Lock()
 
     @app.middleware("http")
     async def csrf_guard(request: Request, call_next):
+        if request.url.path.startswith("/browser/ebay/"):
+            token = request.headers.get("x-dealfinder-token", "")
+            if (_local_port(request.headers.get("host", "")) is None
+                    or not secrets.compare_digest(token, app.state.browser_token)):
+                return PlainTextResponse("Forbidden", status_code=403)
+            return await call_next(request)
         if not request_allowed(request.method, request.headers):
             return PlainTextResponse("Forbidden", status_code=403)
         return await call_next(request)

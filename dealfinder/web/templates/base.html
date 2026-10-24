@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"400","swap":true},{"code":"[45]..","swap":false,"error":true}]}'>
   <title>{% block title %}Dealfinder{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v=4">
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v=5">
   <script src="/static/htmx.min.js"></script>
 </head>
 <body>
@@ -15,7 +15,7 @@
     <p class="nav-label">WORKSPACE</p>
     <nav aria-label="Main navigation">
       {% set current = request.url.path %}
-      {% for href, label, symbol in [('/', 'Deals', '◈'), ('/lots/hardware', 'Bulk lots', '▦'), ('/lots/games', 'Game lots', '◫'), ('/catalog', 'Catalog', '≡'), ('/sources/hibid', 'HiBid import', '↗')] %}
+      {% for href, label, symbol in [('/', 'Deals', '◈'), ('/lots/hardware', 'Bulk lots', '▦'), ('/lots/games', 'Game lots', '◫'), ('/catalog', 'Catalog', '≡'), ('/sources/ebay', 'eBay browser', '↻'), ('/sources/hibid', 'HiBid import', '↗')] %}
       <a href="{{ href }}"{% if current == href %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ symbol }}</span>{{ label }}{% if href == '/sources/hibid' %}<span class="nav-tag">MANUAL</span>{% endif %}</a>
       {% endfor %}
     </nav>
