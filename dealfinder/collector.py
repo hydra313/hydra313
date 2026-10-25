@@ -43,11 +43,11 @@ def capture_problem(capture: dict, site: str) -> str:
     if (url.path not in ("/sch/i.html", "/lots") or
             re.search(r"pardon our interruption|verify|captcha|security measure|just a moment|"
                       r"attention required|access denied|sign in|sign-in", capture.get("title", ""), re.I)):
-        return "Sign-in or verification required. Open Sign in, then Resume scanning."
+        return "Sign-in or verification required. Open the site to sign in or verify, then continue scanning."
     if not capture.get("count") and not re.search(
             r"\b0 results\b|no exact matches found|no lots found|no results found|\b0 lots\b",
             capture.get("text", ""), re.I):
-        return "No readable search results. Open Sign in to check the site, then Resume scanning."
+        return "No readable search results. Open the site to check access, then continue scanning."
     return ""
 
 
@@ -152,7 +152,7 @@ class BackgroundCollector:
                         if action == "signin":
                             try:
                                 page = open_site(site, headed=True)
-                                self.update(site, state="signing_in", message="Finish sign-in in the site window. Then click Resume scanning here.")
+                                self.update(site, state="signing_in", message="Finish sign-in in the site window. Then return here and continue scanning.")
                                 page.goto(SIGNIN[site], wait_until="domcontentloaded", timeout=45000)
                             except Exception:
                                 self.update(site, state="needs_attention", message="Sign-in window closed or could not load. Click Sign in to try again.")
@@ -191,7 +191,7 @@ class BackgroundCollector:
                         capture = page.evaluate(script, site)
                         problem = capture_problem(capture, site)
                         if not valid_job({**job, "url": capture["url"]}):
-                            problem = "Sign-in or verification required. Open Sign in, then Resume scanning."
+                            problem = "Sign-in or verification required. Open the site to sign in or verify, then continue scanning."
                         if problem:
                             raise ValueError(problem)
                         params = parse_qs(urlsplit(job["url"]).query)
@@ -202,11 +202,11 @@ class BackgroundCollector:
                         self.update(site, state="ready", message=f"Background scan complete · {result.get('usable', 0)} usable results",
                                     last_capture=datetime.now(timezone.utc).isoformat())
                     except Exception:
-                        message = "Search needs attention. Open Sign in to check the site, then Resume scanning."
+                        message = "Search needs attention. Open the site to check access, then continue scanning."
                         if site == "ebay" and job.get("kind") == "sold":
                             self._allow_sold = False
                             self.update(site, state="ready", message="Public listing scans continue",
-                                        sold_message="Sold prices unavailable. Sign in and Resume scanning to retry; public listings do not require this step.")
+                                        sold_message="Sold prices unavailable. Sign in and continue scanning to retry; public listings do not require this step.")
                         else:
                             self.update(site, state="needs_attention", message=message)
                         close_site(site)

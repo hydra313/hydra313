@@ -20,5 +20,5 @@
   </td>
 </tr>
 {% else %}
-<tr class="empty"><td colspan="7">No verified good deals match these filters yet. Try a broader search or include unpriced listings.</td></tr>
+<tr class="empty"><td colspan="7"><strong>{{ 'No listings match these filters.' if filters.show_all else 'No verified good deals match these filters yet.' }}</strong><p>{{ 'Try another model or clear your filters.' if filters.show_all else 'Some listings may still be waiting for sold-price comparisons.' }}</p><a class="empty-action" href="{{ request.url.path }}?show_all=true">Browse all listings</a> <a class="empty-action" href="/connections">Check scanner status</a></td></tr>
 {% endfor %}

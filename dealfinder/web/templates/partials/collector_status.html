@@ -1,6 +1,24 @@
-<div id="collector-status" hx-get="/connections/scanner" hx-trigger="every 5s" hx-swap="outerHTML" role="status">
+<div id="collector-status" class="scanner-grid" hx-get="/connections/scanner" hx-trigger="every 5s" hx-swap="outerHTML">
   {% for site, state in collector.sites.items() %}
-  <p><strong>{{ 'eBay' if site == 'ebay' else 'HiBid' }}:</strong> {{ state.message }}{% if state.query %}<span class="muted"> · {{ state.query }}</span>{% endif %}</p>
-  {% if state.sold_message %}<p class="muted">{{ state.sold_message }}</p>{% endif %}
+  {% set signing = state.state == 'signing_in' %}
+  {% set attention = state.state == 'needs_attention' %}
+  <article class="scanner-card">
+    <div class="scanner-heading"><h3>{{ 'eBay' if site == 'ebay' else 'HiBid' }}</h3><span class="scanner-badge {{ 'attention' if attention or signing else '' }}">{{ 'Finish sign-in' if signing else 'Needs attention' if attention else 'Scanning enabled' }}</span></div>
+    {% if signing %}
+    <p><strong>Finish in the Chrome window</strong>, then return here. ConsoleHawk never reads your password.</p>
+    {% else %}<p class="scanner-message">{{ state.message }}</p>{% endif %}
+    {% if state.query %}<p class="scanner-query muted">Latest search: {{ state.query }}</p>{% endif %}
+    {% if state.sold_message %}<p class="muted">{{ state.sold_message }}</p>{% endif %}
+    <div class="row">
+      {% if signing %}
+      <button class="primary" hx-post="/connections/scanner/{{ site }}/resume" hx-target="#{{ site }}-scanner-result" hx-disabled-elt="this">Sign-in done? Continue scanning</button>
+      {% else %}
+      <button class="{{ 'primary' if attention else '' }}" hx-post="/connections/scanner/{{ site }}/signin" hx-target="#{{ site }}-scanner-result" hx-disabled-elt="this">{{ 'Open site to sign in or verify' if attention else 'Sign in (optional)' }}</button>
+      {% if attention or state.sold_message %}<button hx-post="/connections/scanner/{{ site }}/resume" hx-target="#{{ site }}-scanner-result" hx-disabled-elt="this">Retry scanning</button>{% endif %}
+      {% endif %}
+      <a href="/?source={{ site }}&amp;show_all=true">Browse listings &rarr;</a>
+    </div>
+    <p id="{{ site }}-scanner-result" role="status" aria-live="polite"></p>
+  </article>
   {% endfor %}
 </div>

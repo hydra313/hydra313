@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Connections · ConsoleHawk{% endblock %}
 {% block content %}
-<div class="page-heading"><div><span class="eyebrow">CONNECT ONCE, KEEP DISCOVERING</span><h1>Connections</h1><p>Manage automatic searches and the channel that receives your deal alerts.</p></div><span class="heading-icon" aria-hidden="true">↻</span></div>
+<div class="page-heading"><div><span class="eyebrow">CONNECT ONCE, KEEP DISCOVERING</span><h1>Connections</h1><p>Keep searches running. Choose where your deal alerts go.</p></div><span class="heading-icon" aria-hidden="true">↻</span></div>
 {% if background_enabled %}
 <section class="connection-setup">
   <h2>Background scanning</h2>
   <p>eBay and HiBid searches run inside ConsoleHawk, without an extension or tabs in your browser. Public searches start without signing in, using a separate Chrome profile for each site.</p>
   {% include "partials/collector_status.html" %}
-  <p class="muted">If a site needs your attention, click Sign in below, finish in the site window, then click Resume scanning. A blocked active search pauses that site. A blocked eBay sold-price lookup leaves public listing searches running. Keep this PC and ConsoleHawk running.</p>
+  <p class="muted">1. Open the site when requested. &nbsp; 2. Sign in or finish verification. &nbsp; 3. Return here and continue scanning.</p>
 </section>
 {% else %}
 <section class="connection-setup">
@@ -26,6 +26,7 @@
 </section>
 {% endif %}
 <div class="connection-grid">
+  {% if not background_enabled %}
   <section class="connection-card">
     <span class="eyebrow">LISTINGS + SOLD COMPARISONS</span><h2>eBay</h2>
     <p>Keyless auction and Buy It Now listings and matching dated sold results. Sign in only when requested; your session is remembered on this PC.</p>
@@ -57,6 +58,7 @@
     <p class="muted">If verification appears, this site pauses until you reconnect. The other site keeps running.</p>
     <a href="/?source=hibid&amp;show_all=true">View listings</a>
   </section>
+  {% endif %}
   <section class="connection-card">
     <span class="eyebrow">PUBLIC SEARCH</span><h2>ShopGoodwill</h2>
     <p>Automatic search is already enabled. No account connection is required to discover listings. Sign in on ShopGoodwill when you want to bid.</p>

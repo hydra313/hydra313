@@ -469,7 +469,7 @@ def deals(request: Request, category: str | None = None, source: str | None = No
     eligible = visible_deals(items, show_all)
     pages = max(1,math.ceil(len(eligible)/100))
     page = min(page,pages)
-    ctx = {"deals": eligible[(page-1)*100:page*100], "available_count":len(items),
+    ctx = {"filters": {**filters, **search.values()}, "deals": eligible[(page-1)*100:page*100], "available_count":len(items),
            "page":page, "pages":pages,
            "next_page":request.url.include_query_params(page=page+1) if page < pages else None,
            "previous_page":request.url.include_query_params(page=page-1) if page > 1 else None,
@@ -722,7 +722,7 @@ def scanner_command(request: Request, site: str, action: str):
         request.app.state.collector.command(action, site)
     except ValueError as error:
         raise HTTPException(400, str(error)) from None
-    return HTMLResponse('Opening the sign-in window. After signing in, click Resume scanning.'
+    return HTMLResponse('Opening the sign-in window. Finish in Chrome, then click Sign-in done? Continue scanning.'
                         if action == 'signin' else 'Resuming background scanning. No browser tab is needed.')
 
 

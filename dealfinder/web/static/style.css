@@ -295,3 +295,31 @@ body { font-size: 15px; }
 .filter-advanced .advanced-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 14px; margin-top: 12px; }
 .listing-meta { color: var(--muted); font-size: 13px; margin-top: 8px; }
 @media(max-width:760px) { .deals td.title { min-width: 0; font-size: 16px; } .deals td.img img { width: 150px; height:150px; } .deals td.img { width:auto; } }
+
+/* Clear scanner steps and a calmer, comfortable browsing surface. */
+.scanner-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:16px; margin:24px 0; }
+.scanner-card { padding:22px; border:1px solid var(--border); border-radius:14px; background:linear-gradient(135deg,#222c20,#171d16); min-width:0; }
+.scanner-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
+.scanner-heading h3 { margin:0; font-size:22px; }
+.scanner-badge { padding:6px 10px; border-radius:20px; color:#b8e4a0; background:#30412a; font-size:12px; font-weight:700; }
+.scanner-badge.attention { color:#ffd59a; background:#48371d; }
+.scanner-query { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px; }
+.scanner-card [role=status]:empty { display:none; }
+.scanner-card button { min-height:44px; white-space:normal; }
+.browse-filters { padding:24px; border-radius:16px; background:linear-gradient(140deg,#20291e,#171d16); }
+.browse-filters input,.browse-filters select { min-height:46px; font-size:14px; }
+.browse-filters .search-field input { border-color:#7d895b; }
+.browse-loading { color:var(--accent); font-size:13px; }
+.deals td.img img,.deals td.img:empty::after { width:144px; height:144px; }
+.deals td.img { width:156px; min-width:156px; }
+.deals tbody tr:not(.empty):not(.result-summary):hover { background:#263021; }
+.empty strong { display:block; font-size:20px; margin:12px; }
+.empty-action { display:inline-block; padding:12px 16px; margin:4px; border:1px solid var(--border); border-radius:9px; }
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible { outline:2px solid #f4b64e; outline-offset:3px; }
+@media(max-width:760px) { .deals td.img { width:auto; min-width:0; } .browse-filters { padding:16px; } }
+
+.top { padding-top:16px; padding-bottom:14px; }
+.workspace-label { margin-bottom:10px; }
+.refresh-feedback { flex-direction:row; flex-wrap:wrap; align-items:center; column-gap:16px; row-gap:6px; }
+.refresh-feedback #refresh-status { flex-basis:100%; }
+@media(max-width:760px) { .refresh-feedback { flex-direction:column; align-items:flex-start; } }

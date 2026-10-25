@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Deals · ConsoleHawk{% endblock %}
 {% block content %}
-<div class="page-heading"><div><span class="eyebrow">YOUR WATCHLIST</span><h1>Deals</h1><p>A closer look at your next opportunity.</p></div><span class="heading-icon" aria-hidden="true">◈</span></div>
-<form class="filters browse-filters" hx-get="/" hx-target="#deal-rows" hx-trigger="change, submit, keyup changed delay:400ms from:input[name='q'], listings-updated from:body" hx-sync="this:replace" hx-push-url="true">
+<div class="page-heading"><div><span class="eyebrow">YOUR WATCHLIST</span><h1>Deals</h1><p>Find your next console. Compare the price. Spot the deal.</p></div><span class="heading-icon" aria-hidden="true">◈</span></div>
+<form class="filters browse-filters" hx-get="/" hx-target="#deal-rows" hx-trigger="change, submit, keyup changed delay:400ms from:input[name='q'], listings-updated from:body" hx-sync="this:replace" hx-indicator=".browse-loading" hx-push-url="true">
   {% include "partials/browse_filters.html" %}
   <label>Category
     <select name="category">
@@ -26,7 +26,7 @@
   </label>
   <label class="check"><input type="checkbox" name="new_only" value="true"{% if filters.new_only %} checked{% endif %}> New only</label>
   {% include "partials/show_all.html" %}
-<button type="submit" class="primary">Search</button>
+<button type="submit" class="primary">Apply filters</button><span class="browse-loading htmx-indicator" role="status">Updating listings...</span>
 <a class="reset-filters" href="{{ request.url.path }}">Reset filters</a>
 </form>
 <p class="muted">{% if filters.show_all %}Browsing all eligible listings, including unpriced and lower-margin items. Uncheck the option above to return to verified good deals.{% else %}Showing good deals supported by recent eBay sold prices. Enable “Include unpriced and lower-margin listings” to browse everything. Profit estimates include fees and shipping; auction bids can change.{% endif %}</p>

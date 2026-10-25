@@ -1441,3 +1441,21 @@ def test_public_only_collection_skips_sold_jobs_and_keeps_pagination(client, con
     job = response.json()
     assert job['kind'] == 'active'
     assert '_pgn=2' in job['url'] and 'LH_Auction=1' in job['url']
+
+
+def test_signin_flow_shows_next_step_and_single_control_group(client):
+    client.app.state.background_enabled = True
+    client.app.state.collector.update('ebay', state='signing_in', message='Waiting')
+    text = client.get('/connections').text
+    assert 'Sign-in done? Continue scanning' in text
+    assert text.count('hx-post="/connections/scanner/ebay/resume"') == 1
+    assert 'Finish in the Chrome window' in text
+    client.app.state.collector.update('ebay', state='ready', message='Ready')
+    text = client.get('/connections/scanner').text
+    assert 'Scanning enabled' in text
+    assert 'Sign-in done? Continue scanning' not in text
+
+
+def test_browse_empty_state_matches_selected_view(client):
+    assert 'No listings match these filters.' in client.get('/?show_all=true').text
+    assert 'No verified good deals' in client.get('/').text
