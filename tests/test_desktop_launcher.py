@@ -14,7 +14,7 @@ def run_script(script):
     return result.stdout
 
 def test_desktop_opens_app_window_with_quoted_profile_and_no_browser_tab(tmp_path):
-    fake = tmp_path / "Edge Application" / "msedge.exe"
+    fake = tmp_path / "Chrome Application" / "chrome.exe"
     fake.parent.mkdir()
     fake.touch()
     output = run_script(fr"""
@@ -25,14 +25,14 @@ Start-ConsoleHawkWindow -ProjectRoot 'C:\Console Hawk' -Url 'http://127.0.0.1:80
 """)
     assert str(fake) in output
     assert '--app=http://127.0.0.1:8000/' in output
-    assert r'--user-data-dir="C:\Console Hawk\.desktop-profile"' in output
+    assert r'--user-data-dir="C:\Console Hawk\.desktop-profile\chrome"' in output
     assert '--window-size=1440,960' in output
     assert '--disable-web-security' not in output
 
 def test_missing_browser_reports_actionable_error():
     output = run_script(r"""
 . ./scripts/Desktop-Window.ps1
-try { Get-ConsoleHawkBrowserPath -Candidates @('Z:\missing\msedge.exe'); throw 'Did not fail' }
-catch { if ($_.Exception.Message -notmatch 'Install Microsoft Edge or Google Chrome') { throw }; Write-Output 'expected error' }
+try { Get-ConsoleHawkBrowserPath -Candidates @('Z:\missing\chrome.exe'); throw 'Did not fail' }
+catch { if ($_.Exception.Message -notmatch 'Install Google Chrome') { throw }; Write-Output 'expected error' }
 """)
     assert 'expected error' in output

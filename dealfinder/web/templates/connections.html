@@ -5,9 +5,9 @@
 {% if background_enabled %}
 <section class="connection-setup">
   <h2>Background scanning</h2>
-  <p>eBay and HiBid searches run inside ConsoleHawk, without an extension or tabs in your browser. Your sign-in stays in a separate local profile for each site.</p>
+  <p>eBay and HiBid searches run inside ConsoleHawk, without an extension or tabs in your browser. Public searches start without signing in, using a separate Chrome profile for each site.</p>
   {% include "partials/collector_status.html" %}
-  <p class="muted">If a site needs your attention, click Sign in below, finish in the site window, then click Resume scanning. Only that site's scanning pauses. Keep this PC and ConsoleHawk running.</p>
+  <p class="muted">If a site needs your attention, click Sign in below, finish in the site window, then click Resume scanning. A blocked active search pauses that site. A blocked eBay sold-price lookup leaves public listing searches running. Keep this PC and ConsoleHawk running.</p>
 </section>
 {% else %}
 <section class="connection-setup">

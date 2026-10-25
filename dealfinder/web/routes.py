@@ -850,6 +850,8 @@ def ebay_helper_next(request: Request, conn: sqlite3.Connection = Depends(get_co
         priority = [p.ebay_query for p in catalog.enabled_products() if f"product:{p.id}" in selected]
         queries = list(dict.fromkeys(priority + queries))
         sold_queries = ebay_sold_browser.needed_queries(conn, catalog, cfg, utc_now())
+        if not getattr(request.state, "allow_sold", True):
+            sold_queries = []
         api_mode = bool(cfg.ebay_client_id and cfg.ebay_client_secret)
         if api_mode and not sold_queries:
             return {"paused": True, "reason": "eBay API search configured; no sold captures needed"}
@@ -907,7 +909,7 @@ def _save_ebay_capture(request, conn, data):
             else:
                 cards, usable, matched = _import_ebay(request.app.state.runner, conn, html, at)
                 page = data.get('page',1)
-                if isinstance(page,int) and not isinstance(page,bool) and 1 <= page < 5 and cards >= 240:
+                if isinstance(page,int) and not isinstance(page,bool) and 1 <= page < 5 and (cards >= 240 or (cards > 0 and data.get("has_next") is True)):
                     query = str(data.get('query',''))[:200]
                     queue = json.loads(db.get_setting(conn,'ebay_requested_searches','[]'))
                     followup = {'query':query,'auction':data.get('auction') is True,'page':page+1}
@@ -981,6 +983,7 @@ async def browser_helper_next(request: Request, conn: sqlite3.Connection = Depen
     try:
         data = await request.json()
         sites = [s for s in ('ebay','hibid') if s in data.get('sites',[])]
+        request.state.allow_sold = data.get('allow_sold', True) is not False
     except (ValueError,TypeError,AttributeError):
         raise HTTPException(400,'Expected enabled sites') from None
     if not sites:

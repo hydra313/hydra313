@@ -7,6 +7,8 @@
   // Export only public result-card fields. No forms, cookies, account HTML or credentials.
   const empty = /0 results|no exact matches found|no lots found|no results found|0 lots/i.test(document.body?.innerText || "");
   if (source === "ebay") {
+    const next = document.querySelector('a.pagination__next, a[rel="next"]');
+    base.has_next = !!(next?.getAttribute("href") && next.getAttribute("aria-disabled") !== "true");
     const container = document.createElement("ul");
     for (const card of cards.slice(0,250)) {
       const item = document.createElement("li"); item.className = "s-card";

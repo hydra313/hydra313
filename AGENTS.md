@@ -22,7 +22,16 @@ user’s request. Listing photos remain visible. Selected deals are sent to Disc
 - **Decisions made during the build, plus known minor issues:** `docs/superpowers/build-decisions.md`
 - **User-facing setup:** `README.md`
 
-## Current state (as of 2026-10-24)
+## Current state (as of 2026-10-25)
+
+Chrome replaces Edge for both the app window and collector. New profiles nest
+under .desktop-profile/chrome and .collector-profile/chrome; preserve old profiles.
+Sold capture failures disable sold jobs until Resume without pausing public eBay
+searches. /browser/next accepts allow_sold:false. Public eBay pagination follows
+Next links as well as full 240-card pages, bounded to five pages. Anonymous live
+Chrome checks returned no readable cards on either page; do not claim that
+signed-out eBay collection works reliably or that authentication can be bypassed.
+
 
 Windows executable: `desktop/Launcher.cs` builds to the committed
 `desktop/ConsoleHawk.exe`; rebuild with `scripts/Build-Launcher.ps1 -Destination ...`
@@ -37,7 +46,7 @@ that organization for future exports; don't recreate scattered root artifacts.
 Runtime data remains in this checkout, including private browser profiles.
 
 Newest runtime: `python -m dealfinder` now calls `create_app(...,
-start_collector=True)`. `collector.py` owns separate persistent Edge profiles per
+start_collector=True)`. `collector.py` owns separate persistent Chrome profiles per
 site and runs public card captures headlessly on a daemon worker. Connections has
 Sign in / Resume scanning controls; headed windows open only on that user action.
 The worker never reads login forms or automates verification. A blocked site pauses
@@ -48,7 +57,7 @@ header on local HTTP only, never third-party navigation. No localhost token in l
 Never publish `.collector-profile/` or `.desktop-profile/`: these are private
 browser profiles. Do not share a normal Chrome/Edge user profile. Preserve sandboxing.
 Desktop launcher defaults to an app window; `-Browser` opts into a tab, `-NoBrowser`
-starts only the server. Windows collector requires installed Microsoft Edge.
+starts only the server. Windows collector requires installed Google Chrome.
 Tests explicitly opt into browser smoke tests via `CONSOLEHAWK_BROWSER_SMOKE=1`;
 normal `create_app` tests do not launch collectors. Live HiBid background capture
 produced 22 usable records. User chose to sign in to eBay later; eBay is paused in

@@ -55,6 +55,7 @@ class BackgroundCollector:
     def __init__(self, base_url: str, profile_dir: Path, token: str, *, interval: float = 30):
         self.base_url, self.profile_dir, self._token = base_url, Path(profile_dir), token
         self.interval = interval
+        self._allow_sold = True
         self._stop = threading.Event()
         self._lock = threading.Lock()
         self._commands: queue.Queue = queue.Queue(maxsize=16)
@@ -107,7 +108,7 @@ class BackgroundCollector:
         except Exception:
             # Browser exception strings can include session URLs; do not log them.
             for site in SITES:
-                self.update(site, state="needs_attention", message="Background browser could not start. Restart ConsoleHawk; check that Microsoft Edge is installed.")
+                self.update(site, state="needs_attention", message="Background browser could not start. Restart ConsoleHawk; check that Google Chrome is installed.")
 
     def _collect(self, browser):
         contexts, pages = {}, {}
@@ -125,7 +126,7 @@ class BackgroundCollector:
 
         def open_site(site, headed=False):
             context = browser.chromium.launch_persistent_context(
-                str(self.profile_dir / site), channel="msedge" if sys.platform == "win32" else "chromium",
+                str(self.profile_dir / "chrome" / site), channel="chrome" if sys.platform == "win32" else "chromium",
                 headless=not headed, chromium_sandbox=True, accept_downloads=False,
                 viewport={"width": 1440, "height": 1000}, locale="en-US")
             contexts[site] = context
@@ -156,6 +157,9 @@ class BackgroundCollector:
                             except Exception:
                                 self.update(site, state="needs_attention", message="Sign-in window closed or could not load. Click Sign in to try again.")
                         else:
+                            if site == "ebay":
+                                self._allow_sold = True
+                                self.update(site, sold_message="")
                             self.update(site, state="starting", message="Resuming in the background")
                         continue
                     sites = self.available_sites()
@@ -163,7 +167,7 @@ class BackgroundCollector:
                         self._stop.wait(1)
                         continue
                     try:
-                        job = post("/browser/next", {"sites": sites})
+                        job = post("/browser/next", {"sites": sites, "allow_sold": self._allow_sold})
                     except httpx.HTTPError:
                         self._stop.wait(5)
                         continue
@@ -193,13 +197,18 @@ class BackgroundCollector:
                         params = parse_qs(urlsplit(job["url"]).query)
                         result = post(f"/browser/{site}/results", {
                             "query": job["query"], "kind": job.get("kind", "active"),
-                            "html": capture["html"], "captured_at": datetime.now(timezone.utc).isoformat(),
+                            "html": capture["html"], "has_next": capture.get("has_next") is True, "captured_at": datetime.now(timezone.utc).isoformat(),
                             "page": int(params.get("_pgn", ["1"])[0]), "auction": params.get("LH_Auction") == ["1"]})
                         self.update(site, state="ready", message=f"Background scan complete · {result.get('usable', 0)} usable results",
                                     last_capture=datetime.now(timezone.utc).isoformat())
                     except Exception:
                         message = "Search needs attention. Open Sign in to check the site, then Resume scanning."
-                        self.update(site, state="needs_attention", message=message)
+                        if site == "ebay" and job.get("kind") == "sold":
+                            self._allow_sold = False
+                            self.update(site, state="ready", message="Public listing scans continue",
+                                        sold_message="Sold prices unavailable. Sign in and Resume scanning to retry; public listings do not require this step.")
+                        else:
+                            self.update(site, state="needs_attention", message=message)
                         close_site(site)
                         try:
                             post(f"/browser/{site}/results", {"query": job["query"], "error": message,

@@ -35,7 +35,8 @@ def test_site_failure_isolated_and_commands_are_bounded(tmp_path):
  assert c.snapshot()['sites']['ebay']['state']=='needs_attention' # only worker resumes
 
 
-def test_worker_keeps_other_site_running_and_closes_its_contexts(tmp_path, monkeypatch):
+@pytest.mark.parametrize("kind", ["active", "sold"])
+def test_worker_keeps_other_site_running_and_closes_its_contexts(tmp_path, monkeypatch, kind):
  from types import SimpleNamespace
  import httpx
  import dealfinder.collector as module
@@ -55,7 +56,7 @@ def test_worker_keeps_other_site_running_and_closes_its_contexts(tmp_path, monke
  def launch(profile,**kwargs):
   launches.append((profile,kwargs)); context=Context(); contexts.append(context); return context
  original_client=httpx.Client
- jobs=iter([{'source':'ebay','kind':'active','query':'ps2','url':'https://www.ebay.com/sch/i.html?_nkw=ps2'}, {'source':'hibid','kind':'active','query':'ps2','url':'https://hibid.com/lots?q=ps2'}])
+ jobs=iter([{'source':'ebay','kind':kind,'query':'ps2','url':'https://www.ebay.com/sch/i.html?_nkw=ps2'+('&LH_Sold=1' if kind=='sold' else '')}, {'source':'hibid','kind':'active','query':'ps2','url':'https://hibid.com/lots?q=ps2'}])
  requests=[]
  def handle(request):
   import json
@@ -66,8 +67,10 @@ def test_worker_keeps_other_site_running_and_closes_its_contexts(tmp_path, monke
   return httpx.Response(200,json={'usable':0,'ok':True})
  monkeypatch.setattr(module.httpx,'Client',lambda **kw:original_client(**kw,transport=httpx.MockTransport(handle)))
  c._collect(SimpleNamespace(chromium=SimpleNamespace(launch_persistent_context=launch)))
- assert [x[1]['sites'] for x in requests if x[0]=='/browser/next']==[['ebay','hibid'],['hibid']]
- assert c.snapshot()['sites']['ebay']['state']=='needs_attention'
+ assert [x[1]['sites'] for x in requests if x[0]=='/browser/next']==[['ebay','hibid'],['ebay','hibid'] if kind=='sold' else ['hibid']]
+ assert [x[1]['allow_sold'] for x in requests if x[0]=='/browser/next']==[True,kind!='sold']
+ assert c.snapshot()['sites']['ebay']['state']==('ready' if kind=='sold' else 'needs_attention')
+ assert all(kw['channel'] != 'msedge' for _,kw in launches)
  assert c.snapshot()['sites']['hibid']['state']=='ready'
  assert all(kw['headless'] and kw['chromium_sandbox'] and not kw['accept_downloads'] for _,kw in launches)
  assert all(context.closed for context in contexts)

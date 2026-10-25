@@ -1330,11 +1330,12 @@ def test_default_view_uses_current_sold_value_instead_of_stale_stored_profit(cli
     assert 'deal-overpriced' in row
 
 
-def test_full_ebay_pages_queue_a_bounded_next_page(client,conn):
+@pytest.mark.parametrize("count,has_next", [(240,False),(60,True)])
+def test_full_ebay_pages_queue_a_bounded_next_page(client,conn,count,has_next):
     from tests.test_ebay_browser import card
     headers={'X-Dealfinder-Token':client.app.state.browser_token}
-    html=''.join(card(item=str(900000000000+i)) for i in range(240))
-    payload={'html':html,'query':'halo 3 xbox 360','page':1,'auction':True,'captured_at':now_utc().isoformat()}
+    html=''.join(card(item=str(900000000000+i)) for i in range(count))
+    payload={'html':html,'has_next':has_next,'query':'halo 3 xbox 360','page':1,'auction':True,'captured_at':now_utc().isoformat()}
     assert client.post('/browser/ebay/results',json=payload,headers=headers).status_code == 200
     queue=json.loads(db.get_setting(conn,'ebay_requested_searches'))
     assert queue[0] == {'query':'halo 3 xbox 360','page':2,'auction':True}
@@ -1427,3 +1428,16 @@ def test_background_controls_validate_commands_and_keep_session_data_private(cli
     assert client.post('/connections/scanner/ebay/execute').status_code == 400
     assert client.app.state.browser_token not in client.get('/connections/scanner').text
     assert client.app.state.browser_token not in page.text
+
+
+def test_public_only_collection_skips_sold_jobs_and_keeps_pagination(client, conn, monkeypatch):
+    from dealfinder.sources import ebay_sold_browser
+    monkeypatch.setattr(ebay_sold_browser, 'needed_queries', lambda *args: ['ps2'])
+    db.set_setting(conn, 'ebay_browser_rotation', '1')
+    db.set_setting(conn, 'ebay_requested_searches', '[{"query":"halo 3","auction":true,"page":2}]')
+    response = client.post('/browser/next', json={'sites':['ebay'], 'allow_sold':False},
+        headers={'X-Dealfinder-Token':client.app.state.browser_token})
+    assert response.status_code == 200
+    job = response.json()
+    assert job['kind'] == 'active'
+    assert '_pgn=2' in job['url'] and 'LH_Auction=1' in job['url']

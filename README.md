@@ -62,7 +62,7 @@ On Windows, after installation, double-click **desktop/ConsoleHawk.exe**.
 It has the ConsoleHawk logo, starts the server if needed and opens a separate app
 window without a command prompt. The native launcher reuses the existing database,
 settings and background scanner. It requires the installed Python environment and
-Microsoft Edge for background collection; it is not a self-contained installer.
+Google Chrome for background collection; it is not a self-contained installer.
 See [Windows launcher instructions](desktop/README.md) to build a dedicated launch
 folder with a top-level executable. `Start-ConsoleHawk.cmd` remains a fallback;
 its `-Browser` option opens an ordinary browser tab when explicitly desired.
@@ -80,11 +80,17 @@ Keep your existing `dealfinder.db`; this update does not require a reset.
 ## Built-in background scanning (no extension)
 
 ConsoleHawk starts its collector automatically. On Windows it uses installed
-Microsoft Edge in headless mode with a separate local profile for each site.
+Google Chrome in headless mode with a separate local profile for each site.
 It never attaches to your normal browser or opens ordinary search tabs. No API
 key is required. Keep the PC awake and ConsoleHawk running; the dashboard window
 can be closed. On other platforms install the Playwright Chromium browser with
 `python -m playwright install chromium`.
+
+Public active searches start without signing in. eBay searches follow up to five
+result pages, including shorter pages with a Next link. If sold-price searches fail,
+public searches continue; sign-in and Resume scanning retry sold prices. Unpriced
+items remain available under **Include unpriced and lower-margin listings**.
+Sites may still require verification; anonymous access is not guaranteed.
 
 Open **Connections** to see each site's live scanner state. If eBay or HiBid needs
 sign-in or verification, click **Sign in** for that site, finish in the separate
