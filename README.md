@@ -58,12 +58,14 @@ The sidebar opens each workspace. **Source status** expands connection notices a
 Wide tables keep their headers and listing actions visible while scrolling.
 On a phone, listings appear as individual cards.
 
-On Windows, after installation, double-click **Start-ConsoleHawk.cmd** in the
-project folder. It starts the app in the background, waits for the dashboard,
-and opens a separate app window without tabs or an address bar. Double-clicking again opens the running app. Keep the
-launcher with the project and its `.venv` folder; a Windows shortcut can point
-to it from anywhere. Startup errors appear in the launcher window, with app
-logs saved in `logs/`. The scanner keeps running after you close the dashboard window. Microsoft Edge must be installed on Windows; Chrome is a fallback for the dashboard. Use `Start-ConsoleHawk.cmd -Browser` only if you prefer a normal browser tab.
+On Windows, after installation, double-click **desktop/ConsoleHawk.exe**.
+It has the ConsoleHawk logo, starts the server if needed and opens a separate app
+window without a command prompt. The native launcher reuses the existing database,
+settings and background scanner. It requires the installed Python environment and
+Microsoft Edge for background collection; it is not a self-contained installer.
+See [Windows launcher instructions](desktop/README.md) to build a dedicated launch
+folder with a top-level executable. `Start-ConsoleHawk.cmd` remains a fallback;
+its `-Browser` option opens an ordinary browser tab when explicitly desired.
 
 The default view shows only good deals supported by recent matching eBay sold
 averages. Missing or weak evidence, small margins and negative profit stay hidden.

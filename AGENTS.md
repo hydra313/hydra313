@@ -24,6 +24,18 @@ user’s request. Listing photos remain visible. Selected deals are sent to Disc
 
 ## Current state (as of 2026-10-24)
 
+Windows executable: `desktop/Launcher.cs` builds to the committed
+`desktop/ConsoleHawk.exe`; rebuild with `scripts/Build-Launcher.ps1 -Destination ...`
+after changing it. This is a .NET Framework WinExe launcher, not a bundled Python
+runtime. It discovers a source checkout or reads `App/project-path.txt` beside the
+EXE. It runs the existing PowerShell launcher hidden, validates installation files,
+and reports startup failure in a message box. `--check` is a silent diagnostic.
+Six targeted launcher tests pass; the actual local EXE launch returned 0.
+The user's outputs folder is organized into App, Assets, Guides, Screenshots,
+Releases and Archive, with ConsoleHawk.exe and START-HERE.md at the top. Preserve
+that organization for future exports; don't recreate scattered root artifacts.
+Runtime data remains in this checkout, including private browser profiles.
+
 Newest runtime: `python -m dealfinder` now calls `create_app(...,
 start_collector=True)`. `collector.py` owns separate persistent Edge profiles per
 site and runs public card captures headlessly on a daemon worker. Connections has
