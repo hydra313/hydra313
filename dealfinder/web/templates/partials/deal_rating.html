@@ -1,0 +1,4 @@
+<span class="deal-rating rating-{{ d.rating.tone }}" title="{{ d.rating.reason }}">{{ d.rating.label }}</span>
+{% if d.rating.discount is not none %}
+<small class="comparison-note">{{ '%.0f'|format((d.rating.discount * 100)|abs) }}% {{ 'below' if d.rating.discount >= 0 else 'above' }} sold average</small>
+{% else %}<small class="comparison-note">{{ d.rating.reason }}</small>{% endif %}

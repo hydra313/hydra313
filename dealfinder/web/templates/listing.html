@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Listing · ConsoleHawk{% endblock %}
+{% block content %}
+<article class="detail">
+  <h1>{{ d.title }}{% if d.find %} <span class="find" title="Photo find">💎</span>{% endif %}{% if d.target %} <span class="target" title="Target hit">🎯</span>{% endif %}</h1>
+  <p class="meta">
+    {{ kind }} · {{ d.product }} · {{ d.site }} · time left {{ d.time_left }}{% if ended %} (ended){% endif %}{% if dismissed %} · dismissed{% endif %}
+    {% if d.url %} · <a href="{{ d.url }}" target="_blank" rel="noopener">Open listing</a>{% endif %}
+  </p>
+  {% if d.snapshot_at %}<p class="meta">HiBid browser snapshot: {{ d.snapshot_at }}.
+    {% if snapshot_expired %}<strong>Expired: refresh and reimport before using this price.</strong>{% endif %}
+    Shipping and buyer premium may be estimates. <a href="/sources/hibid">Refresh browser import</a></p>{% endif %}
+  {% if d.image %}<img class="lead" src="{{ d.image }}" alt="" loading="lazy">{% endif %}
+
+  <section>
+    <h2>Cost</h2>
+    <div class="detail-comparison"><div><small>Current price</small><strong>{{ d.price|money }}</strong></div><div><small>Average eBay sold{{ ' · lot estimate' if row.kind != 'single' else '' }}</small>{% include "partials/sold_value.html" %}</div><div>{% include "partials/deal_rating.html" %}</div></div>
+    <dl class="facts">
+      {% if d.total_cost is not none %}
+      <dt>Total cost</dt><dd>{{ d.total_cost|money }}</dd>
+      <dt>Breakdown</dt><dd>{{ d.breakdown }}</dd>
+      {% else %}
+      <dt>Total cost</dt><dd>Not scored yet (quantity unknown).</dd>
+      {% endif %}
+      {% if d.quantity is not none %}<dt>{{ 'Games' if game else 'Quantity' }}</dt><dd>{{ d.quantity }}</dd>{% endif %}
+      {% if d.per_unit is not none %}<dt>Cost per {{ 'game' if game else 'unit' }}</dt><dd>{{ d.per_unit|money }}</dd>{% endif %}
+      {% if d.condition %}<dt>Condition</dt><dd>{{ d.condition|replace('_', ' ')|capitalize }}</dd>{% endif %}
+      {% if d.repair_cost is defined and d.repair_cost is not none %}
+      <dt>Repair per unit</dt><dd>{{ d.repair_cost|money }}</dd>
+      <dt>Success rate</dt><dd>{{ '%.0f'|format(d.success_rate * 100) }}%</dd>
+      {% endif %}
+      <dt>Expected profit</dt><dd>{% if d.profit is not none %}{{ d.profit|money }}{% else %}—{% endif %}</dd>
+      {% if d.discount is not none %}<dt>Discount</dt><dd>{{ '%.0f'|format(d.discount * 100) }}%</dd>{% endif %}
+    </dl>
+  </section>
+
+  <section id="sold-comps">
+    <h2>{% if value_basis == 'per_game' %}Market value per game{% elif value_basis == 'used' and row.kind != 'single' %}Working used value per unit{% else %}Market value{% endif %}</h2>
+    {% if d.market %}
+    <p>{{ d.market.value|money }} <span class="badge{% if d.market.low %} low{% endif %}">{{ d.market.badge }}</span></p>
+    {% else %}
+    <p class="muted">No market value yet.</p>
+    {% endif %}
+    {% if comps %}
+    <div class="table-wrap"><table class="deals comps">
+      <thead><tr><th>Comp</th><th>Price</th><th>Sold</th><th>Condition</th></tr></thead>
+      <tbody>
+        {% for c in comps %}
+        <tr>
+          <td data-label="Comp" class="title">{% if c.url %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.title }}</a>{% else %}{{ c.title }}{% endif %}</td>
+          <td data-label="Price" class="num">{{ c.price|money }}</td>
+          <td data-label="Sold">{{ c.sold_date or '—' }}</td>
+          <td data-label="Condition">{{ c.condition or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% endif %}
+  </section>
+
+  {% if not dismissed %}
+  <p><button type="button" hx-post="/listing/{{ d.id }}/dismiss" hx-target="this" hx-swap="outerHTML">Dismiss</button></p>
+  {% endif %}
+</article>
+{% endblock %}

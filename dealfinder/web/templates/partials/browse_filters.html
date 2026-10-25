@@ -1,0 +1,32 @@
+<input type="hidden" name="page" value="{{ page|default(1) }}">
+<label class="search-field">Search listings
+  <input type="search" name="q" value="{{ filters.q }}" maxlength="200" placeholder="Model, edition, title…">
+</label>
+<label>Brand
+  <select name="brand"><option value="">All brands</option>
+    {% for name in brands %}<option value="{{ name }}"{% if filters.brand|lower == name|lower %} selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select>
+</label>
+<label>Console / platform
+  <select name="console"><option value="">All consoles</option>
+    {% for name in consoles %}<option value="{{ name }}"{% if filters.console|lower == name|lower %} selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select>
+</label>
+<label>Sort by<select name="sort">{% for id,name in sorts.items() %}<option value="{{ id }}"{% if filters.sort == id %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+<label>Order<select name="direction"><option value="desc"{% if filters.direction == 'desc' %} selected{% endif %}>Highest / latest first</option><option value="asc"{% if filters.direction == 'asc' %} selected{% endif %}>Lowest / soonest first</option></select></label>
+
+<details class="filter-advanced"{% if filters.condition or filters.min_price or filters.max_price or filters.rating %} open{% endif %}><summary>Price, condition and rating filters</summary><div class="advanced-grid"><label>Condition
+  <select name="condition"><option value="">All conditions</option>
+    {% for id, name in [('new','New / open box'),('used','Used'),('for_parts','For parts / repair'),('unknown','Unknown')] %}
+    <option value="{{ id }}"{% if filters.condition == id %} selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select>
+</label>
+<label>Min. price ($)<input type="number" name="min_price" min="0" step="0.01" value="{{ filters.min_price }}" placeholder="Any"></label>
+<label>Max. price ($)<input type="number" name="max_price" min="0" step="0.01" value="{{ filters.max_price }}" placeholder="Any"></label>
+<label>Deal rating
+  <select name="rating"><option value="">All ratings</option>
+    {% for id, name in [('good','Green · Good deal'),('average','Yellow · Average'),('overpriced','Red · At limit / Pass'),('unknown','Gray · Unknown')] %}
+    <option value="{{ id }}"{% if filters.rating == id %} selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select>
+</label>
+</div></details>

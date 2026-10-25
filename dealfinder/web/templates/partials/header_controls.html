@@ -1,0 +1,13 @@
+<div id="header-controls" class="controls">
+  <div class="control-bar">
+  <div class="row refresh-controls">
+    <form hx-post="/controls/pause" hx-target="#header-controls" hx-swap="outerHTML">
+      <input type="hidden" name="on" value="{{ 'false' if paused else 'true' }}">
+      <span class="scheduler{% if paused %} paused{% endif %}">Scheduler: {{ 'paused' if paused else 'running' }}</span>
+      <button type="submit">{{ 'Resume' if paused else 'Pause' }}</button>
+    </form>
+    <button class="primary" type="button" hx-post="/refresh" hx-target="#header-status" hx-swap="outerHTML"><span aria-hidden="true">↻</span> Refresh now</button>
+  </div>
+  </div>
+  {% include "partials/header_status.html" %}
+</div>

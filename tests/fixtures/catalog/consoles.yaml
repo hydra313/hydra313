@@ -1,0 +1,14 @@
+- id: ps5-30th-anniversary
+  category: console
+  name: PlayStation 5 30th Anniversary
+  ebay_query: "ps5 30th anniversary"
+  match: '\bps5\b.*\b30th\s*anniversary\b'
+  exclude: []
+  max_price: null
+- id: switch-oled-zelda-totk
+  category: console
+  name: Switch OLED Zelda Tears of the Kingdom
+  ebay_query: "switch oled zelda tears of the kingdom"
+  match: '\bswitch\s*oled\b.*\btears\s*of\s*the\s*kingdom\b'
+  exclude: []
+  max_price: 400

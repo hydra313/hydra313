@@ -1,0 +1,14 @@
+.venv/
+build/
+.desktop-profile/
+.collector-profile/
+__pycache__/
+*.egg-info/
+dealfinder.db*
+.pytest_cache/
+config.yaml
+logs/
+.audit/
+*.browser-token
+*.credentials
+*.credentials.tmp

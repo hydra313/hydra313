@@ -1,0 +1,75 @@
+{
+  "data": {
+    "lotSearch": {
+      "pagedResults": {
+        "results": [
+          {
+            "id": 191000001,
+            "lead": "Sony PlayStation 4 Pro 1TB Console with Controller",
+            "quantity": 1,
+            "shippingOffered": true,
+            "lotState": {
+              "highBid": 85.0,
+              "minBid": 10.0,
+              "bidCount": 6,
+              "timeLeftSeconds": 7200,
+              "isClosed": false
+            },
+            "auction": {"buyerPremium": 15.0, "shippingOffered": false},
+            "pictures": [
+              {"fullSizeLocation": "https://cdn.hibid.com/img/191000001/a.jpg"},
+              {"fullSizeLocation": "https://cdn.hibid.com/img/191000001/b.jpg"}
+            ]
+          },
+          {
+            "id": 191000002,
+            "lead": "Box of assorted video games",
+            "quantity": 1,
+            "shippingOffered": false,
+            "lotState": {
+              "highBid": 0,
+              "minBid": 5.0,
+              "bidCount": 0,
+              "timeLeftSeconds": 86400,
+              "isClosed": false
+            },
+            "auction": {"buyerPremium": 18.0, "shippingOffered": false},
+            "pictures": [
+              {"fullSizeLocation": "https://cdn.hibid.com/img/191000002/a.jpg"}
+            ]
+          },
+          {
+            "id": 191000003,
+            "lead": "Nintendo Switch OLED Console",
+            "quantity": 1,
+            "shippingOffered": false,
+            "lotState": {
+              "highBid": 120.0,
+              "minBid": 10.0,
+              "bidCount": 11,
+              "timeLeftSeconds": 0,
+              "isClosed": true
+            },
+            "auction": {"buyerPremium": 10.0, "shippingOffered": true},
+            "pictures": []
+          },
+          {
+            "id": 191000004,
+            "lead": "NVIDIA RTX 3060 Ti Graphics Card",
+            "quantity": 1,
+            "shippingOffered": false,
+            "lotState": {
+              "highBid": 140.0,
+              "minBid": 10.0,
+              "bidCount": 3,
+              "timeLeftSeconds": 600,
+              "isClosed": false
+            },
+            "auction": {"buyerPremium": null, "shippingOffered": true},
+            "pictures": null
+          }
+        ]
+      }
+    }
+  }
+}

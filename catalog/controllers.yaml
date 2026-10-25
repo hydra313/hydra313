@@ -1,0 +1,73 @@
+# Limited-edition controllers (spec 5.1); every entry was checked to be a real release.
+
+# PlayStation 30th Anniversary Collection, Sony, Nov 2024
+- id: dualsense-30th-anniversary
+  category: controller
+  name: DualSense 30th Anniversary
+  ebay_query: "dualsense 30th anniversary"
+  match: '\bdualsense\b(?! edge\b).*\b30th anniversary\b|^(?!.*\b(consoles?|bundle|systems?|digital edition)\b).*\b30th anniversary\b.*\bdualsense\b(?! edge\b)'
+  exclude: []
+  max_price: null
+
+# PlayStation 30th Anniversary Collection, Sony, Nov 2024
+- id: dualsense-edge-30th-anniversary
+  category: controller
+  name: DualSense Edge 30th Anniversary
+  ebay_query: "dualsense edge 30th anniversary"
+  match: '\bdualsense edge\b.*\b30th anniversary\b|^(?!.*\b(consoles?|bundle|systems?|digital edition)\b).*\b30th anniversary\b.*\bdualsense edge\b'
+  exclude: []
+  max_price: null
+
+# Sony, Nov 2022
+- id: dualsense-god-of-war-ragnarok
+  category: controller
+  name: DualSense God of War Ragnarök
+  ebay_query: "dualsense god of war ragnarok"
+  match: '\bdualsense\b.*\b(god of war|ragnar[oö]k)\b|^(?!.*\b(consoles?|bundle|systems?|digital edition)\b).*\b(god of war|ragnar[oö]k)\b.*\bdualsense\b'
+  exclude: []
+  max_price: null
+
+# Sony, Sep 2023
+- id: dualsense-spider-man-2
+  category: controller
+  name: DualSense Marvel's Spider-Man 2
+  ebay_query: "dualsense spider-man 2"
+  match: '\bdualsense\b.*\bspider ?man 2\b|^(?!.*\b(consoles?|bundle|systems?|digital edition)\b).*\bspider ?man 2\b.*\bdualsense\b'
+  exclude: []
+  max_price: null
+
+# Sony, Sep 2024 (the later Astro Bot Joyful edition is excluded)
+- id: dualsense-astro-bot
+  category: controller
+  name: DualSense Astro Bot
+  ebay_query: "dualsense astro bot"
+  match: '\bdualsense\b.*\bastro ?bot\b|^(?!.*\b(consoles?|bundle|systems?|digital edition)\b).*\bastro ?bot\b.*\bdualsense\b'
+  exclude: ['\bjoyful\b']
+  max_price: null
+
+# Microsoft, 2023
+- id: xbox-controller-starfield
+  category: controller
+  name: Xbox Wireless Controller Starfield
+  ebay_query: "xbox controller starfield"
+  match: '\bxbox\b.*\bcontrollers?\b.*\bstarfield\b|\bstarfield\b.*\bxbox\b.*\bcontrollers?\b'
+  exclude: []
+  max_price: null
+
+# Microsoft, Nov 2021
+- id: xbox-elite-series-2-halo-infinite
+  category: controller
+  name: Xbox Elite Series 2 Halo Infinite
+  ebay_query: "xbox elite series 2 halo infinite"
+  match: '\belite\b.*\bhalo infinite\b|\bhalo infinite\b.*\belite\b'
+  exclude: []
+  max_price: null
+
+# Nintendo, May 2023
+- id: switch-pro-controller-zelda-totk
+  category: controller
+  name: Switch Pro Controller Zelda Tears of the Kingdom
+  ebay_query: "switch pro controller zelda tears of the kingdom"
+  match: '\bpro controllers?\b.*\b(tears of the kingdom|totk)\b|\b(tears of the kingdom|totk)\b.*\bpro controllers?\b'
+  exclude: []
+  max_price: null

@@ -1,0 +1,8 @@
+- id: ps2
+  name: PlayStation 2
+  match: '\b(ps2|playstation\s*2)\b'
+  ebay_lot_query: "ps2 game lot"
+- id: snes
+  name: Super Nintendo
+  match: '\b(snes|super\s*nintendo)\b'
+  ebay_lot_query: "snes game lot"

@@ -1,0 +1,8 @@
+{% if d.rating.average is not none %}
+  <strong>{{ d.rating.average|money }}</strong>
+  <small class="comparison-note">{{ d.market.badge }}{% if d.quantity is defined and d.quantity %} · {{ d.quantity }} × {{ d.market.value|money }}{% endif %}</small>
+  <a class="comparison-note" href="/listing/{{ d.id }}#sold-comps">View sold evidence</a>
+{% else %}
+  <span class="muted">Unknown</span>
+  {% if d.market %}<small class="comparison-note">{{ 'Asking estimate' if d.market.method == 'active_bin' else 'Legacy median' }}: {{ d.market.value|money }} · {{ d.market.badge }}</small>{% endif %}
+{% endif %}

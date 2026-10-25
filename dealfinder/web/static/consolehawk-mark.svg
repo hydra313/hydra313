@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="armor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#899966"/><stop offset="1" stop-color="#465338"/></linearGradient>
+    <linearGradient id="visor" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffd881"/><stop offset="1" stop-color="#df8b27"/></linearGradient>
+  </defs>
+  <path d="M12 3h40l9 10v35L48 61H16L3 48V13z" fill="#172015" stroke="#78885b" stroke-width="2"/>
+  <path d="M9 17l17 5 6-9 6 9 17-5-7 18-16 18-16-18z" fill="url(#armor)"/>
+  <path d="M13 25l17 5-5 7-9-4zm38 0l-17 5 5 7 9-4z" fill="url(#visor)"/>
+  <path d="M27 38l5-5 5 5-5 10z" fill="#f1ab40"/>
+  <path d="M19 8h26" stroke="#b3c58a" stroke-width="2"/>
+</svg>

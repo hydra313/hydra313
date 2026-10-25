@@ -1,0 +1,234 @@
+# Single-item GPUs (spec 5.1): NVIDIA RTX only. Patterns run on normalize()d
+# titles.
+
+- id: rtx-3050
+  category: gpu
+  name: GeForce RTX 3050
+  ebay_query: "rtx 3050"
+  match: '\b(rtx )?3050\b(?! (ti|super)\b)'
+  exclude: ['\b6 ?gb?\b']
+  max_price: null
+
+- id: rtx-3060-8gb
+  category: gpu
+  name: GeForce RTX 3060 8GB
+  ebay_query: "rtx 3060 8gb"
+  match: '\b(rtx )?3060\b(?! (ti|super)\b).*\b8 ?gb?\b|\b8 ?gb?\b.*\b(rtx )?3060\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-3060-12gb
+  category: gpu
+  name: GeForce RTX 3060 12GB
+  ebay_query: "rtx 3060 12gb"
+  match: '\b(rtx )?3060\b(?! (ti|super)\b).*\b12 ?gb?\b|\b12 ?gb?\b.*\b(rtx )?3060\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-3060-ti
+  category: gpu
+  name: GeForce RTX 3060 Ti
+  ebay_query: "rtx 3060 ti"
+  match: '\b(rtx )?3060 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-3070
+  category: gpu
+  name: GeForce RTX 3070
+  ebay_query: "rtx 3070"
+  match: '\b(rtx )?3070\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-3070-ti
+  category: gpu
+  name: GeForce RTX 3070 Ti
+  ebay_query: "rtx 3070 ti"
+  match: '\b(rtx )?3070 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-3080-10gb
+  category: gpu
+  name: GeForce RTX 3080 10GB
+  ebay_query: "rtx 3080 10gb"
+  match: '\b(rtx )?3080\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-3080-12gb
+  category: gpu
+  name: GeForce RTX 3080 12GB
+  ebay_query: "rtx 3080 12gb"
+  match: '\b(rtx )?3080\b(?! (ti|super)\b).*\b12 ?gb?\b|\b12 ?gb?\b.*\b(rtx )?3080\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-3080-ti
+  category: gpu
+  name: GeForce RTX 3080 Ti
+  ebay_query: "rtx 3080 ti"
+  match: '\b(rtx )?3080 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-3090
+  category: gpu
+  name: GeForce RTX 3090
+  ebay_query: "rtx 3090"
+  match: '\b(rtx )?3090\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-3090-ti
+  category: gpu
+  name: GeForce RTX 3090 Ti
+  ebay_query: "rtx 3090 ti"
+  match: '\b(rtx )?3090 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-4060
+  category: gpu
+  name: GeForce RTX 4060
+  ebay_query: "rtx 4060"
+  match: '\b(rtx )?4060\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-4060-ti-8gb
+  category: gpu
+  name: GeForce RTX 4060 Ti 8GB
+  ebay_query: "rtx 4060 ti 8gb"
+  match: '\b(rtx )?4060 ti\b(?! super\b).*\b8 ?gb?\b|\b8 ?gb?\b.*\b(rtx )?4060 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-4060-ti-16gb
+  category: gpu
+  name: GeForce RTX 4060 Ti 16GB
+  ebay_query: "rtx 4060 ti 16gb"
+  match: '\b(rtx )?4060 ti\b(?! super\b).*\b16 ?gb?\b|\b16 ?gb?\b.*\b(rtx )?4060 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-4070
+  category: gpu
+  name: GeForce RTX 4070
+  ebay_query: "rtx 4070"
+  match: '\b(rtx )?4070\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-4070-super
+  category: gpu
+  name: GeForce RTX 4070 Super
+  ebay_query: "rtx 4070 super"
+  match: '\b(rtx )?4070 super\b'
+  exclude: []
+  max_price: null
+
+- id: rtx-4070-ti
+  category: gpu
+  name: GeForce RTX 4070 Ti
+  ebay_query: "rtx 4070 ti"
+  match: '\b(rtx )?4070 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-4070-ti-super
+  category: gpu
+  name: GeForce RTX 4070 Ti Super
+  ebay_query: "rtx 4070 ti super"
+  match: '\b(rtx )?4070 ti super\b'
+  exclude: []
+  max_price: null
+
+- id: rtx-4080
+  category: gpu
+  name: GeForce RTX 4080
+  ebay_query: "rtx 4080"
+  match: '\b(rtx )?4080\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-4080-super
+  category: gpu
+  name: GeForce RTX 4080 Super
+  ebay_query: "rtx 4080 super"
+  match: '\b(rtx )?4080 super\b'
+  exclude: []
+  max_price: null
+
+- id: rtx-4090
+  category: gpu
+  name: GeForce RTX 4090
+  ebay_query: "rtx 4090"
+  match: '\b(rtx )?4090\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-5050
+  category: gpu
+  name: GeForce RTX 5050
+  ebay_query: "rtx 5050"
+  match: '\b(rtx )?5050\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-5060
+  category: gpu
+  name: GeForce RTX 5060
+  ebay_query: "rtx 5060"
+  match: '\b(rtx )?5060\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-5060-ti-8gb
+  category: gpu
+  name: GeForce RTX 5060 Ti 8GB
+  ebay_query: "rtx 5060 ti 8gb"
+  match: '\b(rtx )?5060 ti\b(?! super\b).*\b8 ?gb?\b|\b8 ?gb?\b.*\b(rtx )?5060 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-5060-ti-16gb
+  category: gpu
+  name: GeForce RTX 5060 Ti 16GB
+  ebay_query: "rtx 5060 ti 16gb"
+  match: '\b(rtx )?5060 ti\b(?! super\b).*\b16 ?gb?\b|\b16 ?gb?\b.*\b(rtx )?5060 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-5070
+  category: gpu
+  name: GeForce RTX 5070
+  ebay_query: "rtx 5070"
+  match: '\b(rtx )?5070\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-5070-ti
+  category: gpu
+  name: GeForce RTX 5070 Ti
+  ebay_query: "rtx 5070 ti"
+  match: '\b(rtx )?5070 ti\b(?! super\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-5080
+  category: gpu
+  name: GeForce RTX 5080
+  ebay_query: "rtx 5080"
+  match: '\b(rtx )?5080\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
+
+- id: rtx-5090
+  category: gpu
+  name: GeForce RTX 5090
+  ebay_query: "rtx 5090"
+  match: '\b(rtx )?5090\b(?! (ti|super)\b)'
+  exclude: []
+  max_price: null
